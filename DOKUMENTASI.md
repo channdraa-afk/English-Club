@@ -19,6 +19,8 @@
   - Mentor Quick PIN: `123321` (disimpan otomatis di `localStorage` per perangkat)
   - GitHub Repo: `https://github.com/channdraa-afk/English-Club`
   - Vercel Project: `english-club` (Team Evergarden)
+  - Domain Resmi: `https://englishclub.site` (Hostinger A Record `216.198.79.1`)
+  - Google Search Console: Terverifikasi (Token: `VW60R6bNDlrt76VzkEMKiaWd_Yt3gRa_RYxM2wUOfus`)
 
 ### 1.2. Perintah Penting
 - **Instalasi**: `npm install`
@@ -137,6 +139,12 @@
   - Tombol mode dibuat adaptif: `[ 🛡️ Mentor ]` / `[ 🛡️ Presensi ]` di mobile (menghemat 70px) dan `[ 🛡️ Dashboard Mentor ]` / `[ 🛡️ Ke Presensi ]` di desktop.
   - Logo dan teks judul fleksibel (`text-base sm:text-lg`, `min-w-0`), sehingga di HP tidak akan pernah terpotong saat dalam mode siswa maupun mentor.
   - Status sesi di desktop dirapikan menjadi `🟢 Sesi Dibuka` / `⚫ Sesi Ditutup` dengan tooltip judul lengkap tanpa efek terpotong ellipsis.
+- [x] Domain Resmi Berkelas Dunia `englishclub.site` & Integrasi Google Search Console:
+  - Akuisisi domain kustom single-dot `englishclub.site` aktif hingga September 2027.
+  - Konfigurasi DNS A Record Vercel (`216.198.79.1`) dengan sertifikat SSL otomatis HTTPS.
+  - Verifikasi kepemilikan Google Search Console via DNS TXT Record (`VW60R6bNDlrt76VzkEMKiaWd_Yt3gRa_RYxM2wUOfus`) & tag HTML di `index.html`.
+  - Rich OpenGraph & Twitter Card previews dengan logo resmi SMEGA dan `theme-color` Royal Blue (`#2563eb`).
+  - Permintaan pengindeksan prioritas bot Google (*Googlebot crawl priority*) tuntas dilakukan via URL Inspection Tool.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
