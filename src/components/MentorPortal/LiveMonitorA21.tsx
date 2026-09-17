@@ -7,7 +7,8 @@ import {
   TrendingUp, 
   RefreshCw,
   UserX,
-  Zap
+  Zap,
+  FileText
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -27,7 +28,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   attendances,
   onAttendanceChanged,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<'present' | 'absent'>('absent');
+  const [activeSubTab, setActiveSubTab] = useState<'absent' | 'present' | 'permit' | 'all'>('absent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -51,10 +52,16 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     return map;
   }, [currentAttendances]);
 
-  // Lists
+  // Lists: Hadir, Izin (Surat Fisik), and Belum Hadir / Alpa
   const presentStudents = useMemo(() => {
     return a21Students
-      .filter((m) => attendedMap.has(m.id))
+      .filter((m) => attendedMap.has(m.id) && attendedMap.get(m.id)?.critique !== 'IZIN_SURAT_FISIK')
+      .sort((a, b) => a.class_name.localeCompare(b.class_name) || a.name.localeCompare(b.name));
+  }, [a21Students, attendedMap]);
+
+  const permitStudents = useMemo(() => {
+    return a21Students
+      .filter((m) => attendedMap.has(m.id) && attendedMap.get(m.id)?.critique === 'IZIN_SURAT_FISIK')
       .sort((a, b) => a.class_name.localeCompare(b.class_name) || a.name.localeCompare(b.name));
   }, [a21Students, attendedMap]);
 
@@ -75,24 +82,33 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     return classList.map((cls) => {
       const totalInClass = a21Students.filter((m) => m.class_name === cls).length;
       const presentInClass = presentStudents.filter((m) => m.class_name === cls).length;
-      const percent = totalInClass > 0 ? Math.round((presentInClass / totalInClass) * 100) : 0;
+      const permitInClass = permitStudents.filter((m) => m.class_name === cls).length;
+      const effectiveCount = presentInClass + permitInClass;
+      const percent = totalInClass > 0 ? Math.round((effectiveCount / totalInClass) * 100) : 0;
       return {
         className: cls,
         total: totalInClass,
         present: presentInClass,
+        permit: permitInClass,
         percent,
       };
     });
-  }, [classList, a21Students, presentStudents]);
+  }, [classList, a21Students, presentStudents, permitStudents]);
 
   const totalStudents = a21Students.length;
   const presentCount = presentStudents.length;
+  const permitCount = permitStudents.length;
   const absentCount = absentStudents.length;
-  const overallPercent = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
+  const effectiveCount = presentCount + permitCount;
+  const overallPercent = totalStudents > 0 ? Math.round((effectiveCount / totalStudents) * 100) : 0;
 
   // Filtered lists for view
   const displayList = useMemo(() => {
-    const source = activeSubTab === 'present' ? presentStudents : absentStudents;
+    let source = absentStudents;
+    if (activeSubTab === 'present') source = presentStudents;
+    else if (activeSubTab === 'permit') source = permitStudents;
+    else if (activeSubTab === 'all') source = a21Students;
+
     return source.filter((m) => {
       const matchClass = selectedClass === 'all' || m.class_name === selectedClass;
       const matchSearch =
@@ -101,9 +117,9 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
         m.class_name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchClass && matchSearch;
     });
-  }, [activeSubTab, presentStudents, absentStudents, selectedClass, searchQuery]);
+  }, [activeSubTab, presentStudents, permitStudents, absentStudents, a21Students, selectedClass, searchQuery]);
 
-  // Manual mark attendance
+  // Manual mark attendance (Hadir)
   const handleMarkPresent = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
@@ -115,15 +131,29 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     setLoadingId(student.id);
 
     try {
-      const { error } = await supabase.from('attendances').insert({
-        meeting_id: activeMeeting.id,
-        member_id: student.id,
-        feedback_rating: 'super_fun',
-        next_agenda_suggestion: 'Ditandai manual oleh Ketua / Pengurus',
-        is_anonymous: false,
-      });
+      const existing = attendedMap.get(student.id);
+      if (existing) {
+        // Switch from permit to present
+        const { error } = await supabase
+          .from('attendances')
+          .update({
+            critique: null,
+            next_agenda_suggestion: 'Ditandai hadir oleh Kakak Kelas',
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('attendances').insert({
+          meeting_id: activeMeeting.id,
+          member_id: student.id,
+          feedback_rating: 'super_fun',
+          next_agenda_suggestion: 'Ditandai hadir oleh Kakak Kelas',
+          critique: null,
+          is_anonymous: false,
+        });
+        if (error) throw error;
+      }
 
-      if (error) throw error;
       sound.playSuccess();
       onAttendanceChanged();
     } catch (err: any) {
@@ -135,10 +165,56 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     }
   };
 
+  // Manual mark permit (Izin Surat Fisik - Kapan saja)
+  const handleMarkPermit = async (student: Member) => {
+    if (!activeMeeting) {
+      sound.playError();
+      alert('Belum ada pertemuan aktif!');
+      return;
+    }
+
+    sound.playPop();
+    setLoadingId(student.id);
+
+    try {
+      const existing = attendedMap.get(student.id);
+      if (existing) {
+        // Switch from present to permit
+        const { error } = await supabase
+          .from('attendances')
+          .update({
+            critique: 'IZIN_SURAT_FISIK',
+            next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+          })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('attendances').insert({
+          meeting_id: activeMeeting.id,
+          member_id: student.id,
+          feedback_rating: 'okay',
+          next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+          critique: 'IZIN_SURAT_FISIK',
+          is_anonymous: false,
+        });
+        if (error) throw error;
+      }
+
+      sound.playSuccess();
+      onAttendanceChanged();
+    } catch (err: any) {
+      console.error('Error recording permit:', err);
+      sound.playError();
+      alert('Gagal mencatat izin: ' + err.message);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
   // Cancel attendance
   const handleCancelAttendance = async (student: Member) => {
     if (!activeMeeting) return;
-    if (!confirm(`Batalkan presensi untuk ${student.name}?`)) return;
+    if (!confirm(`Batalkan status presensi untuk ${student.name}?`)) return;
 
     sound.playPop();
     setLoadingId(student.id);
@@ -179,12 +255,12 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
           </div>
 
           {/* Big Circular/Number Stats */}
-          <div className="bg-blue-950/60 border-2 border-blue-400/40 rounded-3xl p-4 text-center min-w-[150px]">
+          <div className="bg-blue-950/60 border-2 border-blue-400/40 rounded-3xl p-4 text-center min-w-[170px]">
             <div className="text-3xl sm:text-4xl font-black text-amber-300">
-              {presentCount} <span className="text-sm font-bold text-blue-100">/ {totalStudents}</span>
+              {effectiveCount} <span className="text-sm font-bold text-blue-100">/ {totalStudents}</span>
             </div>
             <p className="text-xs font-black text-blue-200 mt-0.5">
-              {overallPercent}% Sudah Hadir
+              {overallPercent}% Kehadiran Efektif
             </p>
           </div>
         </div>
@@ -197,9 +273,10 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
               style={{ width: `${overallPercent}%` }}
             />
           </div>
-          <div className="flex items-center justify-between text-[11px] font-extrabold text-blue-100">
-            <span>🟢 Hadir: {presentCount} siswa</span>
-            <span>🔴 Belum Hadir: {absentCount} siswa</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold text-blue-100">
+            <span>🟢 Hadir: {presentCount}</span>
+            <span>🟡 Izin (Surat): {permitCount}</span>
+            <span>🔴 Belum Hadir: {absentCount}</span>
           </div>
         </div>
       </div>
@@ -235,8 +312,9 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
                   style={{ width: `${cs.percent}%` }}
                 />
               </div>
-              <div className="text-[10px] font-bold text-slate-500 mt-1">
-                {cs.present} / {cs.total} siswa
+              <div className="text-[10px] font-bold text-slate-500 mt-1 flex items-center justify-between">
+                <span>H: {cs.present} | I: {cs.permit}</span>
+                <span>/{cs.total}</span>
               </div>
             </div>
           ))}
@@ -245,21 +323,21 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
 
       {/* Filter & Subtabs Bar */}
       <div className="bg-white p-4 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">
-        {/* Subtabs Selector */}
-        <div className="grid grid-cols-2 gap-2">
+        {/* Subtabs Selector (4 Subtabs) */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <button
             onClick={() => {
               sound.playPop();
               setActiveSubTab('absent');
             }}
-            className={`py-2.5 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
+            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
               activeSubTab === 'absent'
                 ? 'bg-rose-500 text-white border-rose-700 shadow-[0_3px_0_0_#b91c1c]'
                 : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
             }`}
           >
             <UserX className="w-4 h-4" />
-            <span>Belum Hadir ({absentCount})</span>
+            <span>Belum ({absentCount})</span>
           </button>
 
           <button
@@ -267,14 +345,44 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
               sound.playPop();
               setActiveSubTab('present');
             }}
-            className={`py-2.5 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
+            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
               activeSubTab === 'present'
                 ? 'bg-emerald-600 text-white border-emerald-800 shadow-[0_3px_0_0_#15803d]'
                 : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
             }`}
           >
             <UserCheck className="w-4 h-4" />
-            <span>Sudah Hadir ({presentCount})</span>
+            <span>Hadir ({presentCount})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playPop();
+              setActiveSubTab('permit');
+            }}
+            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
+              activeSubTab === 'permit'
+                ? 'bg-amber-500 text-white border-amber-700 shadow-[0_3px_0_0_#b45309]'
+                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Izin ({permitCount})</span>
+          </button>
+
+          <button
+            onClick={() => {
+              sound.playPop();
+              setActiveSubTab('all');
+            }}
+            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
+              activeSubTab === 'all'
+                ? 'bg-blue-600 text-white border-blue-800 shadow-[0_3px_0_0_#1d4ed8]'
+                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Semua ({totalStudents})</span>
           </button>
         </div>
 
@@ -315,39 +423,53 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
           <div className="text-center py-10 bg-white rounded-3xl border-2 border-dashed border-slate-300 p-6">
             <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
             <p className="text-xs font-black text-slate-600">
-              {activeSubTab === 'absent'
-                ? 'Hore! Semua siswa pada kriteria ini sudah hadir!'
-                : 'Belum ada siswa yang hadir pada filter ini.'}
+              Tidak ada siswa yang ditemukan pada filter ini.
             </p>
           </div>
         ) : (
           displayList.map((student) => {
-            const isPresent = attendedMap.has(student.id);
+            const hasRecord = attendedMap.has(student.id);
             const attendance = attendedMap.get(student.id);
+            const isPermit = hasRecord && attendance?.critique === 'IZIN_SURAT_FISIK';
+            const isPresent = hasRecord && !isPermit;
             const isRowLoading = loadingId === student.id;
 
             return (
               <div
                 key={student.id}
-                className={`p-3.5 rounded-2xl border-2 transition-all flex items-center justify-between gap-3 ${
+                className={`p-3.5 rounded-2xl border-2 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                   isPresent
                     ? 'bg-emerald-50/50 border-emerald-200 shadow-[0_2px_0_0_#a7f3d0]'
+                    : isPermit
+                    ? 'bg-amber-50/50 border-amber-200 shadow-[0_2px_0_0_#fde68a]'
                     : 'bg-white border-slate-200 shadow-[0_2px_0_0_#e2e8f0]'
                 }`}
               >
-                <div className="space-y-0.5">
+                <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <h4 className="font-extrabold text-xs text-slate-900">{student.name}</h4>
                     <span className="px-2 py-0.2 rounded-md bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-black">
                       {student.class_name}
                     </span>
+
+                    {isPresent && (
+                      <span className="px-2 py-0.2 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-black">
+                        ✓ Hadir
+                      </span>
+                    )}
+
+                    {isPermit && (
+                      <span className="px-2 py-0.2 rounded-md bg-amber-100 text-amber-800 border border-amber-200 text-[10px] font-black">
+                        📄 Izin (Surat Fisik)
+                      </span>
+                    )}
                   </div>
 
-                  {isPresent && attendance && (
-                    <p className="text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                  {hasRecord && attendance && (
+                    <p className={`text-[10px] font-bold flex items-center gap-1 ${isPermit ? 'text-amber-700' : 'text-emerald-700'}`}>
                       <Clock className="w-3 h-3" />
-                      <span>Check-in: {new Date(attendance.submitted_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
-                      {attendance.feedback_rating && (
+                      <span>Tercatat: {new Date(attendance.submitted_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} WIB</span>
+                      {attendance.feedback_rating && !isPermit && (
                         <span className="ml-1">
                           {attendance.feedback_rating === 'super_fun' ? '🤩' : attendance.feedback_rating === 'okay' ? '👍' : '😴'}
                         </span>
@@ -357,31 +479,71 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
                 </div>
 
                 {/* Actions */}
-                <div>
-                  {isPresent ? (
-                    <button
-                      onClick={() => handleCancelAttendance(student)}
-                      disabled={isRowLoading}
-                      className="px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-black transition-colors"
-                      title="Batalkan presensi siswa ini"
-                    >
-                      Batal
-                    </button>
+                <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
+                  {!hasRecord ? (
+                    <>
+                      <TactileButton
+                        onClick={() => handleMarkPresent(student)}
+                        disabled={isRowLoading}
+                        variant="brand"
+                        size="sm"
+                        className="py-1 px-2.5 text-xs font-black"
+                      >
+                        {isRowLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Zap className="w-3 h-3" />}
+                        <span>+ Hadir</span>
+                      </TactileButton>
+
+                      <TactileButton
+                        onClick={() => handleMarkPermit(student)}
+                        disabled={isRowLoading}
+                        variant="amber"
+                        size="sm"
+                        className="py-1 px-2.5 text-xs font-black"
+                      >
+                        {isRowLoading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <FileText className="w-3 h-3" />}
+                        <span>📄 Izin</span>
+                      </TactileButton>
+                    </>
+                  ) : isPresent ? (
+                    <>
+                      <button
+                        onClick={() => handleMarkPermit(student)}
+                        disabled={isRowLoading}
+                        className="px-2.5 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-black transition-colors"
+                        title="Ganti status menjadi Izin (Surat Fisik)"
+                      >
+                        📄 Jadi Izin
+                      </button>
+
+                      <button
+                        onClick={() => handleCancelAttendance(student)}
+                        disabled={isRowLoading}
+                        className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-black transition-colors"
+                        title="Batalkan presensi siswa ini"
+                      >
+                        Batal
+                      </button>
+                    </>
                   ) : (
-                    <TactileButton
-                      onClick={() => handleMarkPresent(student)}
-                      disabled={isRowLoading}
-                      variant="brand"
-                      size="sm"
-                      className="py-1 px-3 text-xs"
-                    >
-                      {isRowLoading ? (
-                        <RefreshCw className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <Zap className="w-3 h-3" />
-                      )}
-                      <span>Tandai Hadir</span>
-                    </TactileButton>
+                    <>
+                      <button
+                        onClick={() => handleMarkPresent(student)}
+                        disabled={isRowLoading}
+                        className="px-2.5 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-black transition-colors"
+                        title="Ganti status menjadi Hadir"
+                      >
+                        ⚡ Jadi Hadir
+                      </button>
+
+                      <button
+                        onClick={() => handleCancelAttendance(student)}
+                        disabled={isRowLoading}
+                        className="px-2.5 py-1 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-black transition-colors"
+                        title="Batalkan status izin siswa ini"
+                      >
+                        Batal
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

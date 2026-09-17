@@ -145,8 +145,15 @@
   - Verifikasi kepemilikan Google Search Console via DNS TXT Record (`VW60R6bNDlrt76VzkEMKiaWd_Yt3gRa_RYxM2wUOfus`) & tag HTML di `index.html`.
   - Rich OpenGraph & Twitter Card previews dengan logo resmi SMEGA dan `theme-color` Royal Blue (`#2563eb`).
   - Permintaan pengindeksan prioritas bot Google (*Googlebot crawl priority*) tuntas dilakukan via URL Inspection Tool.
+- [x] Fitur Status "Izin (Surat Fisik)" A21 Bebas Waktu & Pembukaan Akses Rekap Rapor untuk Seluruh Pengurus A20:
+  - **Akses Terbuka untuk 59 Pengurus**: Tab Rekap Rapor Bulanan (Cetak PDF & Ekspor CSV) kini dapat diakses oleh semua kakak kelas via PIN `123321` tanpa memerlukan akun Super Admin.
+  - **Manajemen Bebas Waktu (Tanpa Cutoff 17:30 WIB)**: Pengurus dapat menandai adik kelas berstatus "Izin (Surat Fisik)" kapan pun saat surat fisik diterima (sore, malam di rumah, atau hari berikutnya).
+  - **Integrasi 3-Modul**:
+    - `HelperAttendanceA21`: Tombol taktil cepat `[ 📄 Izin (Surat) ]` berdampingan dengan `[ ⚡ Hadir ]`.
+    - `LiveMonitorA21`: Filter 4 sub-tab (Belum, Hadir, Izin, Semua) dengan aksi ubah status bolak-balik antara Hadir dan Izin.
+    - `ReportRecap`: Selector status 3-arah interaktif pada rekap per pertemuan.
+  - **Standar Rapor SMEGA (H | I | A)**: Matriks 4 pekan, cetak PDF resmi, dan ekspor CSV memuat breakdown kolom Hadir (H), Izin (I), dan Alpa (A) dengan persentase kehadiran sah.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
-- [ ] Menghubungkan domain custom `.my.id` di dashboard Vercel jika diperlukan.

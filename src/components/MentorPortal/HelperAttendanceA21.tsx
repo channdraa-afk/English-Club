@@ -4,7 +4,8 @@ import {
   CheckCircle2, 
   RefreshCw,
   HandHeart,
-  Zap
+  Zap,
+  FileText
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -81,19 +82,54 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
         meeting_id: activeMeeting.id,
         member_id: student.id,
         feedback_rating: 'super_fun',
-        next_agenda_suggestion: 'Dibantu absen oleh Kakak Kelas (Tanpa Token)',
+        next_agenda_suggestion: 'Dibantu absen hadir oleh Kakak Kelas',
         is_anonymous: false,
       });
 
       if (error) throw error;
       sound.playSuccess();
-      setRecentHelped(student.name);
+      setRecentHelped(`${student.name} (✓ Hadir)`);
       setTimeout(() => setRecentHelped(null), 3000);
       onAttendanceChanged();
     } catch (err: any) {
       console.error('Error assisting attendance:', err);
       sound.playError();
       alert('Gagal membantu presensi: ' + err.message);
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  // Handle Quick Permit (Tandai Izin Surat Fisik)
+  const handleQuickPermit = async (student: Member) => {
+    if (!activeMeeting) {
+      sound.playError();
+      alert('Belum ada sesi eskul aktif saat ini! Untuk pertemuan lama, atur di tab Rekap Rapor Bulanan.');
+      return;
+    }
+
+    sound.playPop();
+    setLoadingId(student.id);
+
+    try {
+      const { error } = await supabase.from('attendances').insert({
+        meeting_id: activeMeeting.id,
+        member_id: student.id,
+        feedback_rating: 'okay',
+        next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+        critique: 'IZIN_SURAT_FISIK',
+        is_anonymous: false,
+      });
+
+      if (error) throw error;
+      sound.playSuccess();
+      setRecentHelped(`${student.name} (📄 Izin Surat Fisik)`);
+      setTimeout(() => setRecentHelped(null), 3000);
+      onAttendanceChanged();
+    } catch (err: any) {
+      console.error('Error recording permit:', err);
+      sound.playError();
+      alert('Gagal mencatat izin: ' + err.message);
     } finally {
       setLoadingId(null);
     }
@@ -193,20 +229,37 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
                   </span>
                 </div>
 
-                <TactileButton
-                  onClick={() => handleQuickAssist(student)}
-                  disabled={isLoading}
-                  variant="blue"
-                  size="sm"
-                  className="py-1.5 px-3 text-xs"
-                >
-                  {isLoading ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Zap className="w-3.5 h-3.5" />
-                  )}
-                  <span>Bantu Hadirkan</span>
-                </TactileButton>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <TactileButton
+                    onClick={() => handleQuickAssist(student)}
+                    disabled={isLoading}
+                    variant="blue"
+                    size="sm"
+                    className="py-1 px-2.5 text-xs font-black"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Zap className="w-3.5 h-3.5" />
+                    )}
+                    <span>Hadir</span>
+                  </TactileButton>
+
+                  <TactileButton
+                    onClick={() => handleQuickPermit(student)}
+                    disabled={isLoading}
+                    variant="amber"
+                    size="sm"
+                    className="py-1 px-2.5 text-xs font-black"
+                  >
+                    {isLoading ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5" />
+                    )}
+                    <span>Izin (Surat)</span>
+                  </TactileButton>
+                </div>
               </div>
             );
           })

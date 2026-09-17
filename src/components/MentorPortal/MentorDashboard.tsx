@@ -97,7 +97,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
   // Safety fallback if regular mentor tries to stay on a super-admin tab
   useEffect(() => {
-    const allowedRegular: TabId[] = ['mentor_attendance', 'live_monitor', 'helper_a21', 'agenda', 'structure'];
+    const allowedRegular: TabId[] = ['mentor_attendance', 'live_monitor', 'helper_a21', 'agenda', 'recap', 'structure'];
     if (!isSuperAdmin && !allowedRegular.includes(activeTab)) {
       setActiveTab('mentor_attendance');
     }
@@ -120,10 +120,10 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: false },
     { id: 'helper_a21', label: 'Bantu Absen A21', icon: HandHeart, category: 'a21', superOnly: false },
     { id: 'agenda', label: isSuperAdmin ? 'Aspirasi & Curhat' : 'Suara & Masukan Adik', icon: Sparkles, category: 'a21', superOnly: false },
+    { id: 'recap', label: 'Rekap Rapor Bulanan', icon: FileSpreadsheet, category: 'a21', superOnly: false },
     
     // Khusus Super Admin / BPH
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'a21', superOnly: true },
-    { id: 'recap', label: 'Rekap Rapor Bulanan', icon: FileSpreadsheet, category: 'a21', superOnly: true },
     { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'a21', superOnly: true },
     { id: 'radar', label: 'Radar Kedisiplinan A20', icon: ShieldAlert, category: 'a20', superOnly: true },
     
@@ -398,8 +398,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         />
       )}
 
-      {/* Rekap Rapor Bulanan */}
-      {activeTab === 'recap' && isSuperAdmin && (
+      {/* Rekap Rapor Bulanan (Accessible by ALL Mentors & SuperAdmin) */}
+      {activeTab === 'recap' && (
         <ReportRecap
           members={members}
           meetings={meetings}

@@ -8,7 +8,8 @@ import {
   Printer, 
   CalendarRange, 
   FileSpreadsheet, 
-  RefreshCw 
+  RefreshCw,
+  FileText
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -61,21 +62,22 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
         monthsSet.add(m.meeting_date.slice(0, 7));
       }
     });
-    monthsSet.add(currentMonthStr);
+    if (!monthsSet.has(currentMonthStr)) {
+      monthsSet.add(currentMonthStr);
+    }
     return Array.from(monthsSet).sort().reverse();
   }, [meetings, currentMonthStr]);
 
   // ==========================================
   // SINGLE MEETING RECAP LOGIC
   // ==========================================
+  // Attendances in selected meeting
   const currentMeetingAttendances = useMemo(() => {
+    if (!selectedMeetingId) return [];
     return attendances.filter((a) => a.meeting_id === selectedMeetingId);
   }, [attendances, selectedMeetingId]);
 
-  const attendedMemberIds = useMemo(() => {
-    return new Set(currentMeetingAttendances.map((a) => a.member_id));
-  }, [currentMeetingAttendances]);
-
+  // Rows for Single Meeting Report
   const singleReportRows = useMemo(() => {
     return a21Students
       .filter((m) => {
@@ -85,45 +87,86 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
         return matchesClass && matchesName;
       })
       .map((m) => {
-        const isPresent = attendedMemberIds.has(m.id);
         const attendanceRecord = currentMeetingAttendances.find((a) => a.member_id === m.id);
+        const isPermit = Boolean(attendanceRecord && attendanceRecord.critique === 'IZIN_SURAT_FISIK');
+        const isPresent = Boolean(attendanceRecord && !isPermit);
+        const isAbsent = !attendanceRecord;
         return {
           member: m,
           isPresent,
+          isPermit,
+          isAbsent,
           attendance: attendanceRecord,
         };
       })
       .sort((a, b) => a.member.class_name.localeCompare(b.member.class_name) || a.member.name.localeCompare(b.member.name));
-  }, [a21Students, selectedClass, searchName, attendedMemberIds, currentMeetingAttendances]);
+  }, [a21Students, selectedClass, searchName, currentMeetingAttendances]);
 
   const singlePresentCount = singleReportRows.filter((r) => r.isPresent).length;
+  const singlePermitCount = singleReportRows.filter((r) => r.isPermit).length;
+  const singleAbsentCount = singleReportRows.filter((r) => r.isAbsent).length;
+  const singleEffectiveCount = singlePresentCount + singlePermitCount;
   const singlePercentage = singleReportRows.length > 0 
-    ? Math.round((singlePresentCount / singleReportRows.length) * 100) 
+    ? Math.round((singleEffectiveCount / singleReportRows.length) * 100) 
     : 0;
 
-  // Handler: Tandai Hadir Manual (Dispensasi izin pindah ekskul)
-  const handleToggleManualAttendance = async (member: Member, isPresent: boolean, attRecord?: Attendance) => {
+  // Handler: Atur status presensi (Hadir / Izin Surat Fisik / Alpa) - BISA KAPAN SAJA TANPA BATASAN JAM
+  const handleSetStatus = async (
+    member: Member, 
+    targetStatus: 'present' | 'permit' | 'absent', 
+    attRecord?: Attendance
+  ) => {
     if (!selectedMeetingId) return;
     sound.playPop();
     setManualLoadingId(member.id);
 
     try {
-      if (isPresent && attRecord) {
-        // Hapus absen
-        await supabase.from('attendances').delete().eq('id', attRecord.id);
-      } else {
-        // Tambah absen manual
-        await supabase.from('attendances').insert({
-          meeting_id: selectedMeetingId,
-          member_id: member.id,
-          feedback_rating: 'okay',
-          critique: 'Presensi Manual / Dispensasi Pindah Ekskul',
-          is_anonymous: false,
-        });
+      if (targetStatus === 'absent') {
+        if (attRecord) {
+          const { error } = await supabase.from('attendances').delete().eq('id', attRecord.id);
+          if (error) throw error;
+        }
+      } else if (targetStatus === 'permit') {
+        if (attRecord) {
+          const { error } = await supabase.from('attendances').update({
+            critique: 'IZIN_SURAT_FISIK',
+            next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+          }).eq('id', attRecord.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('attendances').insert({
+            meeting_id: selectedMeetingId,
+            member_id: member.id,
+            feedback_rating: 'okay',
+            critique: 'IZIN_SURAT_FISIK',
+            next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+            is_anonymous: false,
+          });
+          if (error) throw error;
+        }
+      } else if (targetStatus === 'present') {
+        if (attRecord) {
+          const { error } = await supabase.from('attendances').update({
+            critique: null,
+            next_agenda_suggestion: 'Ditandai hadir manual oleh Pengurus',
+          }).eq('id', attRecord.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from('attendances').insert({
+            meeting_id: selectedMeetingId,
+            member_id: member.id,
+            feedback_rating: 'super_fun',
+            critique: null,
+            next_agenda_suggestion: 'Ditandai hadir manual oleh Pengurus',
+            is_anonymous: false,
+          });
+          if (error) throw error;
+        }
       }
+      sound.playSuccess();
       if (onAttendanceChanged) onAttendanceChanged();
     } catch (err: any) {
-      console.error('Error toggling manual attendance:', err);
+      console.error('Error changing attendance status:', err);
       sound.playError();
       alert('Gagal mengubah status presensi: ' + err.message);
     } finally {
@@ -214,6 +257,9 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       })
       .map((m) => {
         let presentCount = 0;
+        let permitCount = 0;
+        let absentCount = 0;
+
         const slotStatuses = monthSlots.map((slot) => {
           if (!slot.meeting) {
             return {
@@ -224,24 +270,32 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
           if (slot.meeting.is_holiday) {
             return { slot, status: 'holiday' as const };
           }
-          const hasAtt = attendanceLookup.has(`${slot.meeting.id}_${m.id}`);
-          if (hasAtt) {
+          const att = attendanceLookup.get(`${slot.meeting.id}_${m.id}`);
+          if (att) {
+            if (att.critique === 'IZIN_SURAT_FISIK') {
+              permitCount++;
+              return { slot, status: 'permit' as const };
+            }
             presentCount++;
             return { slot, status: 'present' as const };
           }
           if (slot.isPastOrToday) {
+            absentCount++;
             return { slot, status: 'absent' as const };
           }
           return { slot, status: 'upcoming' as const };
         });
 
         const totalActive = heldNonHolidayMeetings.length;
-        const percent = totalActive > 0 ? Math.round((presentCount / totalActive) * 100) : 100;
+        const effectiveCount = presentCount + permitCount;
+        const percent = totalActive > 0 ? Math.round((effectiveCount / totalActive) * 100) : 100;
 
         return {
           member: m,
           slotStatuses,
           presentCount,
+          permitCount,
+          absentCount,
           percent,
         };
       })
@@ -261,13 +315,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       if (s.meeting?.is_holiday) return `"${s.displayDate} (LIBUR)"`;
       return `"${s.displayDate} (${s.weekLabel})"`;
     });
-    const headers = ['No', 'Nama Lengkap', 'Kelas', ...dateHeaders, 'Total Hadir', 'Persentase'];
+    const headers = ['No', 'Nama Lengkap', 'Kelas', ...dateHeaders, 'Hadir (H)', 'Izin (I)', 'Alpa (A)', 'Persentase'];
 
     const rows = monthlyMatrixRows.map((r, idx) => {
       const datesData = r.slotStatuses.map((s) => {
         if (s.status === 'holiday') return '"LIBUR"';
-        if (s.status === 'present') return '"Hadir"';
-        if (s.status === 'absent') return '"Alpha"';
+        if (s.status === 'present') return '"H"';
+        if (s.status === 'permit') return '"I"';
+        if (s.status === 'absent') return '"A"';
         return '"-"';
       });
 
@@ -277,6 +332,8 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
         `"${r.member.class_name}"`,
         ...datesData,
         `"${r.presentCount}"`,
+        `"${r.permitCount}"`,
+        `"${r.absentCount}"`,
         `"${r.percent}%"`,
       ];
     });
@@ -384,22 +441,26 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       {recapMode === 'single' && (
         <div className="space-y-4">
           {/* Stats Bar */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-sm">
-              <p className="text-[11px] font-black uppercase text-slate-400">Total Siswa A21</p>
-              <h3 className="text-2xl font-black text-slate-900 mt-1">{a21Students.length}</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            <div className="p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-slate-400">Total Siswa</p>
+              <h3 className="text-xl sm:text-2xl font-black text-slate-900 mt-1">{a21Students.length}</h3>
             </div>
-            <div className="p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-sm">
-              <p className="text-[11px] font-black uppercase text-emerald-800">Siswa Hadir</p>
-              <h3 className="text-2xl font-black text-emerald-700 mt-1">{singlePresentCount}</h3>
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-300 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-emerald-800">Hadir (H)</p>
+              <h3 className="text-xl sm:text-2xl font-black text-emerald-700 mt-1">{singlePresentCount}</h3>
             </div>
-            <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 shadow-sm">
-              <p className="text-[11px] font-black uppercase text-rose-800">Belum Hadir</p>
-              <h3 className="text-2xl font-black text-rose-700 mt-1">{singleReportRows.length - singlePresentCount}</h3>
+            <div className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-amber-800">Izin (I)</p>
+              <h3 className="text-xl sm:text-2xl font-black text-amber-700 mt-1">{singlePermitCount}</h3>
             </div>
-            <div className="p-4 rounded-2xl bg-blue-50 border-2 border-blue-300 shadow-sm">
-              <p className="text-[11px] font-black uppercase text-blue-800">Persentase</p>
-              <h3 className="text-2xl font-black text-blue-700 mt-1">{singlePercentage}%</h3>
+            <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 shadow-sm">
+              <p className="text-[10px] font-black uppercase text-rose-800">Alpa (A)</p>
+              <h3 className="text-xl sm:text-2xl font-black text-rose-700 mt-1">{singleAbsentCount}</h3>
+            </div>
+            <div className="p-3.5 rounded-2xl bg-blue-50 border-2 border-blue-300 shadow-sm col-span-2 sm:col-span-1">
+              <p className="text-[10px] font-black uppercase text-blue-800">% Kehadiran</p>
+              <h3 className="text-xl sm:text-2xl font-black text-blue-700 mt-1">{singlePercentage}%</h3>
             </div>
           </div>
 
@@ -453,7 +514,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                     <th className="py-3 px-3">Nama Siswa</th>
                     <th className="py-3 px-3">Kelas</th>
                     <th className="py-3 px-3 text-center">Status</th>
-                    <th className="py-3 px-3 text-center">Aksi Cepat (Izin/Dispensasi)</th>
+                    <th className="py-3 px-3 text-center">Aksi (Bisa Diatur Kapan Saja)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-bold">
@@ -461,7 +522,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                     <tr
                       key={r.member.id}
                       className={`hover:bg-slate-50 transition-colors ${
-                        r.isPresent ? 'bg-emerald-50/40' : ''
+                        r.isPresent ? 'bg-emerald-50/30' : r.isPermit ? 'bg-amber-50/30' : ''
                       }`}
                     >
                       <td className="py-2.5 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
@@ -477,6 +538,11 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                             <UserCheck className="w-3 h-3" />
                             Hadir
                           </span>
+                        ) : r.isPermit ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-black border border-amber-300">
+                            <FileText className="w-3 h-3" />
+                            Izin (Surat)
+                          </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[10px] font-bold border border-rose-200">
                             <UserX className="w-3 h-3" />
@@ -485,24 +551,68 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        <button
-                          type="button"
-                          disabled={manualLoadingId === r.member.id}
-                          onClick={() => handleToggleManualAttendance(r.member, r.isPresent, r.attendance)}
-                          className={`px-3 py-1 rounded-xl text-[11px] font-black border transition-all cursor-pointer ${
-                            r.isPresent
-                              ? 'bg-white hover:bg-rose-50 text-rose-600 border-rose-200'
-                              : 'bg-emerald-500 hover:bg-emerald-600 text-white border-emerald-700 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5'
-                          }`}
-                        >
-                          {manualLoadingId === r.member.id ? (
-                            <RefreshCw className="w-3 h-3 animate-spin mx-auto" />
-                          ) : r.isPresent ? (
-                            'Batalkan Hadir'
-                          ) : (
-                            'Tandai Hadir (Izin/Dispen)'
-                          )}
-                        </button>
+                        {manualLoadingId === r.member.id ? (
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin mx-auto text-slate-500" />
+                        ) : (
+                          <div className="flex items-center justify-center gap-1.5">
+                            {r.isPresent ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStatus(r.member, 'permit', r.attendance)}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-colors"
+                                  title="Ubah status ke Izin Surat Fisik"
+                                >
+                                  📄 Jadi Izin
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStatus(r.member, 'absent', r.attendance)}
+                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-colors"
+                                  title="Batalkan presensi (jadikan alpa)"
+                                >
+                                  Batal
+                                </button>
+                              </>
+                            ) : r.isPermit ? (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStatus(r.member, 'present', r.attendance)}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors"
+                                  title="Ubah status ke Hadir"
+                                >
+                                  ⚡ Jadi Hadir
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStatus(r.member, 'absent', r.attendance)}
+                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-colors"
+                                  title="Batalkan izin (jadikan alpa)"
+                                >
+                                  Batal
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStatus(r.member, 'present', r.attendance)}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all"
+                                >
+                                  + Hadir
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleSetStatus(r.member, 'permit', r.attendance)}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all"
+                                >
+                                  📄 Izin (Surat)
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}
@@ -599,7 +709,9 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                         </span>
                       </th>
                     ))}
-                    <th className="border border-slate-300 py-2.5 px-2 text-center w-16 bg-slate-200">Hadir</th>
+                    <th className="border border-slate-300 py-2.5 px-1 text-center w-12 bg-emerald-100 text-emerald-900" title="Total Hadir (H)">H</th>
+                    <th className="border border-slate-300 py-2.5 px-1 text-center w-12 bg-amber-100 text-amber-900" title="Total Izin Surat Fisik (I)">I</th>
+                    <th className="border border-slate-300 py-2.5 px-1 text-center w-12 bg-rose-100 text-rose-900" title="Total Alpa / Tanpa Keterangan (A)">A</th>
                     <th className="border border-slate-300 py-2.5 px-2 text-center w-16 bg-slate-200">% Rapor</th>
                   </tr>
                 </thead>
@@ -612,21 +724,39 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                       {r.slotStatuses.map((st, sIdx) => (
                         <td
                           key={sIdx}
-                          className={`border border-slate-300 py-2 px-2 text-center text-sm ${
+                          className={`border border-slate-300 py-2 px-2 text-center text-xs ${
                             st.status === 'holiday'
-                              ? 'bg-amber-50 text-amber-600 font-bold text-[10px]'
+                              ? 'bg-amber-50 text-amber-700 font-bold text-[10px]'
                               : st.status === 'present'
-                              ? 'text-emerald-600 font-black'
+                              ? 'text-emerald-700 font-black bg-emerald-50/20'
+                              : st.status === 'permit'
+                              ? 'text-amber-700 font-black bg-amber-50/40'
                               : st.status === 'absent'
-                              ? 'text-rose-400 font-black'
+                              ? 'text-rose-500 font-black bg-rose-50/20'
                               : 'text-slate-300 font-bold'
                           }`}
                         >
-                          {st.status === 'holiday' ? 'LIBUR' : st.status === 'present' ? '✓' : st.status === 'absent' ? '✗' : '-'}
+                          {st.status === 'holiday' ? (
+                            'LIBUR'
+                          ) : st.status === 'present' ? (
+                            'H'
+                          ) : st.status === 'permit' ? (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 font-black text-[11px]">I</span>
+                          ) : st.status === 'absent' ? (
+                            'A'
+                          ) : (
+                            '-'
+                          )}
                         </td>
                       ))}
-                      <td className="border border-slate-300 py-2 px-2 text-center font-mono font-black text-slate-900 bg-slate-50">
+                      <td className="border border-slate-300 py-2 px-1 text-center font-mono font-black text-emerald-700 bg-emerald-50/40">
                         {r.presentCount}
+                      </td>
+                      <td className="border border-slate-300 py-2 px-1 text-center font-mono font-black text-amber-700 bg-amber-50/40">
+                        {r.permitCount}
+                      </td>
+                      <td className="border border-slate-300 py-2 px-1 text-center font-mono font-black text-rose-700 bg-rose-50/40">
+                        {r.absentCount}
                       </td>
                       <td className={`border border-slate-300 py-2 px-2 text-center font-mono font-black ${
                         r.percent >= 75 ? 'text-emerald-700 bg-emerald-50/50' : 'text-rose-700 bg-rose-50/50'
@@ -637,6 +767,16 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                   ))}
                 </tbody>
               </table>
+
+              {/* Legend & Summary Footer for Print & Screen */}
+              <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-bold text-slate-600">
+                <div>
+                  <strong>Keterangan:</strong> <span className="text-emerald-700 font-black">H</span> = Hadir • <span className="text-amber-700 font-black">I</span> = Izin Resmi (Surat Fisik) • <span className="text-rose-700 font-black">A</span> = Alpa / Tanpa Keterangan • <strong>LIBUR</strong> = Hari Libur Resmi
+                </div>
+                <div>
+                  Total Angkatan 21: <strong>{a21Students.length} siswa aktif</strong>
+                </div>
+              </div>
             </div>
           )}
         </div>
