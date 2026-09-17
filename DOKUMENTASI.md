@@ -209,9 +209,10 @@
 - [x] Fitur Radar Bibit Lomba (Talent Scout Bintang A21) untuk Seleksi Delegasi Lomba SMEGA:
   - **Akses Terbuka Semua Mentor**: Terbuka di tab `⭐ Radar Bibit Lomba` di bawah kategori `🎒 Operasional A21 (Adik Kelas)`.
   - **Aturan Sakral Bintang Anti-Dobel**: 1x pertemuan maksimal 1 bintang per anak. Jika sudah diberi oleh 1 mentor, mentor lain melihat statusnya terkunci berbintang untuk sesi tersebut.
-  - **Modal Wajib Cabang Lomba & Catatan Alasan**:
-    - Mentor wajib memilih cabang lomba/kategori keunggulan: 🎙️ *Speech*, 📖 *Storytelling*, ⚔️ *Debate*, 📺 *Newscasting*, 🔠 *Scrabble*, 🐝 *Spelling Bee*, 🗣️ *Read Aloud*, atau 🌟 *Active Vocal / General*.
+  - **Modal Wajib Cabang Lomba, Catatan Alasan, & Nama Mentor**:
+    - Mentor wajib memilih cabang lomba/kategori keunggulan: 🎙️ *Speech*, 📖 *Storytelling*, ⚔️ *Debate*, 📺 *Newscasting*, 🔠 *Scrabble*, 🐝 *Spelling Bee*, 🗣️ *Read Aloud*, atau ✨ *Lain-lainnya*.
     - Mentor wajib mengisi catatan ulasan alasan adik kelas tersebut menonjol untuk dibaca mentor lain.
+    - Mentor wajib mengisi nama penilai (contoh: *Kak Chandra*) yang otomatis tersimpan di `localStorage` perangkat.
   - **Penempatan Bintang Anti-Meluber & Gamifikasi Octalysis**:
     - Menggunakan badge taktil 3D ringkas `⭐ N` (misal `⭐ 5`).
     - Sistem Tier Gelar Bakat: 🥉 *Rising Star* (1-2 ⭐), 🥈 *Active Speaker* (3-5 ⭐), 🥇 *Champion Talent* (6+ ⭐).

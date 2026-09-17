@@ -28,7 +28,7 @@ export const COMPETITION_CATEGORIES: {
   { id: 'scrabble', label: 'Scrabble', icon: '🔠', color: 'text-emerald-700 bg-emerald-100 border-emerald-300', badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
   { id: 'spelling_bee', label: 'Spelling Bee', icon: '🐝', color: 'text-yellow-800 bg-yellow-100 border-yellow-300', badgeBg: 'bg-yellow-50 text-yellow-800 border-yellow-200' },
   { id: 'read_aloud', label: 'Read Aloud', icon: '🗣️', color: 'text-cyan-700 bg-cyan-100 border-cyan-300', badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-200' },
-  { id: 'general_active', label: 'Active Vocal / General', icon: '🌟', color: 'text-indigo-700 bg-indigo-100 border-indigo-300', badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  { id: 'general_active', label: 'Lain-lainnya', icon: '✨', color: 'text-indigo-700 bg-indigo-100 border-indigo-300', badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
 ];
 
 export const getTierInfo = (starCount: number) => {
@@ -104,7 +104,9 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
   const [modalMember, setModalMember] = useState<Member | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<CompetitionCategory>('speech');
   const [reviewNotes, setReviewNotes] = useState('');
-  const [mentorNameInput, setMentorNameInput] = useState('');
+  const [mentorNameInput, setMentorNameInput] = useState(() => {
+    return localStorage.getItem('ec_mentor_scout_name') || '';
+  });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -181,6 +183,10 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
     setModalMember(m);
     setSelectedCategory('speech');
     setReviewNotes('');
+    const savedName = localStorage.getItem('ec_mentor_scout_name') || '';
+    if (savedName) {
+      setMentorNameInput(savedName);
+    }
     setFormError(null);
   };
 
@@ -207,12 +213,21 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
       return;
     }
 
+    if (!mentorNameInput.trim()) {
+      setFormError('Wajib menuliskan nama kamu sebagai mentor penilai!');
+      sound.playError();
+      return;
+    }
+
     // Double check: anti-double star on the same meeting
     if (sessionStarsByMemberId.has(modalMember.id)) {
       setFormError('Adik ini sudah mendapatkan bintang pada pertemuan ini!');
       sound.playError();
       return;
     }
+
+    const trimmedMentorName = mentorNameInput.trim();
+    localStorage.setItem('ec_mentor_scout_name', trimmedMentorName);
 
     try {
       setIsSubmitting(true);
@@ -221,7 +236,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
         meeting_id: selectedMeetingId,
         category: selectedCategory,
         notes: reviewNotes.trim(),
-        awarded_by: mentorNameInput.trim() || 'Mentor SMEGA',
+        awarded_by: trimmedMentorName,
       });
       sound.playSuccess();
       setModalMember(null);
@@ -622,13 +637,13 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
               {/* Nama Mentor Penilai */}
               <div className="space-y-1.5">
                 <label className="text-xs font-black uppercase text-slate-600 tracking-wider block">
-                  3. Nama Mentor / Penilai:
+                  3. Nama Mentor / Penilai: <span className="text-rose-500">* (Wajib)</span>
                 </label>
                 <input
                   type="text"
                   value={mentorNameInput}
                   onChange={(e) => setMentorNameInput(e.target.value)}
-                  placeholder="Misal: Kak Chandra / Mentor Kedis"
+                  placeholder="Misal: Kak Chandra"
                   className="w-full px-3 py-2 rounded-xl bg-slate-50 border-2 border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 placeholder:text-slate-400 transition-colors"
                 />
               </div>
