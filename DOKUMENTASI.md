@@ -119,6 +119,12 @@
   - **Suara & Masukan Adik Kelas**: Menampilkan rating dan aspirasi ide *"Next Agenda"* dari adik-adik agar seluruh kakak kelas semakin peka dan merasakan aspirasi lapangan.
   - **Struktur Pengurus A20**: Bagan hierarki resmi lengkap dengan gerbang rahasia 3-tap Ketua.
   - Akses Super Admin tetap eksklusif bagi Ketua (Kontrol Sesi, Rekap Rapor Bulanan, ACC Anggota Baru, Radar Kedisiplinan A20, dan Kotak Curhat Internal Pengurus).
+- [x] Horizontal Mouse-Wheel Scrolling & Eliminasi Scrollbar Windows (`MentorDashboard.tsx` & `src/index.css`):
+  - Mengonversi putaran roda mouse vertikal (`deltaY`) langsung menjadi geseran horizontal (`scrollLeft`) saat kursor berada di atas area menu tab.
+  - Mencegah lompatan vertikal pada halaman web utama via listener `wheel` non-passive (`e.preventDefault()`).
+  - Menghilangkan scrollbar abu-abu kaku bawaan Windows dengan utility lintas browser `.scrollbar-none`.
+  - Mengatasi bug flexbox scroll clipping (`justify-start px-0.5`), sehingga ikon tab paling kiri tidak lagi terpotong.
+  - Tombol panah taktil kiri & kanan muncul otomatis (*auto-detect overflow*) saat tab melebihi lebar layar desktop.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
