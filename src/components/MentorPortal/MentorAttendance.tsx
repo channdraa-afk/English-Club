@@ -13,6 +13,7 @@ import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { supabase } from '../../lib/supabase';
+import confetti from 'canvas-confetti';
 
 interface MentorAttendanceProps {
   members: Member[];
@@ -153,6 +154,14 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
       setTokenInput('');
       setIssues('');
       setSuggestions('');
+      
+      confetti({
+        particleCount: 75,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ['#2563eb', '#dc2626', '#f59e0b', '#10b981'],
+      });
+
       onAttendanceChanged();
     } catch (err: any) {
       console.error('Error submitting mentor attendance:', err);

@@ -97,7 +97,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
   // Safety fallback if regular mentor tries to stay on a super-admin tab
   useEffect(() => {
-    if (!isSuperAdmin && activeTab !== 'mentor_attendance' && activeTab !== 'helper_a21' && activeTab !== 'structure') {
+    const allowedRegular: TabId[] = ['mentor_attendance', 'live_monitor', 'helper_a21', 'agenda', 'structure'];
+    if (!isSuperAdmin && !allowedRegular.includes(activeTab)) {
       setActiveTab('mentor_attendance');
     }
   }, [isSuperAdmin, activeTab]);
@@ -114,17 +115,19 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   }
 
   const allTabs: TabItem[] = [
-    // Operasional A21
-    { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: true },
+    // Tab Prioritas Pengurus
+    { id: 'mentor_attendance', label: 'Presensi Mandiri A20', icon: Users, category: 'a20', superOnly: false },
+    { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: false },
     { id: 'helper_a21', label: 'Bantu Absen A21', icon: HandHeart, category: 'a21', superOnly: false },
+    { id: 'agenda', label: isSuperAdmin ? 'Aspirasi & Curhat' : 'Suara & Masukan Adik', icon: Sparkles, category: 'a21', superOnly: false },
+    
+    // Khusus Super Admin / BPH
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'a21', superOnly: true },
     { id: 'recap', label: 'Rekap Rapor Bulanan', icon: FileSpreadsheet, category: 'a21', superOnly: true },
     { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'a21', superOnly: true },
-    
-    // Internal A20
     { id: 'radar', label: 'Radar Kedisiplinan A20', icon: ShieldAlert, category: 'a20', superOnly: true },
-    { id: 'mentor_attendance', label: 'Presensi Mandiri A20', icon: Users, category: 'a20', superOnly: false },
-    { id: 'agenda', label: 'Kotak Curhat & Evaluasi', icon: Sparkles, category: 'a20', superOnly: true },
+    
+    // Info Struktur
     { id: 'structure', label: 'Struktur Pengurus A20', icon: Award, category: 'a20', superOnly: false },
   ];
 
@@ -292,7 +295,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
                 }}
                 className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black whitespace-nowrap transition-all duration-75 select-none cursor-pointer border-2 ${
                   isActive
-                    ? 'bg-slate-900 text-white border-slate-950 shadow-[0_3px_0_0_#0f172a] translate-y-0'
+                    ? 'bg-blue-600 text-white border-blue-800 shadow-[0_3px_0_0_#1e3a8a] translate-y-0'
                     : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-[0_3px_0_0_#e2e8f0] active:translate-y-0.5'
                 }`}
               >
@@ -321,8 +324,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       </div>
 
       {/* Active Tab Views */}
-      {/* Live Monitor A21 */}
-      {activeTab === 'live_monitor' && isSuperAdmin && (
+      {/* Live Monitor A21 (Accessible by ALL Mentors & SuperAdmin) */}
+      {activeTab === 'live_monitor' && (
         <LiveMonitorA21
           members={members}
           activeMeeting={activeMeeting}
@@ -388,12 +391,13 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         />
       )}
 
-      {/* Kotak Curhat & Evaluasi */}
-      {activeTab === 'agenda' && isSuperAdmin && (
+      {/* Suara & Masukan Adik Kelas / Curhat Internal (Accessible by ALL Mentors & SuperAdmin) */}
+      {activeTab === 'agenda' && (
         <AgendaVault
           attendances={attendances}
           members={members}
           activeMeeting={activeMeeting}
+          isSuperAdmin={isSuperAdmin}
         />
       )}
 

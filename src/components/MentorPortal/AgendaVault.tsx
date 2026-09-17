@@ -7,14 +7,16 @@ interface AgendaVaultProps {
   attendances: Attendance[];
   members: Member[];
   activeMeeting: Meeting | null;
+  isSuperAdmin?: boolean;
 }
 
 export const AgendaVault: React.FC<AgendaVaultProps> = ({
   attendances,
   members,
   activeMeeting,
+  isSuperAdmin = false,
 }) => {
-  const [activeGroup, setActiveGroup] = useState<'a21' | 'a20'>('a20');
+  const [activeGroup, setActiveGroup] = useState<'a21' | 'a20'>('a21');
 
   const memberMap = useMemo(() => {
     return new Map(members.map((m) => [m.id, m]));
@@ -74,38 +76,59 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Category Tabs: A20 Curhat vs A21 Aspirasi */}
-      <div className="grid grid-cols-2 gap-2 bg-white p-2 rounded-3xl border-2 border-slate-200 shadow-sm">
-        <button
-          onClick={() => {
-            sound.playPop();
-            setActiveGroup('a20');
-          }}
-          className={`py-3 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
-            activeGroup === 'a20'
-              ? 'bg-indigo-900 text-white border-indigo-950 shadow-[0_3px_0_0_#1e1b4b]'
-              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <HeartHandshake className="w-4 h-4 text-indigo-300" />
-          <span>Kotak Curhat & Evaluasi A20 ({a20Curhats.length})</span>
-        </button>
+      {/* Category Tabs */}
+      {isSuperAdmin ? (
+        <div className="grid grid-cols-2 gap-2 bg-white p-2 rounded-3xl border-2 border-slate-200 shadow-sm">
+          <button
+            onClick={() => {
+              sound.playPop();
+              setActiveGroup('a21');
+            }}
+            className={`py-3 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
+              activeGroup === 'a21'
+                ? 'bg-blue-600 text-white border-blue-800 shadow-[0_3px_0_0_#1e3a8a]'
+                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <Sparkles className="w-4 h-4 text-blue-200" />
+            <span>Aspirasi Adik Kelas A21 ({a21Feedbacks.length})</span>
+          </button>
 
-        <button
-          onClick={() => {
-            sound.playPop();
-            setActiveGroup('a21');
-          }}
-          className={`py-3 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
-            activeGroup === 'a21'
-              ? 'bg-emerald-600 text-white border-emerald-800 shadow-[0_3px_0_0_#15803d]'
-              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-          }`}
-        >
-          <Sparkles className="w-4 h-4 text-emerald-200" />
-          <span>Aspirasi Adik Kelas A21 ({a21Feedbacks.length})</span>
-        </button>
-      </div>
+          <button
+            onClick={() => {
+              sound.playPop();
+              setActiveGroup('a20');
+            }}
+            className={`py-3 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
+              activeGroup === 'a20'
+                ? 'bg-indigo-900 text-white border-indigo-950 shadow-[0_3px_0_0_#1e1b4b]'
+                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+            }`}
+          >
+            <HeartHandshake className="w-4 h-4 text-indigo-300" />
+            <span>Kotak Curhat & Evaluasi A20 ({a20Curhats.length})</span>
+          </button>
+        </div>
+      ) : (
+        <div className="p-5 rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-2 border-blue-900 shadow-[0_4px_0_0_#1e3a8a] flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 rounded-2xl bg-white/20 text-white">
+              <Sparkles className="w-6 h-6 text-amber-300" />
+            </span>
+            <div>
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
+                Suara & Masukan Lapangan
+              </span>
+              <h3 className="text-lg font-black leading-tight">
+                Aspirasi & Ulasan Adik Kelas (Angkatan 21)
+              </h3>
+            </div>
+          </div>
+          <span className="text-xs font-black px-3 py-1 rounded-xl bg-white/20 text-white border border-white/30">
+            {a21Feedbacks.length} Respon
+          </span>
+        </div>
+      )}
 
       {/* Summary KPI Pills */}
       <div className="grid grid-cols-3 gap-3">

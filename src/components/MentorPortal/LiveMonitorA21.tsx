@@ -164,26 +164,26 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   return (
     <div className="space-y-6">
       {/* Hero Live Counter Card */}
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white border-2 border-emerald-900 shadow-[0_6px_0_0_#14532d] space-y-4">
+      <div className="p-6 rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-700 to-slate-900 text-white border-2 border-blue-900 shadow-[0_6px_0_0_#1e3a8a] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-200 bg-emerald-900/60 px-2.5 py-0.5 rounded-md border border-emerald-500/40">
+            <span className="text-[10px] font-black uppercase tracking-wider text-blue-200 bg-blue-900/60 px-2.5 py-0.5 rounded-md border border-blue-500/40">
               Live Monitoring Sesi Eskul
             </span>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               Presensi Angkatan 21 (Adik Kelas)
             </h2>
-            <p className="text-xs font-bold text-emerald-100">
+            <p className="text-xs font-bold text-blue-100">
               {activeMeeting ? activeMeeting.title : 'Belum Ada Sesi Pertemuan'}
             </p>
           </div>
 
           {/* Big Circular/Number Stats */}
-          <div className="bg-emerald-950/60 border-2 border-emerald-400/40 rounded-3xl p-4 text-center min-w-[150px]">
-            <div className="text-3xl sm:text-4xl font-black text-emerald-300">
-              {presentCount} <span className="text-sm font-bold text-emerald-100">/ {totalStudents}</span>
+          <div className="bg-blue-950/60 border-2 border-blue-400/40 rounded-3xl p-4 text-center min-w-[150px]">
+            <div className="text-3xl sm:text-4xl font-black text-amber-300">
+              {presentCount} <span className="text-sm font-bold text-blue-100">/ {totalStudents}</span>
             </div>
-            <p className="text-xs font-black text-emerald-200 mt-0.5">
+            <p className="text-xs font-black text-blue-200 mt-0.5">
               {overallPercent}% Sudah Hadir
             </p>
           </div>
@@ -191,13 +191,13 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
 
         {/* Dynamic Progress Bar */}
         <div className="space-y-1.5">
-          <div className="w-full h-4 bg-emerald-950/70 rounded-full overflow-hidden border border-emerald-500/50 p-0.5">
+          <div className="w-full h-4 bg-blue-950/70 rounded-full overflow-hidden border border-blue-500/50 p-0.5">
             <div
-              className="h-full bg-gradient-to-r from-amber-400 to-emerald-300 rounded-full transition-all duration-500 shadow-sm"
+              className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500 shadow-sm"
               style={{ width: `${overallPercent}%` }}
             />
           </div>
-          <div className="flex items-center justify-between text-[11px] font-extrabold text-emerald-100">
+          <div className="flex items-center justify-between text-[11px] font-extrabold text-blue-100">
             <span>🟢 Hadir: {presentCount} siswa</span>
             <span>🔴 Belum Hadir: {absentCount} siswa</span>
           </div>
