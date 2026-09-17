@@ -201,6 +201,10 @@
     - **Haram Ada Tanda Tangan**: Keduanya murni tanpa kolom tanda tangan Kedis maupun Ketua sesuai instruksi sakral Chandra.
   - **Dual Ekspor CSV Excel Windows Indonesia**:
     - `Radar_Kedisiplinan_A20_Bulanan_<Bulan>.csv` dan `Radar_Kedisiplinan_A20_Kumulatif_<Tahun>.csv` dengan delimiter titik koma (`;`) dan UTF-8 BOM (`\uFEFF`) agar tidak berantakan saat dibuka di Microsoft Excel.
+- [x] Otomasi Cloud Keep-Alive Supabase Anti-Sleep (`.github/workflows/keep-alive.yml`):
+  - **Set & Forget 100% Otomatis**: Menjalankan cron job serverless di awan GitHub Actions setiap 2 hari sekali (`0 0 */2 * *`) pada pukul 07:00 WIB untuk mem-ping REST API Supabase.
+  - **Anti-Pause 7 Hari**: Menjaga database tetap terjaga dan aktif tanpa perlu Chandra menambah data dummy/palsu ataupun membuka laptop/web secara manual di hari libur.
+  - **Bersih & Ringan**: Cukup melakukan query ringan `SELECT key FROM app_settings LIMIT 1` (hanya butuh 2-3 detik eksekusi cURL) yang langsung me-reset timer istirahat Supabase menjadi 0.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
