@@ -29,7 +29,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleLogoTap = () => {
     sound.playPop();
     const nextTap = tapCount + 1;
-    if (nextTap >= 4) {
+    if (nextTap >= 5) {
       setTapCount(0);
       onOpenMentor();
     } else {
@@ -45,7 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div 
           onClick={handleLogoTap}
           className="flex items-center gap-3 cursor-pointer select-none group"
-          title="Ketuk untuk EC SMEGA"
+          title="English Club SMEGA"
         >
           <div className="w-11 h-11 rounded-2xl bg-emerald-500 border-2 border-emerald-700 shadow-[0_3px_0_0_#15803d] flex items-center justify-center text-white font-black text-xl group-active:translate-y-0.5 transition-transform">
             EC
@@ -81,8 +81,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Mentor Portal Button */}
-          {isMentorLoggedIn ? (
+          {/* Mentor Portal Button (Hanya tampil jika sudah login) */}
+          {isMentorLoggedIn && (
             <button
               onClick={() => {
                 sound.playPop();
@@ -96,17 +96,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Shield className="w-3.5 h-3.5" />
               <span>{currentView === 'mentor' ? 'Ke Presensi' : 'Dashboard Mentor'}</span>
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                sound.playPop();
-                onOpenMentor();
-              }}
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 border border-transparent hover:border-slate-200 transition-colors"
-              title="Portal Khusus Mentor"
-            >
-              <Shield className="w-4 h-4" />
             </button>
           )}
         </div>
