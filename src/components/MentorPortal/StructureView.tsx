@@ -1,12 +1,34 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Crown, Star, Award, Shield } from 'lucide-react';
 import { Member } from '../../types/database';
+import { sound } from '../../lib/audio';
 
 interface StructureViewProps {
   members: Member[];
+  isSuperAdmin?: boolean;
+  onRequestSuperAdmin?: () => void;
 }
 
-export const StructureView: React.FC<StructureViewProps> = ({ members }) => {
+export const StructureView: React.FC<StructureViewProps> = ({ 
+  members,
+  isSuperAdmin = false,
+  onRequestSuperAdmin,
+}) => {
+  const [ketuaTapCount, setKetuaTapCount] = useState(0);
+
+  const handleKetuaTap = () => {
+    if (isSuperAdmin) return;
+    sound.playPop();
+    const next = ketuaTapCount + 1;
+    if (next >= 3) {
+      setKetuaTapCount(0);
+      onRequestSuperAdmin?.();
+    } else {
+      setKetuaTapCount(next);
+      setTimeout(() => setKetuaTapCount(0), 2500);
+    }
+  };
+
   const a20Mentors = useMemo(() => {
     return members.filter((m) => m.generation === 20 && m.status === 'active');
   }, [members]);
@@ -74,17 +96,32 @@ export const StructureView: React.FC<StructureViewProps> = ({ members }) => {
                   return (
                     <div
                       key={m.id}
+                      onClick={isKetua ? handleKetuaTap : undefined}
                       className={`p-3 rounded-2xl border transition-all ${
                         isKetua
-                          ? 'bg-amber-50 border-amber-400 shadow-[0_3px_0_0_#f59e0b]'
+                          ? 'bg-amber-50 border-amber-400 shadow-[0_3px_0_0_#f59e0b] cursor-pointer hover:bg-amber-100/60 select-none active:translate-y-0.5'
                           : isKoor
                           ? 'bg-blue-50/70 border-blue-300 shadow-[0_2px_0_0_#93c5fd]'
                           : 'bg-slate-50 border-slate-200'
                       }`}
+                      title={isKetua ? (isSuperAdmin ? '👑 Super Admin Aktif' : 'Tap 3x untuk Akses Rahasia Ketua') : undefined}
                     >
                       <div className="flex items-center justify-between gap-1">
                         <h4 className="font-extrabold text-xs text-slate-900 truncate">{m.name}</h4>
-                        {isKetua && <Crown className="w-4 h-4 text-amber-600 shrink-0" />}
+                        {isKetua && (
+                          <div className="flex items-center gap-1">
+                            {isSuperAdmin ? (
+                              <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-amber-200 text-amber-950 border border-amber-400 flex items-center gap-1 shadow-sm">
+                                <Crown className="w-3 h-3 text-amber-700" />
+                                <span>Admin</span>
+                              </span>
+                            ) : (
+                              <span className="p-1 rounded-lg bg-amber-100 text-amber-700 hover:bg-amber-200 transition-colors">
+                                <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              </span>
+                            )}
+                          </div>
+                        )}
                         {isKoor && <Star className="w-3.5 h-3.5 text-blue-600 shrink-0" />}
                       </div>
 
