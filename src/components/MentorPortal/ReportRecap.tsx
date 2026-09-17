@@ -132,18 +132,68 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   };
 
   // ==========================================
-  // MONTHLY MATRIX RECAP LOGIC (UNTUK SEKRETARIS)
+  // MONTHLY MATRIX RECAP LOGIC (OPSI B - 4 PEKAN BULANAN LENGKAP)
   // ==========================================
-  const monthMeetings = useMemo(() => {
-    return meetings
-      .filter((m) => m.meeting_date && m.meeting_date.startsWith(selectedMonth))
-      .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
-  }, [meetings, selectedMonth]);
+  interface MonthSlot {
+    dateStr: string;
+    displayDate: string;
+    weekLabel: string;
+    meeting: Meeting | null;
+    isPastOrToday: boolean;
+  }
 
-  // Non-holiday meetings for score denominator
-  const activeNonHolidayMeetings = useMemo(() => {
-    return monthMeetings.filter((m) => !m.is_holiday);
-  }, [monthMeetings]);
+  // Menghitung seluruh hari Rabu dalam bulan yang dipilih + sesi yang tersimpan di DB
+  const monthSlots = useMemo<MonthSlot[]>(() => {
+    const [yStr, mStr] = selectedMonth.split('-');
+    const year = parseInt(yStr, 10);
+    const month = parseInt(mStr, 10) - 1; // 0-indexed in Date
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    // 1. Sesi yang sudah ada di database untuk bulan ini
+    const existingMeetings = meetings.filter(
+      (m) => m.meeting_date && m.meeting_date.startsWith(selectedMonth)
+    );
+
+    // 2. Kumpulkan seluruh hari Rabu dalam bulan ini
+    const wednesdayDates: string[] = [];
+    const d = new Date(year, month, 1);
+    while (d.getMonth() === month) {
+      if (d.getDay() === 3) {
+        // 3 = Rabu
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        wednesdayDates.push(`${yyyy}-${mm}-${dd}`);
+      }
+      d.setDate(d.getDate() + 1);
+    }
+
+    // Gabungkan tanggal hari Rabu & tanggal pertemuan DB
+    const allDateSet = new Set<string>([
+      ...wednesdayDates,
+      ...existingMeetings.map((m) => m.meeting_date),
+    ]);
+    const sortedDates = Array.from(allDateSet).sort();
+
+    return sortedDates.map((dateStr, idx) => {
+      const matchedMeeting = existingMeetings.find((m) => m.meeting_date === dateStr) || null;
+      const parts = dateStr.split('-');
+      const dd = parts[2];
+      const mm = parts[1];
+      return {
+        dateStr,
+        displayDate: `${dd}/${mm}`,
+        weekLabel: `Pekan ${idx + 1}`,
+        meeting: matchedMeeting,
+        isPastOrToday: dateStr <= todayStr,
+      };
+    });
+  }, [selectedMonth, meetings]);
+
+  // Sesi efektif yang sudah benar-benar berjalan & bukan libur (pembagi nilai rapor)
+  const heldNonHolidayMeetings = useMemo(() => {
+    return monthSlots.filter((s) => s.meeting && !s.meeting.is_holiday);
+  }, [monthSlots]);
 
   // Attendance lookup: Map key = `${meeting_id}_${member_id}`
   const attendanceLookup = useMemo(() => {
@@ -164,30 +214,39 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       })
       .map((m) => {
         let presentCount = 0;
-        const meetingStatuses = monthMeetings.map((mtg) => {
-          if (mtg.is_holiday) {
-            return { meeting: mtg, status: 'holiday' as const };
+        const slotStatuses = monthSlots.map((slot) => {
+          if (!slot.meeting) {
+            return {
+              slot,
+              status: slot.isPastOrToday ? ('no_session' as const) : ('upcoming' as const),
+            };
           }
-          const hasAtt = attendanceLookup.has(`${mtg.id}_${m.id}`);
+          if (slot.meeting.is_holiday) {
+            return { slot, status: 'holiday' as const };
+          }
+          const hasAtt = attendanceLookup.has(`${slot.meeting.id}_${m.id}`);
           if (hasAtt) {
             presentCount++;
-            return { meeting: mtg, status: 'present' as const };
+            return { slot, status: 'present' as const };
           }
-          return { meeting: mtg, status: 'absent' as const };
+          if (slot.isPastOrToday) {
+            return { slot, status: 'absent' as const };
+          }
+          return { slot, status: 'upcoming' as const };
         });
 
-        const totalActive = activeNonHolidayMeetings.length;
+        const totalActive = heldNonHolidayMeetings.length;
         const percent = totalActive > 0 ? Math.round((presentCount / totalActive) * 100) : 100;
 
         return {
           member: m,
-          meetingStatuses,
+          slotStatuses,
           presentCount,
           percent,
         };
       })
       .sort((a, b) => a.member.class_name.localeCompare(b.member.class_name) || a.member.name.localeCompare(b.member.name));
-  }, [a21Students, selectedClass, searchName, monthMeetings, activeNonHolidayMeetings, attendanceLookup]);
+  }, [a21Students, selectedClass, searchName, monthSlots, heldNonHolidayMeetings, attendanceLookup]);
 
   // Print to PDF (Clean table without kop surat and without signatures)
   const handlePrintPDF = () => {
@@ -198,16 +257,18 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   // Export Monthly CSV
   const handleExportMonthlyCSV = () => {
     sound.playPop();
-    const dateHeaders = monthMeetings.map((m) => 
-      m.is_holiday ? `"${m.meeting_date} (LIBUR)"` : `"${m.meeting_date}"`
-    );
+    const dateHeaders = monthSlots.map((s) => {
+      if (s.meeting?.is_holiday) return `"${s.displayDate} (LIBUR)"`;
+      return `"${s.displayDate} (${s.weekLabel})"`;
+    });
     const headers = ['No', 'Nama Lengkap', 'Kelas', ...dateHeaders, 'Total Hadir', 'Persentase'];
 
     const rows = monthlyMatrixRows.map((r, idx) => {
-      const datesData = r.meetingStatuses.map((s) => {
+      const datesData = r.slotStatuses.map((s) => {
         if (s.status === 'holiday') return '"LIBUR"';
         if (s.status === 'present') return '"Hadir"';
-        return '"Alpha"';
+        if (s.status === 'absent') return '"Alpha"';
+        return '"-"';
       });
 
       return [
@@ -466,7 +527,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               SMK NEGERI 1 PURBALINGGA — ANGKATAN 21
             </p>
             <p className="text-xs font-bold text-slate-500 mt-0.5">
-              Periode: {formatMonthTitle(selectedMonth)} • Total Sesi: {activeNonHolidayMeetings.length} Pertemuan Efektif
+              Periode: {formatMonthTitle(selectedMonth)} • Sesi Berjalan: {heldNonHolidayMeetings.length} Pertemuan ({monthSlots.length} Slot Pekan)
             </p>
           </div>
 
@@ -512,7 +573,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
           </div>
 
           {/* Matrix Table */}
-          {monthMeetings.length === 0 ? (
+          {monthSlots.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <FileSpreadsheet className="w-10 h-10 mx-auto opacity-40 mb-2" />
               <p className="text-xs font-bold">Belum ada sesi pertemuan yang tercatat di bulan {formatMonthTitle(selectedMonth)}.</p>
@@ -525,15 +586,17 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                     <th className="border border-slate-300 py-2.5 px-2 w-8 text-center">No</th>
                     <th className="border border-slate-300 py-2.5 px-3 min-w-[160px]">Nama Lengkap</th>
                     <th className="border border-slate-300 py-2.5 px-2.5 w-20 text-center">Kelas</th>
-                    {monthMeetings.map((mtg) => (
+                    {monthSlots.map((slot) => (
                       <th
-                        key={mtg.id}
+                        key={slot.dateStr}
                         className={`border border-slate-300 py-2.5 px-2 text-center text-[11px] min-w-[70px] ${
-                          mtg.is_holiday ? 'bg-amber-100 text-amber-900' : ''
+                          slot.meeting?.is_holiday ? 'bg-amber-100 text-amber-900' : ''
                         }`}
                       >
-                        <div>{mtg.meeting_date.slice(8, 10)}/{mtg.meeting_date.slice(5, 7)}</div>
-                        {mtg.is_holiday && <span className="text-[9px] font-black uppercase text-amber-800">Libur</span>}
+                        <div className="font-extrabold">{slot.displayDate}</div>
+                        <span className="text-[9px] font-bold text-slate-500 block">
+                          {slot.meeting?.is_holiday ? 'Libur' : slot.weekLabel}
+                        </span>
                       </th>
                     ))}
                     <th className="border border-slate-300 py-2.5 px-2 text-center w-16 bg-slate-200">Hadir</th>
@@ -546,7 +609,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                       <td className="border border-slate-300 py-2 px-2 text-center text-slate-500 font-mono text-[11px]">{idx + 1}</td>
                       <td className="border border-slate-300 py-2 px-3 text-slate-900 font-extrabold">{r.member.name}</td>
                       <td className="border border-slate-300 py-2 px-2.5 text-center text-slate-600 text-[11px]">{r.member.class_name}</td>
-                      {r.meetingStatuses.map((st, sIdx) => (
+                      {r.slotStatuses.map((st, sIdx) => (
                         <td
                           key={sIdx}
                           className={`border border-slate-300 py-2 px-2 text-center text-sm ${
@@ -554,10 +617,12 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                               ? 'bg-amber-50 text-amber-600 font-bold text-[10px]'
                               : st.status === 'present'
                               ? 'text-emerald-600 font-black'
-                              : 'text-rose-400'
+                              : st.status === 'absent'
+                              ? 'text-rose-400 font-black'
+                              : 'text-slate-300 font-bold'
                           }`}
                         >
-                          {st.status === 'holiday' ? 'LIBUR' : st.status === 'present' ? '✓' : '✗'}
+                          {st.status === 'holiday' ? 'LIBUR' : st.status === 'present' ? '✓' : st.status === 'absent' ? '✗' : '-'}
                         </td>
                       ))}
                       <td className="border border-slate-300 py-2 px-2 text-center font-mono font-black text-slate-900 bg-slate-50">
