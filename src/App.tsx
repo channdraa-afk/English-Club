@@ -17,6 +17,8 @@ export const App: React.FC = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
   const [mentorPin, setMentorPin] = useState('123321');
+  const [mentorToken, setMentorToken] = useState('CREW20');
+  const [isManualBypass, setIsManualBypass] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -94,6 +96,10 @@ export const App: React.FC = () => {
             setIsRegistrationOpen(Boolean(s.value));
           } else if (s.key === 'mentor_pin') {
             setMentorPin(typeof s.value === 'string' ? s.value : String(s.value));
+          } else if (s.key === 'mentor_token') {
+            setMentorToken(typeof s.value === 'string' ? s.value : String(s.value));
+          } else if (s.key === 'manual_bypass') {
+            setIsManualBypass(Boolean(s.value));
           }
         });
       }
@@ -150,6 +156,16 @@ export const App: React.FC = () => {
       .upsert({ key: 'registration_open', value: state });
   };
 
+  const handleMentorTokenUpdated = async (tok: string) => {
+    setMentorToken(tok);
+    await supabase.from('app_settings').upsert({ key: 'mentor_token', value: tok });
+  };
+
+  const handleToggleManualBypass = async (state: boolean) => {
+    setIsManualBypass(state);
+    await supabase.from('app_settings').upsert({ key: 'manual_bypass', value: state });
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 selection:bg-emerald-200 selection:text-emerald-900">
       {/* Navbar */}
@@ -198,6 +214,7 @@ export const App: React.FC = () => {
           <MemberAttendance
             members={members}
             activeMeeting={activeMeeting}
+            isManualBypass={isManualBypass}
             onAttendanceSuccess={handleAttendanceSuccess}
           />
         ) : isMentorLoggedIn ? (
@@ -209,6 +226,10 @@ export const App: React.FC = () => {
             registrations={registrations}
             isRegistrationOpen={isRegistrationOpen}
             currentPin={mentorPin}
+            mentorToken={mentorToken}
+            onMentorTokenUpdated={handleMentorTokenUpdated}
+            isManualBypass={isManualBypass}
+            onToggleManualBypass={handleToggleManualBypass}
             isSuperAdmin={isSuperAdmin}
             onSuperAdminUnlock={handleSuperAdminUnlock}
             onSuperAdminLock={handleSuperAdminLock}
