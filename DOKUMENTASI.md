@@ -67,12 +67,15 @@
   - Kartu selebrasi *Word of the Day* siap screenshot.
 - [x] Portal Rahasia Pengurus (Mentor Dashboard):
   - Autentikasi PIN (`123321`) + auto-save login di `localStorage`.
-  - Kontrol sesi pertemuan & token generator.
-  - Rekap rapor 1-klik siap ekspor CSV dan salin tabel Excel.
+  - Pintu masuk rahasia mentor via spam-click 5x pada logo EC (ikon perisai dihapus dari navbar publik).
+  - Kontrol sesi pertemuan, token generator, dan tombol set pertemuan libur + banner pengumuman otomatis.
+  - Rekap harian dengan tombol "Tandai Hadir Manual" untuk siswa yang izin pindah ekskul.
+  - Rekap Matriks Bulanan untuk Sekretaris dengan 2 opsi ekspor: Cetak/Simpan PDF (bersih tanpa kop & tanda tangan) serta Ekspor CSV.
   - Presensi terpisah khusus mentor Angkatan 20.
   - Brankas ide & masukan siswa.
   - Portal ACC pendaftaran anggota baru (approval otomatis masuk tabel `members`).
   - Visualisasi bagan pengurus 59 anggota.
+- [x] Manajemen berkas bersih: dokumen mentah docx & json dirapikan ke dalam subfolder `arsip-data/` (di-ignore di Git).
 - [x] Standar dokumentasi `README.md` & `DOKUMENTASI.md` tanpa prompt leak.
 
 ### 3.2. Roadmap Selanjutnya
