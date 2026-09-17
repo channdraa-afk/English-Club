@@ -206,13 +206,13 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
             </p>
           </div>
 
-          <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-left max-w-md mx-auto space-y-2">
+          <div className="p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 text-left max-w-md mx-auto space-y-2 shadow-sm">
             <div className="flex items-center gap-2 text-amber-900 font-black text-xs">
-              <span>💡</span>
-              <span>Sedang jam eskul tapi presensi terkunci?</span>
+              <span className="text-base">💬</span>
+              <span className="uppercase tracking-wider">English Club SMEGA Quote</span>
             </div>
-            <p className="text-xs font-bold text-amber-800 leading-relaxed">
-              Kamu bisa minta tolong kakak kelas pengurus (Angkatan 20) untuk mengabsenkan namamu lewat fitur <strong>Bantu Absen A21</strong> di portal pengurus, atau Ketua dapat membuka sesi manual!
+            <p className="text-xs sm:text-sm font-extrabold text-amber-950 leading-relaxed italic">
+              "Jangan takut untuk mencoba ataupun salah bicara. Di English Club, setiap kesalahan adalah bukti kalau kamu berani melangkah maju. See you on Wednesday, let's learn, laugh, and grow together! 🌟"
             </p>
           </div>
         </div>
