@@ -162,6 +162,11 @@
   - **Cetak PDF A4 Landscape Anti-Kepotong**: Mengunci `@page { size: A4 landscape; margin: 8mm 6mm; }`, menetralkan padding/border/shadow card, dan mengaktifkan `print-color-adjust: exact` sehingga seluruh tabel termuat utuh tanpa huruf/kolom terpotong.
   - **Perbaikan Format CSV untuk Excel Windows Indonesia**: Menggunakan delimiter titik koma (`;`) dan UTF-8 BOM (`\uFEFF`) via Web Blob URL, sehingga saat dibuka di Microsoft Excel laptop Chandra, data otomatis terbagi ke Kolom A, B, C, D, dst tanpa menumpuk di Kolom A.
   - **Fitur 1-Klik Salin Alpa untuk WhatsApp**: Tombol taktil di `LiveMonitorA21` dan `ReportRecap` yang menyalin daftar nama adik kelas yang bolos / alpa beserta kelasnya dalam format pesan WhatsApp rapi siap paste (`Ctrl + V`).
+- [x] Optimasi UX Silent Background Refresh, Anti-Layout-Shift, & Penyesuaian Etis Status Keaktifan:
+  - **Silent Background Re-fetch**: Mengeliminasi unmount komponen `<MentorDashboard>` dan spinner layar penuh saat melakukan perubahan presensi. Refresh data berjalan senyap di latar belakang, menjaga tab aktif dan posisi scroll tetap stabil.
+  - **Persistensi Tab Aktif (`sessionStorage`)**: Menyimpan state `activeTab` di `sessionStorage` sehingga tab yang sedang dibuka (misal: Rekap & Cetak Nilai) tidak akan pernah mental kembali ke tab awal.
+  - **Anti-Layout Shift Mode Switcher**: Mengunci baris tab mode switcher dengan `flex-nowrap`, `overflow-x-auto`, dan `shrink-0` serta menyeragamkan tombol aksi kanan (`[ 🖨️ Cetak PDF ]` dan `[ 📥 Ekspor CSV ]`) sehingga tidak ada tombol yang melompat/patah ke baris kedua.
+  - **Penyesuaian Etis "Status Keaktifan"**: Mengganti istilah "Predikat Rapor" dan grading A/B/C/D menjadi **"Status Keaktifan"** (*Sangat Aktif, Aktif, Cukup Aktif, Kurang Aktif*) untuk menghormati wewenang nilai rapor Guru Pembina SMEGA.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).

@@ -368,10 +368,10 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
         const effectiveCount = presentCount + permitCount;
         const percent = totalMeetings > 0 ? Math.round((effectiveCount / totalMeetings) * 100) : 100;
 
-        let grade = 'Sangat Baik (A)';
-        if (percent < 60) grade = 'Kurang (D)';
-        else if (percent < 75) grade = 'Cukup (C)';
-        else if (percent < 85) grade = 'Baik (B)';
+        let grade = 'Sangat Aktif';
+        if (percent < 60) grade = 'Kurang Aktif';
+        else if (percent < 75) grade = 'Cukup Aktif';
+        else if (percent < 85) grade = 'Aktif';
 
         return {
           member: m,
@@ -437,7 +437,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   // Export Cumulative Semester CSV
   const handleExportCumulativeCSV = () => {
     sound.playPop();
-    const headers = ['"No"', '"Nama Lengkap"', '"Kelas"', '"Total Pertemuan"', '"Hadir (H)"', '"Izin (I)"', '"Alpa (A)"', '"% Kehadiran"', '"Predikat Rapor"'];
+    const headers = ['"No"', '"Nama Lengkap"', '"Kelas"', '"Total Pertemuan"', '"Hadir (H)"', '"Izin (I)"', '"Alpa (A)"', '"% Kehadiran"', '"Status Keaktifan"'];
 
     const rows = cumulativeMatrixRows.map((r, idx) => [
       `"${idx + 1}"`,
@@ -529,14 +529,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
 
       {/* Mode Switcher Tabs */}
       <div className="no-print flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border-2 border-slate-200 shadow-sm">
-        <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
           <button
             type="button"
             onClick={() => {
               sound.playPop();
               setRecapMode('single');
             }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
               recapMode === 'single'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -552,7 +552,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               sound.playPop();
               setRecapMode('monthly');
             }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
               recapMode === 'monthly'
                 ? 'bg-emerald-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -568,7 +568,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               sound.playPop();
               setRecapMode('cumulative');
             }}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer shrink-0 ${
               recapMode === 'cumulative'
                 ? 'bg-blue-600 text-white shadow-sm'
                 : 'text-slate-600 hover:bg-slate-100'
@@ -579,30 +579,20 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
           </button>
         </div>
 
-        {recapMode === 'monthly' && (
-          <div className="flex items-center gap-2 self-end sm:self-center">
+        {recapMode !== 'single' && (
+          <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
             <TactileButton variant="white" size="sm" onClick={handlePrintPDF}>
               <Printer className="w-3.5 h-3.5 text-slate-700" />
-              <span>Cetak / PDF</span>
+              <span>Cetak PDF</span>
             </TactileButton>
 
-            <TactileButton variant="brand" size="sm" onClick={handleExportMonthlyCSV}>
+            <TactileButton 
+              variant={recapMode === 'cumulative' ? 'blue' : 'brand'} 
+              size="sm" 
+              onClick={recapMode === 'cumulative' ? handleExportCumulativeCSV : handleExportMonthlyCSV}
+            >
               <Download className="w-3.5 h-3.5" />
               <span>Ekspor CSV</span>
-            </TactileButton>
-          </div>
-        )}
-
-        {recapMode === 'cumulative' && (
-          <div className="flex items-center gap-2 self-end sm:self-center">
-            <TactileButton variant="white" size="sm" onClick={handlePrintPDF}>
-              <Printer className="w-3.5 h-3.5 text-slate-700" />
-              <span>Cetak Rapor PDF</span>
-            </TactileButton>
-
-            <TactileButton variant="blue" size="sm" onClick={handleExportCumulativeCSV}>
-              <Download className="w-3.5 h-3.5" />
-              <span>Ekspor CSV Rapor</span>
             </TactileButton>
           </div>
         )}
@@ -1056,7 +1046,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                     <th className="border border-slate-300 py-2.5 px-2 text-center w-20 bg-amber-100 text-amber-900" title="Total Izin Resmi (I)">Izin (I)</th>
                     <th className="border border-slate-300 py-2.5 px-2 text-center w-20 bg-rose-100 text-rose-900" title="Total Alpa (A)">Alpa (A)</th>
                     <th className="border border-slate-300 py-2.5 px-3 text-center w-24 bg-blue-100 text-blue-900">% Kehadiran</th>
-                    <th className="border border-slate-300 py-2.5 px-3 text-center w-32 bg-indigo-100 text-indigo-900">Predikat Rapor</th>
+                    <th className="border border-slate-300 py-2.5 px-3 text-center w-32 bg-indigo-100 text-indigo-900">Status Keaktifan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-bold">
@@ -1095,7 +1085,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               {/* Legend & Summary Footer for Print & Screen */}
               <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-bold text-slate-600">
                 <div>
-                  <strong>Standar Rapor:</strong> ≥85% = Sangat Baik (A) • 75-84% = Baik (B) • 60-74% = Cukup (C) • &lt;60% = Kurang (D) • Izin fisik dihitung sah.
+                  <strong>Kategori Keaktifan:</strong> ≥85% = Sangat Aktif • 75-84% = Aktif • 60-74% = Cukup Aktif • &lt;60% = Kurang Aktif • Izin fisik dihitung sah.
                 </div>
                 <div>
                   Total Angkatan 21: <strong>{a21Students.length} siswa aktif</strong>

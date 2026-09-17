@@ -47,8 +47,8 @@ export const App: React.FC = () => {
   }, []);
 
   // Fetch all data from Supabase
-  const fetchData = useCallback(async () => {
-    setIsLoading(true);
+  const fetchData = useCallback(async (isSilent = false) => {
+    if (!isSilent) setIsLoading(true);
     setDbError(null);
 
     try {
@@ -107,7 +107,7 @@ export const App: React.FC = () => {
       console.error('Error fetching Supabase data:', err);
       setDbError(err.message || 'Gagal memuat data dari Supabase.');
     } finally {
-      setIsLoading(false);
+      if (!isSilent) setIsLoading(false);
     }
   }, []);
 
@@ -123,7 +123,7 @@ export const App: React.FC = () => {
     setSuccessMember(member);
     setSuccessMeeting(meeting);
     setIsWordModalOpen(true);
-    fetchData(); // Refresh attendances
+    fetchData(true); // Silent refresh
   };
 
   const handleMentorLoginSuccess = () => {
@@ -188,12 +188,12 @@ export const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="flex-1">
-        {isLoading ? (
+        {isLoading && members.length === 0 ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-slate-400">
             <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
             <p className="text-sm font-bold">Memuat Data English Club SMEGA...</p>
           </div>
-        ) : dbError ? (
+        ) : dbError && members.length === 0 ? (
           <div className="max-w-md mx-auto px-4 py-12 text-center">
             <div className="p-6 rounded-3xl bg-amber-50 border-2 border-amber-300 shadow-[0_4px_0_0_#fcd34d] space-y-3">
               <AlertCircle className="w-10 h-10 text-amber-600 mx-auto" />
@@ -202,7 +202,7 @@ export const App: React.FC = () => {
                 Tabel database belum dibuat di Supabase project kamu. Silakan jalankan skrip <code className="bg-white px-1.5 py-0.5 rounded border border-amber-300">supabase/schema.sql</code> dan <code className="bg-white px-1.5 py-0.5 rounded border border-amber-300">supabase/seed.sql</code> di SQL Editor Supabase.
               </p>
               <button
-                onClick={fetchData}
+                onClick={() => fetchData()}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-black shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -233,12 +233,12 @@ export const App: React.FC = () => {
             isSuperAdmin={isSuperAdmin}
             onSuperAdminUnlock={handleSuperAdminUnlock}
             onSuperAdminLock={handleSuperAdminLock}
-            onMeetingUpdated={fetchData}
+            onMeetingUpdated={() => fetchData(true)}
             onToggleRegistration={handleToggleRegistration}
             onPinUpdated={(pin) => setMentorPin(pin)}
-            onAttendanceChanged={fetchData}
-            onRefreshRegistrations={fetchData}
-            onMemberAdded={fetchData}
+            onAttendanceChanged={() => fetchData(true)}
+            onRefreshRegistrations={() => fetchData(true)}
+            onMemberAdded={() => fetchData(true)}
             onLogout={handleMentorLogout}
             onBackToStudent={() => setCurrentView('student')}
           />

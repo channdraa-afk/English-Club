@@ -90,7 +90,20 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   onLogout,
   onBackToStudent,
 }) => {
-  const [activeTab, setActiveTab] = useState<TabId>(isSuperAdmin ? 'live_monitor' : 'mentor_attendance');
+  const [activeTab, setActiveTabState] = useState<TabId>(() => {
+    const saved = sessionStorage.getItem('ec_active_tab') as TabId | null;
+    const allowedRegular: TabId[] = ['mentor_attendance', 'live_monitor', 'helper_a21', 'agenda', 'recap', 'structure'];
+    if (saved && (isSuperAdmin || allowedRegular.includes(saved))) {
+      return saved;
+    }
+    return isSuperAdmin ? 'live_monitor' : 'mentor_attendance';
+  });
+
+  const setActiveTab = (tab: TabId) => {
+    setActiveTabState(tab);
+    sessionStorage.setItem('ec_active_tab', tab);
+  };
+
   const [superAdminCategory, setSuperAdminCategory] = useState<'a21' | 'a20' | 'all'>('a21');
   const [isSuperModalOpen, setIsSuperModalOpen] = useState(false);
   const tabsScrollRef = useRef<HTMLDivElement>(null);
