@@ -158,8 +158,8 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
     <div className="w-full max-w-xl mx-auto px-4 py-6">
       {/* Greeting Banner */}
       <div className="text-center mb-6">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-black mb-2">
-          <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-blue-50 border border-blue-200 text-blue-900 text-xs font-black mb-2 shadow-sm">
+          <Sparkles className="w-3.5 h-3.5 text-blue-600" />
           <span>Presensi Resmi Angkatan 21</span>
         </div>
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -235,14 +235,14 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder="Ketik minimal 2 huruf namamu..."
-                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-none transition-colors"
+                    className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
                   />
                 </div>
 
                 {/* Autocomplete Dropdown */}
                 {searchResults.length > 0 && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border-2 border-emerald-500 shadow-xl overflow-hidden z-20">
-                    <div className="px-3 py-1.5 bg-emerald-50 text-[11px] font-black text-emerald-800 border-b border-emerald-200">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl border-2 border-blue-500 shadow-xl overflow-hidden z-20">
+                    <div className="px-3 py-1.5 bg-blue-50 text-[11px] font-black text-blue-900 border-b border-blue-200">
                       Klik namamu untuk memilih:
                     </div>
                     {searchResults.map((m) => (
@@ -250,12 +250,12 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
                         key={m.id}
                         type="button"
                         onClick={() => handleSelectMember(m)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 flex items-center justify-between border-b border-slate-100 last:border-none transition-colors group"
+                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 flex items-center justify-between border-b border-slate-100 last:border-none transition-colors group"
                       >
-                        <span className="font-extrabold text-sm text-slate-800 group-hover:text-emerald-700">
+                        <span className="font-extrabold text-sm text-slate-800 group-hover:text-blue-700">
                           {m.name}
                         </span>
-                        <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 group-hover:bg-emerald-200 group-hover:text-emerald-900">
+                        <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-slate-100 text-slate-600 group-hover:bg-blue-200 group-hover:text-blue-900">
                           {m.class_name}
                         </span>
                       </button>
@@ -358,7 +358,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
               value={nextAgenda}
               onChange={(e) => setNextAgenda(e.target.value)}
               placeholder="Contoh: Movie session, Kahoot games, atau Speaking games..."
-              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-none transition-colors"
+              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none transition-colors"
             />
           </div>
 
@@ -378,9 +378,9 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
                     sound.playPop();
                     setIsAnonymous(e.target.checked);
                   }}
-                  className="w-4 h-4 text-emerald-600 rounded border-slate-300 focus:ring-emerald-500 cursor-pointer"
+                  className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
                 />
-                <span className="text-xs font-bold text-slate-600">Kirim Anonim 🎭</span>
+                <span className="text-xs font-black text-slate-500">Kirim Anonim</span>
               </label>
             </div>
             <textarea
@@ -388,7 +388,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
               onChange={(e) => setCritique(e.target.value)}
               rows={2}
               placeholder="Ada materi yang kurang jelas atau masukan untuk kakak kelas?"
-              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-emerald-500 focus:outline-none transition-colors resize-none"
+              className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-bold text-slate-800 placeholder:text-slate-400 focus:bg-white focus:border-blue-500 focus:outline-none transition-colors resize-none"
             />
           </div>
 

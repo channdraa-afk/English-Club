@@ -47,13 +47,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="flex items-center gap-3 cursor-pointer select-none group"
           title="English Club SMEGA"
         >
-          <div className="w-11 h-11 rounded-2xl bg-white border-2 border-emerald-600 shadow-[0_3px_0_0_#059669] flex items-center justify-center p-1 group-active:translate-y-0.5 transition-transform overflow-hidden">
+          <div className="w-11 h-11 rounded-2xl bg-white border-2 border-blue-600 shadow-[0_3px_0_0_#1d4ed8] flex items-center justify-center p-1 group-active:translate-y-0.5 transition-transform overflow-hidden">
             <img src="/logo.png" alt="EC SMEGA Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
               <span className="font-black text-slate-900 text-lg leading-tight tracking-tight">English Club</span>
-              <span className="bg-emerald-100 text-emerald-800 text-[10px] font-black px-1.5 py-0.5 rounded-md border border-emerald-300">SMEGA</span>
+              <span className="bg-blue-100 text-blue-900 text-[10px] font-black px-1.5 py-0.5 rounded-md border border-blue-300">SMEGA</span>
             </div>
             <p className="text-[11px] text-slate-500 font-bold">SMK Negeri 1 Purbalingga</p>
           </div>
@@ -91,7 +91,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black border transition-all ${
                 currentView === 'mentor'
                   ? 'bg-slate-800 text-white border-slate-900 shadow-[0_2px_0_0_#0f172a]'
-                  : 'bg-emerald-600 text-white border-emerald-800 shadow-[0_2px_0_0_#15803d]'
+                  : 'bg-blue-600 text-white border-blue-800 shadow-[0_2px_0_0_#1e3a8a]'
               } active:translate-y-0.5`}
             >
               <Shield className="w-3.5 h-3.5" />

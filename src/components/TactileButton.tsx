@@ -2,7 +2,7 @@ import React from 'react';
 import { sound } from '../lib/audio';
 
 interface TactileButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'brand' | 'amber' | 'rose' | 'blue' | 'slate' | 'white';
+  variant?: 'brand' | 'amber' | 'rose' | 'blue' | 'slate' | 'white' | 'crimson' | 'emerald';
   size?: 'sm' | 'md' | 'lg';
   children: React.ReactNode;
 }
@@ -24,10 +24,12 @@ export const TactileButton: React.FC<TactileButtonProps> = ({
   };
 
   const variants = {
-    brand: 'bg-emerald-500 hover:bg-emerald-600 text-white border-2 border-emerald-700 shadow-[0_4px_0_0_#15803d] active:shadow-none active:translate-y-1',
+    brand: 'bg-blue-600 hover:bg-blue-500 text-white border-2 border-blue-800 shadow-[0_4px_0_0_#1e3a8a] active:shadow-none active:translate-y-1',
     amber: 'bg-amber-500 hover:bg-amber-600 text-white border-2 border-amber-700 shadow-[0_4px_0_0_#b45309] active:shadow-none active:translate-y-1',
     rose: 'bg-rose-500 hover:bg-rose-600 text-white border-2 border-rose-700 shadow-[0_4px_0_0_#be123c] active:shadow-none active:translate-y-1',
-    blue: 'bg-blue-500 hover:bg-blue-600 text-white border-2 border-blue-700 shadow-[0_4px_0_0_#1d4ed8] active:shadow-none active:translate-y-1',
+    crimson: 'bg-rose-600 hover:bg-rose-500 text-white border-2 border-rose-800 shadow-[0_4px_0_0_#9f1239] active:shadow-none active:translate-y-1',
+    emerald: 'bg-emerald-600 hover:bg-emerald-500 text-white border-2 border-emerald-800 shadow-[0_4px_0_0_#15803d] active:shadow-none active:translate-y-1',
+    blue: 'bg-blue-600 hover:bg-blue-500 text-white border-2 border-blue-800 shadow-[0_4px_0_0_#1d4ed8] active:shadow-none active:translate-y-1',
     slate: 'bg-slate-700 hover:bg-slate-800 text-white border-2 border-slate-900 shadow-[0_4px_0_0_#0f172a] active:shadow-none active:translate-y-1',
     white: 'bg-white hover:bg-slate-50 text-slate-800 border-2 border-slate-200 shadow-[0_4px_0_0_#cbd5e1] active:shadow-none active:translate-y-1',
   };

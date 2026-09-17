@@ -167,7 +167,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 selection:bg-emerald-200 selection:text-emerald-900">
+    <div className="min-h-screen flex flex-col bg-slate-50 selection:bg-blue-200 selection:text-blue-900">
       {/* Navbar */}
       <Navbar
         activeMeetingTitle={activeMeeting?.title}
