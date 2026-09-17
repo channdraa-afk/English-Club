@@ -125,6 +125,18 @@
   - Menghilangkan scrollbar abu-abu kaku bawaan Windows dengan utility lintas browser `.scrollbar-none`.
   - Mengatasi bug flexbox scroll clipping (`justify-start px-0.5`), sehingga ikon tab paling kiri tidak lagi terpotong.
   - Tombol panah taktil kiri & kanan muncul otomatis (*auto-detect overflow*) saat tab melebihi lebar layar desktop.
+- [x] Kalender Matriks 4 Slot Hari Rabu Sebulan Penuh (Opsi B) di `ReportRecap.tsx`:
+  - Otomatis memetakan seluruh hari Rabu dalam sebulan (misal September: 4 slot hari Rabu).
+  - Slot tanggal yang belum tiba berstatus `-` dan tidak mengurangi persentase kehadiran rapor siswa (`heldNonHolidayMeetings`).
+  - Ekspor cetak PDF dan file CSV langsung berformat matriks 4 pekan resmi berstandar rapor SMK Negeri 1 Purbalingga.
+- [x] Bank 50+ Idiom Kurasi & Generator Word of the Day (`src/data/idioms.ts` & `MeetingControl.tsx`):
+  - 50 idiom populer bertema motivasi, percakapan sehari-hari, dan kesuksesan dengan arti bahasa Indonesia dan contoh kalimat.
+  - Tombol **`[ 🎲 Acak dari Bank Idiom ]`** di form atur sesi pertemuan untuk pemilihan idiom kilat.
+  - Helper `getWeeklyIdiom` untuk auto-rotate mingguan yang konsisten berdasarkan nomor pekan kalender.
+- [x] Optimalisasi Responsivitas Navbar Mobile (`Navbar.tsx`):
+  - Tombol mode dibuat adaptif: `[ 🛡️ Mentor ]` / `[ 🛡️ Presensi ]` di mobile (menghemat 70px) dan `[ 🛡️ Dashboard Mentor ]` / `[ 🛡️ Ke Presensi ]` di desktop.
+  - Logo dan teks judul fleksibel (`text-base sm:text-lg`, `min-w-0`), sehingga di HP tidak akan pernah terpotong saat dalam mode siswa maupun mentor.
+  - Status sesi di desktop dirapikan menjadi `🟢 Sesi Dibuka` / `⚫ Sesi Ditutup` dengan tooltip judul lengkap tanpa efek terpotong ellipsis.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
