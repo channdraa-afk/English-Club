@@ -187,16 +187,19 @@
   - **Pemurnian Monitor Live A21 (`LiveMonitorA21.tsx`)**: Menghapus seluruh tombol mutasi absensi (`+ Hadir`, `📄 Izin`, `Batal`). Tab ini kini 100% murni menjadi *radar cockpit* pengamatan realtime (progress bar, statistik per kelas, daftar alpa, salin WhatsApp) tanpa duplikasi tombol.
   - **Sentralisasi Bantuan Presensi di `Bantu Absen A21` (`HelperAttendanceA21.tsx`)**: Satu-satunya tempat sah bagi mentor di lapangan untuk membantu adik kelas yang tidak bawa HP / kuota habis saat sesi eskul aktif.
   - **Penguncian Akses Modifikasi Presensi (Anti Otak-Atik di `ReportRecap.tsx`)**: Kolom *"Aksi (Bisa Diatur Kapan Saja)"* dan tombol manipulasi status hadir/izin/batal dikunci total dan hanya muncul untuk **Super Admin (Ketua Chandra)**. Mentor biasa, Kedis, dan Sekre hanya berada di mode *Read-Only & Print/Export* demi menjaga integritas data nilai rapor.
-  - **Rekap Presensi & Radar Kedisiplinan A20 untuk Kedis (`MentorDisciplineRadar.tsx`)**:
-    - Dibuka untuk Sie Kedisiplinan (Prisa Aztasyah & tim) dan seluruh pengurus di menu `🛡️ Internal A20`.
-    - Fitur **`[ 🖨️ Cetak PDF Kedisiplinan ]`** A4 landscape resmi yang langsung menampilkan ringkasan KPI dan tabel 59 pengurus (tanpa lembar tanda tangan Kedis & Ketua sesuai arahan Chandra).
-    - Fitur **`[ 📥 Ekspor CSV Kedisiplinan ]`** standar Excel Windows Indonesia (delimiter `;` dan UTF-8 BOM `\uFEFF`).
-    - Tab murni *Safe by Design* (100% read-only tanpa endpoint pengubahan kehadiran pengurus lain).
-  - **Logo Resmi English Club (`public/logo.png`) di Seluruh Kop PDF**:
-    - Disematkan secara profesional pada kop dokumen cetak PDF: Rekap Bulanan A21 (Sekretaris), Rapor Semester A21 (Sekretaris), dan Rekap Presensi A20 (Sie Kedisiplinan).
-  - **Kategori Switcher Terbuka untuk Seluruh Pengurus (`MentorDashboard.tsx`)**:
-    - Mentor biasa / Kedis kini menikmati kenyamanan Category Switcher: `[ 🎒 Operasional A21 ]`, `[ 🛡️ Internal A20 ]`, dan `[ 📚 Semua ]`.
-    - Menu `[ 🌐 Umum ]` (Kontrol Token, Bypass, ACC Pendaftaran) dan tab `💬 Curhat & Evaluasi A20` tetap **100% terkunci rahasia khusus Super Admin**.
+- [x] Dual-Mode Rekap Kedisiplinan A20, Teguran WhatsApp Kedis, & Dual Ekspor PDF/CSV (`MentorDisciplineRadar.tsx`):
+  - **Mode Switcher (Bulanan vs Kumulatif Semester/Tahunan)**:
+    - *Mode Bulanan (Shift 2x)*: Mengevaluasi target kuota 2x kehadiran per bulan aktif, matriks per tanggal sesi hari Rabu, dan persentase kepatuhan bulanan.
+    - *Mode Kumulatif / Tahunan*: Mengakumulasi total seluruh sesi eskul yang terlaksana sepanjang semester/tahun ajaran, total hadir, target shift 50%, persentase kehadiran, dan predikat dedikasi (*Super Dedikasi ≥75%*, *Disiplin Sesuai Shift ≥50%*, *Kurang Kuota <50%*, *Kritis 0x Hadir*).
+  - **1-Klik Salin Alpa / Kritis ke WhatsApp untuk Sie Kedisiplinan (Kedis)**:
+    - Tombol taktil cerdas `[ 📋 Salin Alpa / Kritis ke WA ]` dengan feedback Web Audio API & visual konfirmasi 3 detik.
+    - Otomatis merangkum daftar kakak pengurus A20 yang tercatat alpa / kritis (0x hadir) beserta jabatan/sie dan kelasnya ke format pesan resmi WA yang santun namun tegas untuk grup pengurus.
+  - **Dual Ekspor Cetak PDF A4 Landscape Resmi**:
+    - Mode Bulanan: Menghasilkan lembar cetak PDF rekap bulanan dengan kop Logo Resmi EC (`/logo.png`), ringkasan KPI, dan matriks tanggal kehadiran.
+    - Mode Kumulatif: Menghasilkan lembar cetak PDF rekap kumulatif dengan kop Logo Resmi EC (`/logo.png`), ringkasan KPI tahunan, total sesi, dan status dedikasi.
+    - **Haram Ada Tanda Tangan**: Keduanya murni tanpa kolom tanda tangan Kedis maupun Ketua sesuai instruksi sakral Chandra.
+  - **Dual Ekspor CSV Excel Windows Indonesia**:
+    - `Radar_Kedisiplinan_A20_Bulanan_<Bulan>.csv` dan `Radar_Kedisiplinan_A20_Kumulatif_<Tahun>.csv` dengan delimiter titik koma (`;`) dan UTF-8 BOM (`\uFEFF`) agar tidak berantakan saat dibuka di Microsoft Excel.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).

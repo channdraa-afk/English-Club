@@ -10,7 +10,11 @@ import {
   Users, 
   ArrowUpDown,
   CalendarCheck,
-  Printer
+  Printer,
+  MessageSquare,
+  Copy,
+  Check,
+  Layers
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -28,11 +32,13 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   attendances,
 }) => {
   const currentMonthStr = new Date().toISOString().slice(0, 7);
+  const [radarMode, setRadarMode] = useState<'monthly' | 'cumulative'>('monthly');
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
   const [searchName, setSearchName] = useState('');
   const [selectedSie, setSelectedSie] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'critical' | 'warning' | 'safe'>('all');
   const [sortBy, setSortBy] = useState<'attention' | 'highest' | 'name'>('attention');
+  const [copiedWA, setCopiedWA] = useState(false);
 
   // Filter only Angkatan 20 active mentors (59 members)
   const a20Mentors = useMemo(() => {
@@ -60,6 +66,13 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
     return monthMeetings.filter((m) => !m.is_holiday);
   }, [monthMeetings]);
 
+  // All non-holiday meetings across the entire semester / year
+  const allHeldMeetings = useMemo(() => {
+    return meetings
+      .filter((m) => m.meeting_date && !m.is_holiday)
+      .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
+  }, [meetings]);
+
   // List of distinct sie sections
   const sieOptions = useMemo(() => {
     const list = [
@@ -69,10 +82,9 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
     return list;
   }, []);
 
-  // Compute evaluation per mentor
-  const mentorEvaluations = useMemo(() => {
+  // 1. Compute evaluation per mentor for MONTHLY mode
+  const monthlyEvaluations = useMemo(() => {
     return a20Mentors.map((mentor) => {
-      // Find attendances in effective meetings this month
       const attendedMeetings = effectiveMeetings.filter((meeting) => {
         return attendances.some(
           (a) => a.meeting_id === meeting.id && a.member_id === mentor.id
@@ -97,27 +109,82 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
       } else {
         status = 'safe';
         isOverachiever = true;
-        statusLabel = `Super Rajin (${count}x Hadir)`;
+        statusLabel = `Super Dedikasi (${count}x Hadir)`;
       }
 
       return {
         mentor,
         attendedMeetings,
         count,
+        target: 2,
+        totalMeetings: effectiveMeetings.length,
         status,
         statusLabel,
         isOverachiever,
+        percent: effectiveMeetings.length > 0 ? Math.round((count / effectiveMeetings.length) * 100) : 100,
       };
     });
   }, [a20Mentors, effectiveMeetings, attendances]);
 
+  // 2. Compute evaluation per mentor for CUMULATIVE / TAHUNAN mode
+  const cumulativeEvaluations = useMemo(() => {
+    const totalMeetings = allHeldMeetings.length;
+    // Standard target: 50% attendance (since 2x out of 4 weeks = 50%)
+    const targetMeetings = Math.ceil(totalMeetings * 0.5);
+
+    return a20Mentors.map((mentor) => {
+      const attendedMeetings = allHeldMeetings.filter((meeting) => {
+        return attendances.some(
+          (a) => a.meeting_id === meeting.id && a.member_id === mentor.id
+        );
+      });
+
+      const count = attendedMeetings.length;
+      const percent = totalMeetings > 0 ? Math.round((count / totalMeetings) * 100) : 100;
+
+      let status: 'critical' | 'warning' | 'safe' = 'safe';
+      let statusLabel = 'Disiplin Sesuai Kuota';
+      let isOverachiever = false;
+
+      if (count === 0) {
+        status = 'critical';
+        statusLabel = 'Kritis (0x Hadir)';
+      } else if (percent < 50) {
+        status = 'warning';
+        statusLabel = `Kurang Kuota (${percent}%)`;
+      } else if (percent >= 75) {
+        status = 'safe';
+        isOverachiever = true;
+        statusLabel = `Super Dedikasi (${percent}%)`;
+      } else {
+        status = 'safe';
+        statusLabel = `Disiplin Sesuai Shift (${percent}%)`;
+      }
+
+      return {
+        mentor,
+        attendedMeetings,
+        count,
+        target: targetMeetings,
+        totalMeetings,
+        status,
+        statusLabel,
+        isOverachiever,
+        percent,
+      };
+    });
+  }, [a20Mentors, allHeldMeetings, attendances]);
+
+  // Active evaluations list based on selected mode
+  const currentEvaluations = radarMode === 'monthly' ? monthlyEvaluations : cumulativeEvaluations;
+
   // KPI Statistics
   const stats = useMemo(() => {
-    const total = mentorEvaluations.length;
-    const safeCount = mentorEvaluations.filter((e) => e.status === 'safe').length;
-    const warningCount = mentorEvaluations.filter((e) => e.status === 'warning').length;
-    const criticalCount = mentorEvaluations.filter((e) => e.status === 'critical').length;
-    const overachieverCount = mentorEvaluations.filter((e) => e.isOverachiever).length;
+    const total = currentEvaluations.length;
+    const safeCount = currentEvaluations.filter((e) => e.status === 'safe').length;
+    const warningCount = currentEvaluations.filter((e) => e.status === 'warning').length;
+    const criticalCount = currentEvaluations.filter((e) => e.status === 'critical').length;
+    const overachieverCount = currentEvaluations.filter((e) => e.isOverachiever).length;
 
     return {
       total,
@@ -127,11 +194,11 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
       overachieverCount,
       complianceRate: total > 0 ? Math.round((safeCount / total) * 100) : 0,
     };
-  }, [mentorEvaluations]);
+  }, [currentEvaluations]);
 
   // Filtered and Sorted list
   const filteredList = useMemo(() => {
-    return mentorEvaluations
+    return currentEvaluations
       .filter((item) => {
         const matchesName =
           !searchName.trim() ||
@@ -150,7 +217,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
       })
       .sort((a, b) => {
         if (sortBy === 'attention') {
-          // 0x first, then 1x, then 2x, then overachievers
+          // 0x first, then 1x / low attendance, then 2x+, then overachievers
           if (a.count !== b.count) return a.count - b.count;
           return a.mentor.name.localeCompare(b.mentor.name);
         }
@@ -160,7 +227,44 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         }
         return a.mentor.name.localeCompare(b.mentor.name);
       });
-  }, [mentorEvaluations, searchName, selectedSie, selectedStatus, sortBy]);
+  }, [currentEvaluations, searchName, selectedSie, selectedStatus, sortBy]);
+
+  // 1-Click Copy Absent/Critical List to WhatsApp for Kedis
+  const handleCopyAbsentWA = () => {
+    sound.playPop();
+    const criticalMentors = filteredList.filter((item) => item.status === 'critical');
+
+    if (criticalMentors.length === 0) {
+      alert(
+        radarMode === 'monthly'
+          ? `Alhamdulillah, seluruh pengurus Angkatan 20 tercatat sudah bertugas minimal 1x di bulan ${formatMonthTitle(selectedMonth)}! 🎉`
+          : 'Alhamdulillah, seluruh pengurus Angkatan 20 tercatat aktif bertugas di sesi semester ini! 🎉'
+      );
+      return;
+    }
+
+    const periodTitle = radarMode === 'monthly' 
+      ? formatMonthTitle(selectedMonth) 
+      : `Akumulasi Seluruh Pertemuan (${allHeldMeetings.length} Sesi Terlaksana)`;
+
+    let text = `📢 *EVALUASI KEDISIPLINAN PENGURUS A20 — ENGLISH CLUB SMEGA*\n`;
+    text += `📅 *Periode:* ${periodTitle}\n`;
+    text += `👥 *Total Pengurus Kritis (0x Hadir):* ${criticalMentors.length} Pengurus\n\n`;
+    text += `Berikut Kakak Pengurus Angkatan 20 yang tercatat *Belum Hadir / Belum Memenuhi Shift*:\n`;
+
+    criticalMentors.forEach((item, idx) => {
+      text += `${idx + 1}. ${item.mentor.name} — *${item.mentor.position}* (${item.mentor.class_name})\n`;
+    });
+
+    text += `\n⚠️ *Peringatan Kedisiplinan:*
+Sesuai komitmen awal kepengurusan, setiap pengurus wajib memenuhi kuota shift minimal 2x sesi aktif per bulan untuk mendampingi adik-adik kelas A21. Mohon konfirmasi kendala dan segera jadwalkan kehadiran shift di pekan berikutnya ke Sie Kedisiplinan. Terima kasih! 🙏✨`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      sound.playSuccess();
+      setCopiedWA(true);
+      setTimeout(() => setCopiedWA(false), 3000);
+    });
+  };
 
   // Handle Print PDF
   const handlePrintPdf = () => {
@@ -168,8 +272,8 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
     window.print();
   };
 
-  // Export CSV function (Standard Excel Windows Indonesia: ';' with UTF-8 BOM)
-  const handleExportCsv = () => {
+  // Export Monthly CSV (Standard Excel Windows Indonesia: ';' with UTF-8 BOM)
+  const handleExportMonthlyCsv = () => {
     sound.playSuccess();
 
     const headers = [
@@ -202,7 +306,49 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Radar_Kedisiplinan_A20_${selectedMonth}.csv`;
+    link.download = `Radar_Kedisiplinan_A20_Bulanan_${selectedMonth}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export Cumulative Semester CSV
+  const handleExportCumulativeCsv = () => {
+    sound.playSuccess();
+
+    const headers = [
+      'No',
+      'Nama Lengkap',
+      'Kelas',
+      'Jabatan / Sie',
+      'Total Pertemuan Terlaksana',
+      'Total Hadir',
+      'Target Shift Minimal (50%)',
+      'Persentase Kehadiran',
+      'Status Dedikasi',
+    ];
+
+    const rows = filteredList.map((item, idx) => {
+      return [
+        idx + 1,
+        `"${item.mentor.name.replace(/"/g, '""')}"`,
+        `"${item.mentor.class_name}"`,
+        `"${item.mentor.position.replace(/"/g, '""')}"`,
+        `${allHeldMeetings.length} Sesi`,
+        `${item.count} Sesi`,
+        `${item.target} Sesi`,
+        `"${item.percent}%"`,
+        `"${item.statusLabel}"`,
+      ].join(';');
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Radar_Kedisiplinan_A20_Kumulatif_${new Date().getFullYear()}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -268,6 +414,59 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         }
       `}</style>
 
+      {/* Mode Switcher Bar (Hidden in Print) */}
+      <div className="no-print flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-3xl border-2 border-slate-200 shadow-sm">
+        <div className="flex items-center gap-1.5 flex-nowrap overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setRadarMode('monthly');
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+              radarMode === 'monthly'
+                ? 'bg-indigo-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Calendar className="w-4 h-4" />
+            <span>Rekap Bulanan (Shift 2x)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setRadarMode('cumulative');
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs font-black transition-all cursor-pointer shrink-0 ${
+              radarMode === 'cumulative'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Rekap Kumulatif / Tahunan</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+          <TactileButton variant="white" size="sm" onClick={handlePrintPdf}>
+            <Printer className="w-3.5 h-3.5 text-slate-700" />
+            <span>Cetak PDF Kedis</span>
+          </TactileButton>
+
+          <TactileButton
+            variant={radarMode === 'cumulative' ? 'blue' : 'brand'}
+            size="sm"
+            onClick={radarMode === 'cumulative' ? handleExportCumulativeCsv : handleExportMonthlyCsv}
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Ekspor CSV ({radarMode === 'monthly' ? 'Bulanan' : 'Kumulatif'})</span>
+          </TactileButton>
+        </div>
+      </div>
+
       {/* Top Banner (Hidden in Print) */}
       <div className="no-print p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-500 shadow-[0_6px_0_0_#312e81] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -279,52 +478,111 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
               <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300">
                 Pusat Kendali Kedisiplinan Pengurus
               </span>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2">
-                <span>Radar Kedisiplinan Angkatan 20</span>
+              <h2 className="text-xl sm:text-2xl font-black tracking-tight flex items-center gap-2 flex-wrap">
+                <span>
+                  {radarMode === 'monthly'
+                    ? 'Radar Kedisiplinan Angkatan 20 (Bulanan)'
+                    : 'Rekap Kedisiplinan Kumulatif Angkatan 20'}
+                </span>
                 <span className="text-xs px-2 py-0.5 rounded-md bg-amber-400 text-slate-950 font-black border border-amber-300">
-                  Target: 2x/Bulan
+                  {radarMode === 'monthly' ? 'Target: 2x/Bulan' : `Target: 50% (${Math.ceil(allHeldMeetings.length * 0.5)} Sesi)`}
                 </span>
               </h2>
             </div>
           </div>
 
-          {/* Month Selector */}
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-indigo-300 shrink-0" />
-            <select
-              value={selectedMonth}
-              onChange={(e) => {
-                sound.playPop();
-                setSelectedMonth(e.target.value);
-              }}
-              className="bg-indigo-900/80 text-white border-2 border-indigo-400 rounded-2xl px-3 py-1.5 text-xs font-black focus:outline-none focus:ring-2 focus:ring-indigo-300"
-            >
-              {availableMonths.map((m) => (
-                <option key={m} value={m} className="bg-slate-900 text-white">
-                  {formatMonthTitle(m)}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Month Selector (Only in monthly mode) */}
+          {radarMode === 'monthly' && (
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-indigo-300 shrink-0" />
+              <select
+                value={selectedMonth}
+                onChange={(e) => {
+                  sound.playPop();
+                  setSelectedMonth(e.target.value);
+                }}
+                className="bg-indigo-900/80 text-white border-2 border-indigo-400 rounded-2xl px-3 py-1.5 text-xs font-black focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              >
+                {availableMonths.map((m) => (
+                  <option key={m} value={m} className="bg-slate-900 text-white">
+                    {formatMonthTitle(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
 
         <p className="text-xs font-bold text-indigo-200/90 leading-relaxed max-w-2xl">
-          Aturan Shift Chandra: Setiap Sie mengirimkan 50% anggota per minggu (fleksibel hadir 2 minggu berturut-turut). 
-          Selama dalam sebulan hadir minimal <strong>2 kali pertemuan aktif</strong>, status pengurus dinyatakan <strong>AMAN</strong>.
+          {radarMode === 'monthly' ? (
+            <>
+              Aturan Shift Chandra: Setiap Sie mengirimkan 50% anggota per minggu (fleksibel hadir 2 minggu berturut-turut). 
+              Selama dalam sebulan hadir minimal <strong>2 kali pertemuan aktif</strong>, status pengurus dinyatakan <strong>AMAN</strong>.
+            </>
+          ) : (
+            <>
+              Rekapitulasi Akumulasi: Menghitung persentase keaktifan seluruh sesi yang telah terlaksana sepanjang semester. 
+              Pengurus dengan kehadiran <strong>≥50%</strong> dinyatakan <strong>DISIPLIN</strong>, dan <strong>≥75%</strong> dinyatakan <strong>SUPER DEDIKASI</strong>.
+            </>
+          )}
         </p>
 
         <div className="pt-1 flex flex-wrap items-center gap-2 text-[11px] font-bold text-indigo-200">
           <span className="flex items-center gap-1 bg-indigo-800/60 px-2.5 py-1 rounded-xl border border-indigo-600/50">
             <CalendarCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Pertemuan Aktif Bulan Ini: <strong>{effectiveMeetings.length} Sesi</strong></span>
+            <span>
+              {radarMode === 'monthly'
+                ? `Pertemuan Aktif Bulan Ini: ${effectiveMeetings.length} Sesi`
+                : `Total Pertemuan Terlaksana Semester Ini: ${allHeldMeetings.length} Sesi`}
+            </span>
           </span>
-          {monthMeetings.some((m) => m.is_holiday) && (
+          {radarMode === 'monthly' && monthMeetings.some((m) => m.is_holiday) && (
             <span className="flex items-center gap-1 bg-rose-900/60 text-rose-200 px-2.5 py-1 rounded-xl border border-rose-700/50">
               <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
               <span>Libur: {monthMeetings.filter((m) => m.is_holiday).length} Pertemuan</span>
             </span>
           )}
         </div>
+      </div>
+
+      {/* WhatsApp Broadcast Banner for Kedis (Hidden in Print) */}
+      <div className="no-print p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-300 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+            <MessageSquare className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+              Teguran WhatsApp Sie Kedisiplinan (Kedis)
+            </h4>
+            <p className="text-[11px] font-bold text-emerald-800">
+              {stats.criticalCount > 0
+                ? `Terdapat ${stats.criticalCount} pengurus A20 berstatus Kritis (0x hadir) pada periode ini.`
+                : 'Alhamdulillah, seluruh pengurus Angkatan 20 sudah hadir memenuhi kuota sesi.'}
+            </p>
+          </div>
+        </div>
+
+        <TactileButton
+          onClick={handleCopyAbsentWA}
+          variant="brand"
+          size="sm"
+          className={`shrink-0 py-2 px-4 text-xs font-black ${
+            stats.criticalCount === 0 ? 'opacity-75' : ''
+          }`}
+        >
+          {copiedWA ? (
+            <>
+              <Check className="w-4 h-4 text-white" />
+              <span>Tersalin ke WhatsApp!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              <span>Salin Alpa / Kritis ke WA</span>
+            </>
+          )}
+        </TactileButton>
       </div>
 
       {/* KPI Cards Grid (Hidden in Print) */}
@@ -341,7 +599,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
             {stats.safeCount} <span className="text-xs font-bold text-emerald-700">/ {stats.total}</span>
           </div>
           <p className="text-[10px] font-extrabold text-emerald-700">
-            {stats.complianceRate}% Memenuhi Kuota (≥2x)
+            {stats.complianceRate}% Memenuhi Kuota ({radarMode === 'monthly' ? '≥2x' : '≥50%'})
           </p>
         </div>
 
@@ -357,15 +615,15 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
             {stats.overachieverCount} <span className="text-xs font-bold text-amber-700">Orang</span>
           </div>
           <p className="text-[10px] font-extrabold text-amber-700">
-            Hadir Lebih dari Kuota (&gt;2x)
+            {radarMode === 'monthly' ? 'Hadir Lebih dari Kuota (>2x)' : 'Kehadiran Prima (≥75%)'}
           </p>
         </div>
 
-        {/* Warning (1x) */}
+        {/* Warning (1x / <50%) */}
         <div className="p-4 rounded-3xl bg-yellow-50 border-2 border-yellow-300 shadow-[0_4px_0_0_#fef08a] space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-wider text-yellow-800">
-              Kurang 1 Sesi
+              {radarMode === 'monthly' ? 'Kurang 1 Sesi' : 'Di Bawah Kuota'}
             </span>
             <AlertTriangle className="w-4 h-4 text-yellow-600" />
           </div>
@@ -373,7 +631,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
             {stats.warningCount} <span className="text-xs font-bold text-yellow-700">Orang</span>
           </div>
           <p className="text-[10px] font-extrabold text-yellow-700">
-            Baru Hadir 1x (Perlu 1x Lagi)
+            {radarMode === 'monthly' ? 'Baru Hadir 1x (Perlu 1x Lagi)' : 'Kehadiran di Bawah 50%'}
           </p>
         </div>
 
@@ -410,7 +668,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
           </div>
 
           {/* Sie Filter */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
             <select
               value={selectedSie}
               onChange={(e) => {
@@ -436,8 +694,8 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
             >
               <option value="all">Semua Status</option>
               <option value="critical">🔴 Kritis (0x)</option>
-              <option value="warning">🟡 Kurang (1x)</option>
-              <option value="safe">🟢 Aman (≥2x)</option>
+              <option value="warning">{radarMode === 'monthly' ? '🟡 Kurang (1x)' : '🟡 Kurang (<50%)'}</option>
+              <option value="safe">{radarMode === 'monthly' ? '🟢 Aman (≥2x)' : '🟢 Aman (≥50%)'}</option>
             </select>
 
             {/* Sort Toggle */}
@@ -448,7 +706,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
                   prev === 'attention' ? 'highest' : prev === 'highest' ? 'name' : 'attention'
                 );
               }}
-              className="px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 border-2 border-slate-200 text-xs font-black flex items-center gap-1 transition-colors"
+              className="px-3 py-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 border-2 border-slate-200 text-xs font-black flex items-center gap-1 transition-colors shrink-0"
               title="Ganti Pengurutan"
             >
               <ArrowUpDown className="w-3.5 h-3.5" />
@@ -473,17 +731,17 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
               className="py-1.5 px-3 text-xs"
             >
               <Printer className="w-3.5 h-3.5 text-slate-700" />
-              <span>Cetak PDF Kedisiplinan</span>
+              <span>Cetak PDF Kedis</span>
             </TactileButton>
 
             <TactileButton
-              onClick={handleExportCsv}
-              variant="brand"
+              onClick={radarMode === 'cumulative' ? handleExportCumulativeCsv : handleExportMonthlyCsv}
+              variant={radarMode === 'cumulative' ? 'blue' : 'brand'}
               size="sm"
               className="py-1.5 px-3 text-xs"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Ekspor CSV Kedisiplinan</span>
+              <span>Ekspor CSV ({radarMode === 'monthly' ? 'Bulanan' : 'Kumulatif'})</span>
             </TactileButton>
           </div>
         </div>
@@ -498,7 +756,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
           </div>
         ) : (
           filteredList.map((item) => {
-            const { mentor, count, status, isOverachiever, attendedMeetings } = item;
+            const { mentor, count, target, status, isOverachiever, attendedMeetings, percent } = item;
 
             return (
               <div
@@ -523,7 +781,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
                     {isOverachiever && (
                       <span className="flex items-center gap-0.5 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black">
                         <Star className="w-3 h-3 fill-amber-500 text-amber-600" />
-                        <span>Overachiever</span>
+                        <span>Super Dedikasi</span>
                       </span>
                     )}
                   </div>
@@ -531,30 +789,40 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
                     {mentor.position}
                   </p>
 
-                  {/* Attended meeting dates pills */}
-                  <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                    <span className="text-[10px] font-bold text-slate-400">Kehadiran:</span>
-                    {effectiveMeetings.length === 0 ? (
-                      <span className="text-[10px] text-slate-400 italic">Belum ada sesi di bulan ini</span>
-                    ) : (
-                      effectiveMeetings.map((m) => {
-                        const hasAttended = attendedMeetings.some((am) => am.id === m.id);
-                        return (
-                          <span
-                            key={m.id}
-                            title={`${m.title || 'Pertemuan'} (${m.meeting_date})`}
-                            className={`px-1.5 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1 ${
-                              hasAttended
-                                ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                : 'bg-slate-100 text-slate-400 border border-slate-200'
-                            }`}
-                          >
-                            {hasAttended ? '✓' : '✗'} {m.meeting_date.slice(8)}
-                          </span>
-                        );
-                      })
-                    )}
-                  </div>
+                  {/* Attended meeting dates pills / info */}
+                  {radarMode === 'monthly' ? (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                      <span className="text-[10px] font-bold text-slate-400">Kehadiran:</span>
+                      {effectiveMeetings.length === 0 ? (
+                        <span className="text-[10px] text-slate-400 italic">Belum ada sesi di bulan ini</span>
+                      ) : (
+                        effectiveMeetings.map((m) => {
+                          const hasAttended = attendedMeetings.some((am) => am.id === m.id);
+                          return (
+                            <span
+                              key={m.id}
+                              title={`${m.title || 'Pertemuan'} (${m.meeting_date})`}
+                              className={`px-1.5 py-0.5 rounded-md text-[10px] font-black flex items-center gap-1 ${
+                                hasAttended
+                                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                  : 'bg-slate-100 text-slate-400 border border-slate-200'
+                              }`}
+                            >
+                              {hasAttended ? '✓' : '✗'} {m.meeting_date.slice(8)}
+                            </span>
+                          );
+                        })
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 pt-1 text-xs font-bold text-slate-500">
+                      <span>Total: <strong>{count}</strong> dari {allHeldMeetings.length} Sesi Terlaksana</span>
+                      <span>•</span>
+                      <span className={percent >= 50 ? 'text-emerald-700 font-black' : 'text-rose-600 font-black'}>
+                        {percent}% Kehadiran
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Status Badge & Attendance Count */}
@@ -562,13 +830,13 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-bold text-slate-500">Total:</span>
                     <span className={`text-base font-black px-2 py-0.5 rounded-xl border ${
-                      count >= 2 
+                      count >= target 
                         ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                        : count === 1
+                        : count > 0
                         ? 'bg-yellow-50 text-yellow-900 border-yellow-300'
                         : 'bg-rose-50 text-rose-900 border-rose-300'
                     }`}>
-                      {count} / 2 Sesi
+                      {count} / {target} Sesi
                     </span>
                   </div>
 
@@ -593,6 +861,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
 
       {/* ========================================================= */}
       {/* OFFICIAL PRINTABLE RECAP TABLE FOR KEDIS (A4 LANDSCAPE) */}
+      {/* HARAM ADA TANDA TANGAN (NO SIGNATURES AT ALL) */}
       {/* ========================================================= */}
       <div id="printable-discipline-radar" className="hidden print:block space-y-4 bg-white p-6">
         {/* Official Clean Heading with EC Logo */}
@@ -601,13 +870,17 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
             <img src="/logo.png" alt="EC SMEGA Logo" className="w-14 h-14 object-contain shrink-0" />
             <div>
               <h2 className="text-lg font-black text-slate-950 uppercase tracking-tight leading-tight">
-                REKAPITULASI KEDISIPLINAN & PRESENSI PENGURUS (ANGKATAN 20)
+                {radarMode === 'monthly'
+                  ? 'REKAPITULASI KEDISIPLINAN BULANAN PENGURUS (ANGKATAN 20)'
+                  : 'REKAPITULASI KEDISIPLINAN KUMULATIF / TAHUNAN PENGURUS (ANGKATAN 20)'}
               </h2>
               <p className="text-xs font-black text-slate-700 mt-0.5">
                 EKSTRAKURIKULER ENGLISH CLUB — SMK NEGERI 1 PURBALINGGA
               </p>
               <p className="text-[11px] font-bold text-slate-500 mt-0.5">
-                Periode: {formatMonthTitle(selectedMonth)} • Standar Shift: Minimal 2x Hadir per Bulan • {effectiveMeetings.length} Pertemuan Aktif
+                {radarMode === 'monthly'
+                  ? `Periode: ${formatMonthTitle(selectedMonth)} • Standar Shift: Minimal 2x Hadir per Bulan • ${effectiveMeetings.length} Pertemuan Aktif`
+                  : `Periode: Akumulasi Seluruh Pertemuan Semester / Tahun Ajaran • ${allHeldMeetings.length} Pertemuan Terlaksana • Target Shift: 50%`}
               </p>
             </div>
           </div>
@@ -621,62 +894,119 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         {/* Compact KPI Summary Bar */}
         <div className="grid grid-cols-4 gap-2.5 p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-[11px] font-bold text-slate-800">
           <div>Total Pengurus: <strong>{stats.total} Orang</strong></div>
-          <div>Aman (≥2x): <strong className="text-emerald-700">{stats.safeCount} Orang ({stats.complianceRate}%)</strong></div>
-          <div>Kurang 1 Sesi (1x): <strong className="text-amber-700">{stats.warningCount} Orang</strong></div>
+          <div>Aman / Disiplin: <strong className="text-emerald-700">{stats.safeCount} Orang ({stats.complianceRate}%)</strong></div>
+          <div>{radarMode === 'monthly' ? 'Kurang 1 Sesi (1x):' : 'Di Bawah Kuota (<50%):'} <strong className="text-amber-700">{stats.warningCount} Orang</strong></div>
           <div>Kritis (0x): <strong className="text-rose-700">{stats.criticalCount} Orang</strong></div>
         </div>
 
-        {/* Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs border-collapse border border-slate-300">
-            <thead className="bg-slate-100 text-slate-900 font-black">
-              <tr>
-                <th className="border border-slate-300 py-2 px-2 w-8 text-center">No</th>
-                <th className="border border-slate-300 py-2 px-3 min-w-[170px]">Nama Lengkap</th>
-                <th className="border border-slate-300 py-2 px-2 w-20 text-center">Kelas</th>
-                <th className="border border-slate-300 py-2 px-3 min-w-[140px]">Jabatan / Sie</th>
-                <th className="border border-slate-300 py-2 px-2 min-w-[150px] text-center">Kehadiran Sesi Rabu</th>
-                <th className="border border-slate-300 py-2 px-2 w-20 text-center">Total Hadir</th>
-                <th className="border border-slate-300 py-2 px-3 w-36 text-center">Status Kedisiplinan</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-200 font-bold">
-              {filteredList.map((item, idx) => (
-                <tr key={item.mentor.id}>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center font-mono text-slate-500">{idx + 1}</td>
-                  <td className="border border-slate-300 py-1.5 px-3 text-slate-900 font-extrabold">{item.mentor.name}</td>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600">{item.mentor.class_name}</td>
-                  <td className="border border-slate-300 py-1.5 px-3 text-slate-700">{item.mentor.position}</td>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center text-[10px] font-mono">
-                    {item.attendedMeetings.length === 0 ? (
-                      <span className="text-slate-400 italic">Belum Ada</span>
-                    ) : (
-                      item.attendedMeetings.map((m) => m.meeting_date.slice(8)).join(', ')
-                    )}
-                  </td>
-                  <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-black text-slate-900">
-                    {item.count} Sesi
-                  </td>
-                  <td className="border border-slate-300 py-1.5 px-3 text-center">
-                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black ${
-                      item.status === 'safe'
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : item.status === 'warning'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-rose-100 text-rose-800'
-                    }`}>
-                      {item.statusLabel}
-                    </span>
-                  </td>
+        {/* Table View */}
+        {radarMode === 'monthly' ? (
+          /* MONTHLY TABLE */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse border border-slate-300">
+              <thead className="bg-slate-100 text-slate-900 font-black">
+                <tr>
+                  <th className="border border-slate-300 py-2 px-2 w-8 text-center">No</th>
+                  <th className="border border-slate-300 py-2 px-3 min-w-[170px]">Nama Lengkap</th>
+                  <th className="border border-slate-300 py-2 px-2 w-20 text-center">Kelas</th>
+                  <th className="border border-slate-300 py-2 px-3 min-w-[140px]">Jabatan / Sie</th>
+                  <th className="border border-slate-300 py-2 px-2 min-w-[150px] text-center">Kehadiran Sesi Rabu</th>
+                  <th className="border border-slate-300 py-2 px-2 w-20 text-center">Total Hadir</th>
+                  <th className="border border-slate-300 py-2 px-3 w-36 text-center">Status Kedisiplinan</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-slate-200 font-bold">
+                {filteredList.map((item, idx) => (
+                  <tr key={item.mentor.id}>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center font-mono text-slate-500">{idx + 1}</td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-slate-900 font-extrabold">{item.mentor.name}</td>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600">{item.mentor.class_name}</td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-slate-700">{item.mentor.position}</td>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center text-[10px] font-mono">
+                      {item.attendedMeetings.length === 0 ? (
+                        <span className="text-slate-400 italic">Belum Ada</span>
+                      ) : (
+                        item.attendedMeetings.map((m) => m.meeting_date.slice(8)).join(', ')
+                      )}
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-black text-slate-900">
+                      {item.count} Sesi
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black ${
+                        item.status === 'safe'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : item.status === 'warning'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-rose-100 text-rose-800'
+                      }`}>
+                        {item.statusLabel}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          /* CUMULATIVE / TAHUNAN TABLE */
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs border-collapse border border-slate-300">
+              <thead className="bg-slate-100 text-slate-900 font-black">
+                <tr>
+                  <th className="border border-slate-300 py-2 px-2 w-8 text-center">No</th>
+                  <th className="border border-slate-300 py-2 px-3 min-w-[170px]">Nama Lengkap</th>
+                  <th className="border border-slate-300 py-2 px-2 w-20 text-center">Kelas</th>
+                  <th className="border border-slate-300 py-2 px-3 min-w-[140px]">Jabatan / Sie</th>
+                  <th className="border border-slate-300 py-2 px-2 w-24 text-center">Total Sesi</th>
+                  <th className="border border-slate-300 py-2 px-2 w-24 text-center">Total Hadir</th>
+                  <th className="border border-slate-300 py-2 px-2 w-28 text-center">% Kehadiran</th>
+                  <th className="border border-slate-300 py-2 px-3 w-40 text-center">Kategori Dedikasi</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 font-bold">
+                {filteredList.map((item, idx) => (
+                  <tr key={item.mentor.id}>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center font-mono text-slate-500">{idx + 1}</td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-slate-900 font-extrabold">{item.mentor.name}</td>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600">{item.mentor.class_name}</td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-slate-700">{item.mentor.position}</td>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center font-mono text-slate-700">
+                      {allHeldMeetings.length} Sesi
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-black text-slate-900">
+                      {item.count} Sesi
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-black">
+                      <span className={item.percent >= 50 ? 'text-emerald-700' : 'text-rose-600'}>
+                        {item.percent}%
+                      </span>
+                    </td>
+                    <td className="border border-slate-300 py-1.5 px-3 text-center">
+                      <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black ${
+                        item.status === 'safe'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : item.status === 'warning'
+                          ? 'bg-yellow-100 text-yellow-800'
+                          : 'bg-rose-100 text-rose-800'
+                      }`}>
+                        {item.statusLabel}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {/* Legend Footer (NO SIGNATURES) */}
+        {/* Legend Footer (HARAM ADA TANDA TANGAN / NO SIGNATURES) */}
         <div className="mt-4 pt-3 border-t border-slate-300 flex items-center justify-between text-[10px] font-bold text-slate-500">
-          <div>Ketentuan Shift: Setiap pengurus wajib hadir minimal 2 kali pertemuan aktif per bulan. Sesi libur resmi tidak dihitung.</div>
+          <div>
+            {radarMode === 'monthly'
+              ? 'Ketentuan Shift: Setiap pengurus wajib hadir minimal 2 kali pertemuan aktif per bulan. Sesi libur resmi tidak dihitung.'
+              : 'Ketentuan Akumulasi: Pengurus wajib memenuhi target kehadiran minimal 50% dari total sesi semester/tahunan yang terlaksana.'}
+          </div>
           <div>Total Data: {filteredList.length} Pengurus Angkatan 20</div>
         </div>
       </div>
