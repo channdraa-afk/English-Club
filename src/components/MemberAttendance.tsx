@@ -4,16 +4,19 @@ import { Member, Meeting } from '../types/database';
 import { TactileButton } from './TactileButton';
 import { sound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
+import { getScheduleStatus } from '../lib/schedule';
 
 interface MemberAttendanceProps {
   members: Member[];
   activeMeeting: Meeting | null;
+  isManualBypass?: boolean;
   onAttendanceSuccess: (member: Member, meeting: Meeting) => void;
 }
 
 export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
   members,
   activeMeeting,
+  isManualBypass = false,
   onAttendanceSuccess,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,6 +57,10 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
     setSearchQuery('');
   };
 
+  const scheduleStatus = useMemo(() => {
+    return getScheduleStatus(activeMeeting, isManualBypass);
+  }, [activeMeeting, isManualBypass]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
@@ -61,6 +68,12 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
     if (!activeMeeting) {
       sound.playError();
       setErrorMessage('Saat ini belum ada pertemuan aktif. Silakan hubungi kakak kelas / mentor!');
+      return;
+    }
+
+    if (!scheduleStatus.isActive) {
+      sound.playError();
+      setErrorMessage(`Presensi saat ini tidak aktif: ${scheduleStatus.statusText}`);
       return;
     }
 
@@ -159,7 +172,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
         </p>
       </div>
 
-      {activeMeeting?.is_holiday ? (
+      {scheduleStatus.isHoliday ? (
         <div className="bg-white rounded-3xl border-2 border-amber-300 shadow-[0_6px_0_0_#fcd34d] p-8 text-center space-y-4">
           <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-100 text-amber-600 border-2 border-amber-300 flex items-center justify-center text-3xl">
             🏖️
@@ -169,10 +182,37 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
               Pertemuan Hari Ini Libur
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900">
-              {activeMeeting.holiday_reason || 'Kegiatan English Club Ditiadakan'}
+              {activeMeeting?.holiday_reason || 'Kegiatan English Club Ditiadakan'}
             </h2>
             <p className="text-xs sm:text-sm font-bold text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
               Presensi ditiadakan dan tidak mempengaruhi persentase nilai kehadiranmu. Selamat beristirahat dan sampai jumpa di hari Rabu minggu depan! ✨
+            </p>
+          </div>
+        </div>
+      ) : !scheduleStatus.isActive ? (
+        <div className="bg-white rounded-3xl border-2 border-slate-300 shadow-[0_6px_0_0_#cbd5e1] p-6 sm:p-8 text-center space-y-5">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-slate-100 text-slate-600 border-2 border-slate-300 flex items-center justify-center text-3xl">
+            ⏰
+          </div>
+          <div className="space-y-2">
+            <span className="inline-block px-3.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider border border-slate-200">
+              {scheduleStatus.statusText}
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              Presensi Angkatan 21 Sedang Ditutup
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-md mx-auto leading-relaxed">
+              Sistem presensi resmi English Club SMEGA aktif secara otomatis setiap hari <span className="text-emerald-700 font-extrabold">Rabu pukul 15:40 – 17:30 WIB</span>. Di luar waktu tersebut, token otomatis kedaluwarsa demi menjaga validitas data.
+            </p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-amber-50 border-2 border-amber-200 text-left max-w-md mx-auto space-y-2">
+            <div className="flex items-center gap-2 text-amber-900 font-black text-xs">
+              <span>💡</span>
+              <span>Sedang jam eskul tapi presensi terkunci?</span>
+            </div>
+            <p className="text-xs font-bold text-amber-800 leading-relaxed">
+              Kamu bisa minta tolong kakak kelas pengurus (Angkatan 20) untuk mengabsenkan namamu lewat fitur <strong>Bantu Absen A21</strong> di portal pengurus, atau Ketua dapat membuka sesi manual!
             </p>
           </div>
         </div>
