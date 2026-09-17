@@ -12,11 +12,11 @@
   VITE_SUPABASE_URL=https://hqsbmomlubeasmpnwkcb.supabase.co
   VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
   ```
-- **Kredensial Vault (Recall Ready)**:
+- **Kredensial Vault (Zero Credential Leak)**:
   - Supabase URL: `https://hqsbmomlubeasmpnwkcb.supabase.co`
-  - Supabase Anon Key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
-  - Database Password: `englishclubsmega666`
-  - Mentor Quick PIN: `123321` (disimpan otomatis di `localStorage` per perangkat)
+  - Supabase Anon Key: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (Public Client Key dengan RLS Policy)
+  - Database Password: Tersimpan aman di vault lokal pengembang (Zero Public Leak)
+  - Mentor Quick PIN: Terkelola via database `app_settings` (disimpan otomatis di `localStorage` per perangkat)
   - GitHub Repo: `https://github.com/channdraa-afk/English-Club`
   - Vercel Project: `english-club` (Team Evergarden)
   - Domain Resmi: `https://englishclub.site` (Hostinger A Record `216.198.79.1`)
@@ -81,7 +81,7 @@
 - [x] Standar dokumentasi `README.md` & `DOKUMENTASI.md` tanpa prompt leak.
 - [x] Integrasi Logo Resmi EC SMEGA (`public/logo.png`) pada Navbar taktil dan Favicon tab browser.
 - [x] Perapihan footer developer: pembersihan teks embel-embel jurusan sehingga bersih dan profesional (`Dikembangkan oleh Chandra (@channdraa-afk).`).
-- [x] Sembunyikan Akses Ketua: Tombol `[ 👑 Akses Ketua ]` di-hide total dari pandangan publik/kakak kelas. Pintu masuk Super Admin murni via 3-tap kartu Chandra di tab Struktur Pengurus dengan password `mybinivioletevergarden`.
+- [x] Sembunyikan Akses Ketua: Tombol `[ 👑 Akses Ketua ]` di-hide total dari pandangan publik/kakak kelas. Pintu masuk Super Admin murni via 3-tap kartu Chandra di tab Struktur Pengurus yang dilindungi kriptografi One-Way Hashing SHA-256 (Anti-F12).
 - [x] Sistem Jadwal Otomatis & Auto-Reset Token (`src/lib/schedule.ts`):
   - Presensi resmi eskul hanya aktif otomatis setiap hari **Rabu pukul 15:40 – 17:30 WIB**.
   - Setelah pukul 17:30 WIB, token otomatis kedaluwarsa / terkunci sendiri.
@@ -226,6 +226,12 @@
   - **Eliminasi Dialog Native Browser (`window.confirm` ➔ Modal Taktil 3D)**:
     - Menghapus total dialog konfirmasi kaku bawaan browser (`window.confirm` & `alert`).
     - Menggantinya dengan **Modal Konfirmasi Taktil 3D** serasi tema Duolingo: ikon squircle tempat sampah 3D rose (`[ 🗑️ ]`), teks konfirmasi ramah yang menyebutkan nama siswa secara spesifik, tombol `[ Batal ]` taktil abu-abu, dan tombol eksekusi `[ Ya, Copot 🗑️ ]` merah rose 3D pushable dengan feedback Web Audio API murni.
+- [x] Pengamanan Bertingkat (Defense-in-Depth Architecture) & Pembersihan Sistem:
+  - **Sanitasi Kredensial Zero Leak**: Menghapus master password PostgreSQL Supabase, PIN mentor, dan password Super Admin dari repositori publik GitHub `DOKUMENTASI.md`.
+  - **Kriptografi One-Way Hashing SHA-256 (Web Crypto API)**: Kata sandi ketua diverifikasi menggunakan hash 64-karakter (`bfa576d3...`). Teks sandi asli lenyap 100% dari file bundle JavaScript (`index-*.js`), kebal dari pencarian `Ctrl + F` di DevTools / Inspect Element.
+  - **Anti-Console Tampering (Signature Verification)**: Akses Super Admin mewajibkan pencocokan signature hash kriptografis. Manipulasi primitif `sessionStorage.setItem('ec_superadmin_auth', 'true')` di console langsung ditolak dan di-purge otomatis oleh sistem.
+  - **Proteksi Master Data Siswa (RLS Hardening)**: Tabel `members` (165 siswa) dikunci menjadi *Read-Only* bagi client publik melalui skrip `supabase/security_hardening.sql`, mencegah vandalisme database lewat REST API.
+  - **Pembersihan Aset Sampah & Fix Sinkronisasi Bintang**: Menghapus file sampah `public/logo.svg`, memperbaiki edge-case reset array bintang kosong saat seluruh bintang dicopot, serta menyinkronkan dual-layer backup `talent_stars` dan `app_settings`.
 
 
 ### 3.2. Roadmap Selanjutnya

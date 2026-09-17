@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- 2. Drop existing tables if re-running
 DROP TABLE IF EXISTS attendances CASCADE;
+DROP TABLE IF EXISTS talent_stars CASCADE;
 DROP TABLE IF EXISTS registrations CASCADE;
 DROP TABLE IF EXISTS meetings CASCADE;
 DROP TABLE IF EXISTS members CASCADE;
@@ -80,6 +81,21 @@ CREATE TABLE app_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 8. Radar Bibit Lomba (Talent Scout A21)
+CREATE TABLE talent_stars (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+    category TEXT NOT NULL,
+    notes TEXT NOT NULL,
+    evaluator_name TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_session_star_per_member UNIQUE (member_id, meeting_id)
+);
+
+CREATE INDEX idx_talent_stars_member ON talent_stars (member_id);
+CREATE INDEX idx_talent_stars_meeting ON talent_stars (meeting_id);
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
@@ -88,14 +104,19 @@ ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE talent_stars ENABLE ROW LEVEL SECURITY;
 
--- Allow public read access to active members
+-- Allow public read access to active members (Hardened: Read-Only Protection)
 CREATE POLICY "Allow public read members" ON members FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/update members" ON members FOR ALL USING (true) WITH CHECK (true);
 
 -- Allow public read & manage meetings
 CREATE POLICY "Allow public read meetings" ON meetings FOR SELECT USING (true);
 CREATE POLICY "Allow public manage meetings" ON meetings FOR ALL USING (true) WITH CHECK (true);
+
+-- Allow public read & manage talent_stars
+CREATE POLICY "Allow public read talent_stars" ON talent_stars FOR SELECT USING (true);
+CREATE POLICY "Allow public insert talent_stars" ON talent_stars FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public delete talent_stars" ON talent_stars FOR DELETE USING (true);
 
 -- Allow public insert, read, update & delete attendances
 CREATE POLICY "Allow public insert attendances" ON attendances FOR INSERT WITH CHECK (true);

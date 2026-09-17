@@ -110,9 +110,8 @@ CREATE POLICY "Allow public read talent_stars" ON talent_stars FOR SELECT USING 
 CREATE POLICY "Allow public insert talent_stars" ON talent_stars FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public delete talent_stars" ON talent_stars FOR DELETE USING (true);
 
--- Allow public read access to active members
+-- Allow public read access to active members (Hardened: Read-Only)
 CREATE POLICY "Allow public read members" ON members FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/update members" ON members FOR ALL USING (true) WITH CHECK (true);
 
 -- Allow public read & manage meetings
 CREATE POLICY "Allow public read meetings" ON meetings FOR SELECT USING (true);

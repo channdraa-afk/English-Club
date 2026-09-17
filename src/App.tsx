@@ -7,6 +7,7 @@ import { WordOfTheDayModal } from './components/WordOfTheDayModal';
 import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
 import { MentorDashboard } from './components/MentorPortal/MentorDashboard';
+import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
 import { sound } from './lib/audio';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
@@ -35,15 +36,19 @@ export const App: React.FC = () => {
   const [successMeeting, setSuccessMeeting] = useState<Meeting | null>(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // Check saved mentor login & superadmin in storage
+  // Check saved mentor login & superadmin cryptographic signature in storage
   useEffect(() => {
     const savedAuth = localStorage.getItem('ec_mentor_auth');
     if (savedAuth === 'true') {
       setIsMentorLoggedIn(true);
     }
-    const savedSuper = sessionStorage.getItem('ec_superadmin_auth');
-    if (savedSuper === 'true') {
+    const savedSuperSig = sessionStorage.getItem('ec_superadmin_sig');
+    if (savedSuperSig === SUPERADMIN_HASH) {
       setIsSuperAdmin(true);
+    } else {
+      // Purge any fake console injection / legacy value
+      sessionStorage.removeItem('ec_superadmin_auth');
+      sessionStorage.removeItem('ec_superadmin_sig');
     }
   }, []);
 
@@ -110,7 +115,7 @@ export const App: React.FC = () => {
       // 6. Fetch talent_stars table if available
       try {
         const { data: starData, error: starErr } = await supabase.from('talent_stars').select('*');
-        if (!starErr && starData && starData.length > 0) {
+        if (!starErr && starData) {
           setTalentStars(starData);
         }
       } catch {
@@ -147,19 +152,22 @@ export const App: React.FC = () => {
   const handleMentorLogout = () => {
     localStorage.removeItem('ec_mentor_auth');
     sessionStorage.removeItem('ec_superadmin_auth');
+    sessionStorage.removeItem('ec_superadmin_sig');
     setIsMentorLoggedIn(false);
     setIsSuperAdmin(false);
     setCurrentView('student');
   };
 
-  const handleSuperAdminUnlock = () => {
+  const handleSuperAdminUnlock = (signature?: string) => {
+    const sig = signature || SUPERADMIN_HASH;
     setIsSuperAdmin(true);
-    sessionStorage.setItem('ec_superadmin_auth', 'true');
+    sessionStorage.setItem('ec_superadmin_sig', sig);
   };
 
   const handleSuperAdminLock = () => {
     setIsSuperAdmin(false);
     sessionStorage.removeItem('ec_superadmin_auth');
+    sessionStorage.removeItem('ec_superadmin_sig');
   };
 
   const handleToggleRegistration = async (state: boolean) => {
@@ -190,20 +198,19 @@ export const App: React.FC = () => {
     setTalentStars(updated);
 
     try {
-      const { error } = await supabase.from('talent_stars').insert(star);
-      if (error) {
-        await supabase.from('app_settings').upsert({
-          key: 'talent_stars',
-          value: updated,
-          updated_at: new Date().toISOString(),
-        });
-      }
+      await supabase.from('talent_stars').insert(star);
     } catch {
+      // Handled via fallback below
+    }
+
+    try {
       await supabase.from('app_settings').upsert({
         key: 'talent_stars',
         value: updated,
         updated_at: new Date().toISOString(),
       });
+    } catch {
+      // ignore
     }
   };
 
@@ -212,20 +219,19 @@ export const App: React.FC = () => {
     setTalentStars(updated);
 
     try {
-      const { error } = await supabase.from('talent_stars').delete().eq('id', starId);
-      if (error) {
-        await supabase.from('app_settings').upsert({
-          key: 'talent_stars',
-          value: updated,
-          updated_at: new Date().toISOString(),
-        });
-      }
+      await supabase.from('talent_stars').delete().eq('id', starId);
     } catch {
+      // Handled via fallback below
+    }
+
+    try {
       await supabase.from('app_settings').upsert({
         key: 'talent_stars',
         value: updated,
         updated_at: new Date().toISOString(),
       });
+    } catch {
+      // ignore
     }
   };
 

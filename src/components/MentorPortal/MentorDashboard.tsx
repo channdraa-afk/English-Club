@@ -59,7 +59,7 @@ interface MentorDashboardProps {
   isManualBypass: boolean;
   onToggleManualBypass: (state: boolean) => void;
   isSuperAdmin: boolean;
-  onSuperAdminUnlock: () => void;
+  onSuperAdminUnlock: (sig?: string) => void;
   onSuperAdminLock: () => void;
   onMeetingUpdated: () => void;
   onToggleRegistration: (state: boolean) => void;
@@ -559,8 +559,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       <SuperAdminModal
         isOpen={isSuperModalOpen}
         onClose={() => setIsSuperModalOpen(false)}
-        onSuccess={() => {
-          onSuperAdminUnlock();
+        onSuccess={(sig) => {
+          onSuperAdminUnlock(sig);
           setActiveTab('live_monitor');
         }}
       />

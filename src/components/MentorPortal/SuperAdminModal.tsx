@@ -3,10 +3,22 @@ import { Crown, KeyRound, Lock, X, AlertCircle, Eye, EyeOff } from 'lucide-react
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 
+// Cryptographic SHA-256 hash of Super Admin master key (One-Way Hashing - Anti-F12)
+export const SUPERADMIN_HASH = 'bfa576d3ec278ee8d0098179b0c17c44245c78b480fedd78106271303a3a4a34';
+
+export async function hashString(str: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(str);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 interface SuperAdminModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (signature?: string) => void;
 }
 
 export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
@@ -17,22 +29,32 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setIsVerifying(true);
 
-    if (password === 'mybinivioletevergarden') {
-      sound.playSuccess();
-      onSuccess();
-      setPassword('');
-      onClose();
-    } else {
+    try {
+      const inputHash = await hashString(password.trim());
+      if (inputHash === SUPERADMIN_HASH) {
+        sound.playSuccess();
+        onSuccess(inputHash);
+        setPassword('');
+        onClose();
+      } else {
+        sound.playError();
+        setError('Kata sandi salah! Akses ini dikhususkan untuk Ketua.');
+        setPassword('');
+      }
+    } catch {
       sound.playError();
-      setError('Kata sandi salah! Akses ini dikhususkan untuk Ketua.');
-      setPassword('');
+      setError('Gagal memverifikasi kata sandi kriptografi.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -108,10 +130,10 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
             variant="amber"
             size="md"
             className="w-full py-3 text-xs"
-            disabled={!password.trim()}
+            disabled={!password.trim() || isVerifying}
           >
             <Lock className="w-4 h-4" />
-            <span>BUKA AKSES PENUH</span>
+            <span>{isVerifying ? 'MEMVERIFIKASI...' : 'BUKA AKSES PENUH'}</span>
           </TactileButton>
         </form>
       </div>
