@@ -1,6 +1,7 @@
-import React, { useMemo } from 'react';
-import { Sparkles, MessageSquareHeart, User } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Sparkles, MessageSquareHeart, User, HeartHandshake, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { Attendance, Member, Meeting } from '../../types/database';
+import { sound } from '../../lib/audio';
 
 interface AgendaVaultProps {
   attendances: Attendance[];
@@ -13,125 +14,221 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
   members,
   activeMeeting,
 }) => {
+  const [activeGroup, setActiveGroup] = useState<'a21' | 'a20'>('a20');
+
   const memberMap = useMemo(() => {
     return new Map(members.map((m) => [m.id, m]));
   }, [members]);
 
-  // Attendances with feedback or suggestions
-  const feedbackItems = useMemo(() => {
+  // Separate attendances by generation
+  const a21Feedbacks = useMemo(() => {
     return attendances
-      .filter((a) => a.next_agenda_suggestion || a.critique || a.feedback_rating)
+      .filter((a) => {
+        const m = memberMap.get(a.member_id);
+        return m?.generation === 21 && (a.next_agenda_suggestion || a.critique || a.feedback_rating);
+      })
       .map((a) => {
-        const member = memberMap.get(a.member_id);
+        const m = memberMap.get(a.member_id);
         return {
           ...a,
-          memberName: a.is_anonymous ? 'Adik Kelas (Anonim)' : member?.name || 'Siswa',
-          memberClass: a.is_anonymous ? 'Rahasia' : member?.class_name || '-',
+          memberName: a.is_anonymous ? 'Adik Kelas (Anonim)' : m?.name || 'Siswa',
+          memberClass: a.is_anonymous ? 'Rahasia' : m?.class_name || '-',
+          memberPosition: 'Angkatan 21',
         };
       })
       .reverse();
   }, [attendances, memberMap]);
 
-  // Ratings count
+  const a20Curhats = useMemo(() => {
+    return attendances
+      .filter((a) => {
+        const m = memberMap.get(a.member_id);
+        return m?.generation === 20 && (a.next_agenda_suggestion || a.critique || a.feedback_rating);
+      })
+      .map((a) => {
+        const m = memberMap.get(a.member_id);
+        return {
+          ...a,
+          memberName: a.is_anonymous ? 'Pengurus (Anonim)' : m?.name || 'Pengurus',
+          memberClass: a.is_anonymous ? 'Rahasia' : m?.class_name || '-',
+          memberPosition: m?.position || 'Pengurus A20',
+        };
+      })
+      .reverse();
+  }, [attendances, memberMap]);
+
+  const currentList = activeGroup === 'a20' ? a20Curhats : a21Feedbacks;
+
+  // Ratings count for selected group
   const ratingCounts = useMemo(() => {
     let fun = 0;
     let ok = 0;
     let boring = 0;
-    attendances.forEach((a) => {
+    currentList.forEach((a) => {
       if (a.feedback_rating === 'super_fun') fun++;
       else if (a.feedback_rating === 'okay') ok++;
       else if (a.feedback_rating === 'boring') boring++;
     });
-    return { fun, ok, boring, total: attendances.length };
-  }, [attendances]);
+    return { fun, ok, boring, total: currentList.length };
+  }, [currentList]);
 
   return (
     <div className="space-y-6">
-      {/* Reaction Summary Cards */}
+      {/* Category Tabs: A20 Curhat vs A21 Aspirasi */}
+      <div className="grid grid-cols-2 gap-2 bg-white p-2 rounded-3xl border-2 border-slate-200 shadow-sm">
+        <button
+          onClick={() => {
+            sound.playPop();
+            setActiveGroup('a20');
+          }}
+          className={`py-3 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
+            activeGroup === 'a20'
+              ? 'bg-indigo-900 text-white border-indigo-950 shadow-[0_3px_0_0_#1e1b4b]'
+              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+          }`}
+        >
+          <HeartHandshake className="w-4 h-4 text-indigo-300" />
+          <span>Kotak Curhat & Evaluasi A20 ({a20Curhats.length})</span>
+        </button>
+
+        <button
+          onClick={() => {
+            sound.playPop();
+            setActiveGroup('a21');
+          }}
+          className={`py-3 px-4 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-2 ${
+            activeGroup === 'a21'
+              ? 'bg-emerald-600 text-white border-emerald-800 shadow-[0_3px_0_0_#15803d]'
+              : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+          }`}
+        >
+          <Sparkles className="w-4 h-4 text-emerald-200" />
+          <span>Aspirasi Adik Kelas A21 ({a21Feedbacks.length})</span>
+        </button>
+      </div>
+
+      {/* Summary KPI Pills */}
       <div className="grid grid-cols-3 gap-3">
         <div className="p-4 rounded-3xl bg-amber-50 border-2 border-amber-300 shadow-[0_4px_0_0_#fcd34d] text-center">
-          <span className="text-3xl">🔥</span>
+          <span className="text-2xl">🤩</span>
           <h4 className="text-xl font-black text-amber-950 mt-1">{ratingCounts.fun}</h4>
-          <p className="text-xs font-black text-amber-800">Super Fun!</p>
+          <p className="text-xs font-black text-amber-800">
+            {activeGroup === 'a20' ? 'Lancar Banget' : 'Super Fun!'}
+          </p>
         </div>
 
         <div className="p-4 rounded-3xl bg-blue-50 border-2 border-blue-300 shadow-[0_4px_0_0_#93c5fd] text-center">
-          <span className="text-3xl">👍</span>
+          <span className="text-2xl">👍</span>
           <h4 className="text-xl font-black text-blue-950 mt-1">{ratingCounts.ok}</h4>
-          <p className="text-xs font-black text-blue-800">Okay</p>
+          <p className="text-xs font-black text-blue-800">
+            {activeGroup === 'a20' ? 'Cukup Kondusif' : 'Okay'}
+          </p>
         </div>
 
-        <div className="p-4 rounded-3xl bg-slate-100 border-2 border-slate-300 shadow-[0_4px_0_0_#cbd5e1] text-center">
-          <span className="text-3xl">😴</span>
-          <h4 className="text-xl font-black text-slate-900 mt-1">{ratingCounts.boring}</h4>
-          <p className="text-xs font-black text-slate-600">Boring / Kurang</p>
+        <div className="p-4 rounded-3xl bg-rose-50 border-2 border-rose-300 shadow-[0_4px_0_0_#fca5a5] text-center">
+          <span className="text-2xl">⚠️</span>
+          <h4 className="text-xl font-black text-rose-950 mt-1">{ratingCounts.boring}</h4>
+          <p className="text-xs font-black text-rose-800">
+            {activeGroup === 'a20' ? 'Banyak Kendala' : 'Boring / Kurang'}
+          </p>
         </div>
       </div>
 
-      {/* Ideas and Critique Board */}
+      {/* Message Cards List */}
       <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-6 space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <div>
-            <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              <span>Aspirasi Ide "Next Agenda" & Kritik Saran</span>
+            <h3 className="text-base font-black text-slate-900 flex items-center gap-2">
+              {activeGroup === 'a20' ? (
+                <>
+                  <ShieldAlert className="w-5 h-5 text-indigo-600" />
+                  <span>Unek-Unek & Laporan Kendala Pengurus A20</span>
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-5 h-5 text-emerald-600" />
+                  <span>Ide "Next Agenda" & Usulan Kegiatan A21</span>
+                </>
+              )}
             </h3>
-            <p className="text-xs font-bold text-slate-500 mt-0.5">
-              {activeMeeting ? `Sesi: ${activeMeeting.title}` : 'Koleksi usulan kegiatan selanjutnya langsung dari adik-adik kelas!'}
+            <p className="text-xs font-bold text-slate-400 mt-0.5">
+              {activeMeeting ? `Sesi: ${activeMeeting.title}` : 'Semua masukan sesi'}
             </p>
           </div>
-          <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-700">
-            {feedbackItems.length} Masukan
+
+          <span className="text-xs font-black px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700">
+            {currentList.length} Masukan
           </span>
         </div>
 
-        {feedbackItems.length === 0 ? (
+        {currentList.length === 0 ? (
           <div className="text-center py-12 text-slate-400">
             <MessageSquareHeart className="w-10 h-10 mx-auto opacity-40 mb-2" />
-            <p className="text-xs font-bold">Belum ada saran atau ide yang masuk untuk sesi ini.</p>
+            <p className="text-xs font-bold">
+              {activeGroup === 'a20'
+                ? 'Belum ada unek-unek yang masuk dari pengurus untuk sesi ini.'
+                : 'Belum ada saran atau ide kegiatan dari adik kelas.'}
+            </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto pr-1">
-            {feedbackItems.map((item) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[550px] overflow-y-auto pr-1">
+            {currentList.map((item) => (
               <div
                 key={item.id}
-                className="p-4 rounded-2xl bg-slate-50 border-2 border-slate-200 shadow-sm space-y-2.5"
+                className={`p-4 rounded-2xl border-2 shadow-sm space-y-2.5 ${
+                  activeGroup === 'a20'
+                    ? 'bg-slate-50 border-indigo-100'
+                    : 'bg-slate-50 border-slate-200'
+                }`}
               >
                 {/* Header Author */}
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="text-xs font-extrabold text-slate-800">{item.memberName}</span>
-                    <span className="text-[10px] font-bold text-slate-400">({item.memberClass})</span>
+                  <div className="flex items-center gap-1.5 truncate">
+                    <User className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span className="text-xs font-extrabold text-slate-800 truncate">
+                      {item.memberName}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-400 shrink-0">
+                      ({item.memberClass})
+                    </span>
                   </div>
 
-                  <span className="text-xs">
-                    {item.feedback_rating === 'super_fun' && '🔥'}
+                  <span className="text-sm shrink-0">
+                    {item.feedback_rating === 'super_fun' && '🤩'}
                     {item.feedback_rating === 'okay' && '👍'}
-                    {item.feedback_rating === 'boring' && '😴'}
+                    {item.feedback_rating === 'boring' && '⚠️'}
                   </span>
                 </div>
 
-                {/* Next Agenda Box */}
-                {item.next_agenda_suggestion && (
-                  <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-amber-800">
-                      💡 Ide Next Agenda:
+                {/* Subtitle Role for A20 */}
+                {activeGroup === 'a20' && (
+                  <span className="inline-block text-[10px] font-black px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-900 border border-indigo-200">
+                    {item.memberPosition}
+                  </span>
+                )}
+
+                {/* Issues / Critique */}
+                {item.critique && (
+                  <div className="p-3 rounded-xl bg-white border border-rose-200 space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-rose-800 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3 text-rose-500" />
+                      <span>{activeGroup === 'a20' ? 'Unek-unek / Masalah Lapangan:' : 'Kritik & Masukan:'}</span>
                     </p>
-                    <p className="text-xs font-bold text-amber-950 mt-0.5 leading-relaxed">
-                      "{item.next_agenda_suggestion}"
+                    <p className="text-xs font-bold text-slate-800 leading-relaxed">
+                      "{item.critique}"
                     </p>
                   </div>
                 )}
 
-                {/* Critique / Feedback */}
-                {item.critique && (
-                  <div className="p-2.5 rounded-xl bg-white border border-slate-200">
-                    <p className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                      💬 Kritik & Masukan:
+                {/* Next Agenda / Suggestion */}
+                {item.next_agenda_suggestion && (
+                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 space-y-1">
+                    <p className="text-[10px] font-black uppercase tracking-wider text-amber-800 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-amber-600" />
+                      <span>{activeGroup === 'a20' ? 'Saran Perbaikan Minggu Depan:' : 'Ide Next Agenda:'}</span>
                     </p>
-                    <p className="text-xs font-bold text-slate-700 mt-0.5 leading-relaxed">
-                      "{item.critique}"
+                    <p className="text-xs font-bold text-amber-950 leading-relaxed">
+                      "{item.next_agenda_suggestion}"
                     </p>
                   </div>
                 )}
