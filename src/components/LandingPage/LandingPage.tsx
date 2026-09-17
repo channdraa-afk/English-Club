@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Calendar, 
@@ -16,13 +16,82 @@ import {
   Send,
   Loader2,
   Trophy,
-  PartyPopper
+  PartyPopper,
+  Crown,
+  Edit3,
+  Plus,
+  Trash2,
+  Lock,
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
-import { Meeting } from '../../types/database';
+import { Meeting, BigEvent, GalleryItem } from '../../types/database';
 import { sound } from '../../lib/audio';
 import { getScheduleStatus } from '../../lib/schedule';
 import { supabase } from '../../lib/supabase';
 import confetti from 'canvas-confetti';
+
+export const DEFAULT_BIG_EVENTS: BigEvent[] = [
+  {
+    id: 'ee',
+    title: 'English Expression',
+    description: 'Ajang unjuk bakat akbar pentas seni drama, pidato monolog, dan performa panggung bahasa Inggris seluruh anggota.',
+    tag: 'Pentas Seni & Ekspresi',
+    accentColor: 'blue',
+  },
+  {
+    id: 'ea',
+    title: 'English Adventure',
+    description: 'Kegiatan camp alam terbuka, outbond seru, bonding keakraban antar-angkatan, dan team building di alam.',
+    tag: 'Camp & Outbond',
+    accentColor: 'emerald',
+  },
+  {
+    id: 'pp',
+    title: 'Pemantapan & Pelantikan',
+    description: 'Masa pengukuhan sakral peserta baru Angkatan 21 menjadi anggota resmi EC SMEGA dan kaderisasi kepengurusan.',
+    tag: 'Regenerasi & Pengukuhan',
+    accentColor: 'indigo',
+  },
+  {
+    id: 'ultah',
+    title: 'Ulang Tahun EC SMEGA',
+    description: 'Peringatan hari lahir English Club SMKN 1 Purbalingga setiap 23 Maret bersama alumni, guru pembina, dan anggota.',
+    tag: '23 Maret (Sejak 2006)',
+    accentColor: 'amber',
+  },
+];
+
+export const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
+  {
+    id: 'gal-1',
+    title: 'Speaking & Speech',
+    subtitle: 'Agenda Rutin Rabu',
+    imageUrl: '',
+    accentColor: 'blue',
+  },
+  {
+    id: 'gal-2',
+    title: 'English Adventure',
+    subtitle: 'Outdoor Camp & Games',
+    imageUrl: '',
+    accentColor: 'emerald',
+  },
+  {
+    id: 'gal-3',
+    title: 'English Expression',
+    subtitle: 'Panggung Seni Bakat',
+    imageUrl: '',
+    accentColor: 'amber',
+  },
+  {
+    id: 'gal-4',
+    title: 'Dies Natalis 2006',
+    subtitle: 'Ulang Tahun 23 Maret',
+    imageUrl: '',
+    accentColor: 'rose',
+  },
+];
 
 interface LandingPageProps {
   activeMeeting: Meeting | null;
@@ -31,6 +100,14 @@ interface LandingPageProps {
   onOpenMentor: () => void;
   membersCount?: { a21: number; a20: number };
   isRegistrationOpen?: boolean;
+  isSuperAdmin?: boolean;
+  onOpenSuperAdminModal?: () => void;
+  onGoToMentorPortal?: () => void;
+  onSuperAdminLock?: () => void;
+  bigEvents?: BigEvent[];
+  galleryItems?: GalleryItem[];
+  onUpdateBigEvents?: (events: BigEvent[]) => Promise<void> | void;
+  onUpdateGalleryItems?: (items: GalleryItem[]) => Promise<void> | void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -40,6 +117,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenMentor,
   membersCount = { a21: 104, a20: 59 },
   isRegistrationOpen = true,
+  isSuperAdmin = false,
+  onOpenSuperAdminModal,
+  onGoToMentorPortal,
+  onSuperAdminLock,
+  bigEvents,
+  galleryItems,
+  onUpdateBigEvents,
+  onUpdateGalleryItems,
 }) => {
   const scheduleStatus = getScheduleStatus(activeMeeting, isManualBypass, 'student');
 
@@ -97,6 +182,160 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     }
   };
 
+  // Dynamic Events & Gallery State
+  const [eventsList, setEventsList] = useState<BigEvent[]>(bigEvents || DEFAULT_BIG_EVENTS);
+  const [galleryList, setGalleryList] = useState<GalleryItem[]>(galleryItems || DEFAULT_GALLERY_ITEMS);
+
+  useEffect(() => {
+    if (bigEvents && bigEvents.length > 0) setEventsList(bigEvents);
+  }, [bigEvents]);
+
+  useEffect(() => {
+    if (galleryItems && galleryItems.length > 0) setGalleryList(galleryItems);
+  }, [galleryItems]);
+
+  // Event Modal State
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<BigEvent | null>(null);
+  const [eventForm, setEventForm] = useState<{
+    title: string;
+    description: string;
+    tag: string;
+    accentColor: NonNullable<BigEvent['accentColor']>;
+  }>({
+    title: '',
+    description: '',
+    tag: '',
+    accentColor: 'blue',
+  });
+
+  // Gallery Modal State
+  const [isGalleryModalOpen, setIsGalleryModalOpen] = useState(false);
+  const [editingGallery, setEditingGallery] = useState<GalleryItem | null>(null);
+  const [galleryForm, setGalleryForm] = useState<{
+    title: string;
+    subtitle: string;
+    imageUrl: string;
+    accentColor: NonNullable<GalleryItem['accentColor']>;
+  }>({
+    title: '',
+    subtitle: '',
+    imageUrl: '',
+    accentColor: 'blue',
+  });
+
+  // Event Handlers
+  const handleOpenAddEvent = () => {
+    setEditingEvent(null);
+    setEventForm({
+      title: '',
+      description: '',
+      tag: '',
+      accentColor: 'blue',
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const handleEditEvent = (ev: BigEvent) => {
+    setEditingEvent(ev);
+    setEventForm({
+      title: ev.title,
+      description: ev.description,
+      tag: ev.tag,
+      accentColor: ev.accentColor || 'blue',
+    });
+    setIsEventModalOpen(true);
+  };
+
+  const handleSaveEvent = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventForm.title.trim() || !eventForm.description.trim() || !eventForm.tag.trim()) return;
+
+    let updated: BigEvent[];
+    if (editingEvent) {
+      updated = eventsList.map((item) => 
+        item.id === editingEvent.id 
+          ? { ...item, ...eventForm } 
+          : item
+      );
+    } else {
+      const newEvent: BigEvent = {
+        id: 'ev-' + Date.now(),
+        ...eventForm,
+      };
+      updated = [...eventsList, newEvent];
+    }
+
+    setEventsList(updated);
+    setIsEventModalOpen(false);
+    sound.playSuccess();
+    await onUpdateBigEvents?.(updated);
+  };
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!confirm('Apakah kamu yakin ingin menghapus agenda ini?')) return;
+    const updated = eventsList.filter((item) => item.id !== id);
+    setEventsList(updated);
+    sound.playPop();
+    await onUpdateBigEvents?.(updated);
+  };
+
+  // Gallery Handlers
+  const handleOpenAddGallery = () => {
+    setEditingGallery(null);
+    setGalleryForm({
+      title: '',
+      subtitle: '',
+      imageUrl: '',
+      accentColor: 'blue',
+    });
+    setIsGalleryModalOpen(true);
+  };
+
+  const handleEditGallery = (item: GalleryItem) => {
+    setEditingGallery(item);
+    setGalleryForm({
+      title: item.title,
+      subtitle: item.subtitle,
+      imageUrl: item.imageUrl || '',
+      accentColor: item.accentColor || 'blue',
+    });
+    setIsGalleryModalOpen(true);
+  };
+
+  const handleSaveGallery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!galleryForm.title.trim() || !galleryForm.subtitle.trim()) return;
+
+    let updated: GalleryItem[];
+    if (editingGallery) {
+      updated = galleryList.map((item) => 
+        item.id === editingGallery.id 
+          ? { ...item, ...galleryForm } 
+          : item
+      );
+    } else {
+      const newItem: GalleryItem = {
+        id: 'gal-' + Date.now(),
+        ...galleryForm,
+      };
+      updated = [...galleryList, newItem];
+    }
+
+    setGalleryList(updated);
+    setIsGalleryModalOpen(false);
+    sound.playSuccess();
+    await onUpdateGalleryItems?.(updated);
+  };
+
+  const handleDeleteGallery = async (id: string) => {
+    if (!confirm('Apakah kamu yakin ingin menghapus foto/momen ini?')) return;
+    const updated = galleryList.filter((item) => item.id !== id);
+    setGalleryList(updated);
+    sound.playPop();
+    await onUpdateGalleryItems?.(updated);
+  };
+
   const scrollToSection = (id: string) => {
     sound.playPop();
     const element = document.getElementById(id);
@@ -107,6 +346,53 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-blue-200 selection:text-blue-900 font-sans">
+      {/* ================= FLOATING SUPER ADMIN BAR ================= */}
+      {isSuperAdmin && (
+        <aside 
+          aria-label="Super Admin Floating Bar"
+          className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur text-white px-4 py-2 border-b-2 border-amber-500 shadow-md flex flex-wrap items-center justify-between gap-3 animate-fade-in"
+        >
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-sm">
+              <Crown className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-black text-amber-300 flex items-center gap-1.5">
+                Mode Super Admin Aktif (Chandra)
+              </p>
+              <p className="text-[10px] font-bold text-slate-400">
+                Kamu memiliki akses edit Agenda, Galeri, dan kontrol database langsung di halaman ini.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                onGoToMentorPortal?.();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <Award className="w-3.5 h-3.5" />
+              <span>Pusat Komando Admin</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                onSuperAdminLock?.();
+              }}
+              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-900/80 text-rose-300 border border-slate-700 hover:border-rose-500 text-xs font-bold active:translate-y-0.5 transition-all cursor-pointer flex items-center gap-1.5"
+              title="Kunci / Keluar Super Admin"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              <span>Kunci</span>
+            </button>
+          </div>
+        </aside>
+      )}
+
       {/* ================= 1. TOP NAVBAR ================= */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-2 border-slate-200 shadow-sm transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
@@ -232,9 +518,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
       ) : (
         <div className="bg-slate-900 text-slate-300 border-b border-slate-800 py-2 px-4 text-center text-xs font-bold">
-          <span>📅 Latihan Rutin: </span>
+          <span>📅 Agenda Rutin: </span>
           <strong className="text-amber-400">Setiap Rabu, 15:40 – 17:30 WIB</strong>
-          <span className="text-slate-400"> di Ruang Eskul / Lab Bahasa SMEGA.</span>
+          <span className="text-slate-400"> di SMKN 1 Purbalingga.</span>
         </div>
       )}
 
@@ -262,8 +548,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Subtitle & Value Proposition */}
           <p className="max-w-2xl mx-auto text-xs sm:text-base font-bold text-slate-600 leading-relaxed">
-            Wadah resmi eksplorasi kemampuan komunikasi bahasa Inggris, public speaking, debat kompetitif, 
-            dan literasi kreatif bagi siswa-siswi SMK Negeri 1 Purbalingga. Lebih dari 20 tahun tradisi prestasi dan kebersamaan.
+            Ekstrakurikuler resmi SMK Negeri 1 Purbalingga untuk mengembangkan kemampuan komunikasi bahasa Inggris, public speaking, debat kompetitif, 
+            dan literasi kreatif. Lebih dari 20 tahun tradisi prestasi dan kebersamaan.
           </p>
 
           {/* Dual 3D Tactile CTA Buttons */}
@@ -358,7 +644,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
               <h3 className="text-base font-black text-slate-900">Championship Spirit</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
-                Menjadi kawah candradimuka penempaan delegasi lomba bahasa Inggris SMK Negeri 1 Purbalingga, 
+                Mempersiapkan dan melatih delegasi lomba bahasa Inggris SMK Negeri 1 Purbalingga, 
                 mulai dari Debate, Speech, hingga Storytelling di tingkat kabupaten dan provinsi.
               </p>
             </div>
@@ -474,13 +760,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               Didukung Penuh Oleh 7 Sie Kerja Pengurus A20:
             </h4>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black text-slate-700">
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">👨‍🏫 Sie Pengajar</span>
+              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">👩‍🏫 Sie Pengajar & Pendamping</span>
               <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">⚖️ Sie Kedisiplinan</span>
               <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">📸 Sie PDD (Publikasi & Desain)</span>
               <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">📢 Sie Humas</span>
               <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">🏢 Sie Sarpras</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">📦 Sie Perlengkapan</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">🧹 Sie Kebersihan</span>
+              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">⚙️ Sie Operasional</span>
+              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">📚 Sie Kurikulum</span>
             </div>
           </div>
         </div>
@@ -489,83 +775,97 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* ================= 6. BIG EVENTS CALENDAR ================= */}
       <section id="agenda" className="py-14 bg-white border-y-2 border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-10">
-          <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-800 text-xs font-black uppercase tracking-wider border border-amber-200">
-              <Calendar className="w-3.5 h-3.5 text-amber-600" />
-              <span>Agenda Besar Tahunan</span>
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-800 text-xs font-black uppercase tracking-wider border border-amber-200">
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                <span>Agenda Besar Tahunan</span>
+              </div>
+              <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+                Program Kerja Ikonik EC SMEGA
+              </h2>
+              <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xl">
+                Milestone dan program kerja tahunan yang selalu dinanti-nantikan oleh seluruh anggota dan pengurus.
+              </p>
             </div>
-            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Program Kerja Ikonik EC SMEGA
-            </h2>
-            <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xl mx-auto">
-              Empat milestone terbesar yang selalu dinanti-nantikan oleh seluruh anggota dan pengurus.
-            </p>
+
+            {isSuperAdmin && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  handleOpenAddEvent();
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black border-2 border-amber-600 shadow-[0_3px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer w-fit shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Tambah Agenda Baru</span>
+              </button>
+            )}
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Event 1: EE */}
-            <div className="p-5 rounded-3xl bg-slate-50 border-2 border-slate-200 hover:border-blue-400 shadow-[0_4px_0_0_#e2e8f0] transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center font-black text-sm">
-                  🎭 EE
-                </div>
-                <h3 className="font-black text-sm text-slate-900">English Expression</h3>
-                <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
-                  Ajang unjuk bakat akbar pentas seni drama, pidato monolog, dan performa panggung bahasa Inggris seluruh anggota.
-                </p>
-              </div>
-              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 w-fit">
-                Pentas Seni & Ekspresi
-              </span>
-            </div>
+            {eventsList.map((ev) => {
+              const theme = ev.accentColor === 'emerald'
+                ? { hoverBorder: 'hover:border-emerald-400', tagBadge: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+                : ev.accentColor === 'indigo'
+                ? { hoverBorder: 'hover:border-indigo-400', tagBadge: 'bg-indigo-50 text-indigo-700 border-indigo-200' }
+                : ev.accentColor === 'amber'
+                ? { hoverBorder: 'hover:border-amber-400', tagBadge: 'bg-amber-50 text-amber-700 border-amber-200' }
+                : ev.accentColor === 'rose'
+                ? { hoverBorder: 'hover:border-rose-400', tagBadge: 'bg-rose-50 text-rose-700 border-rose-200' }
+                : ev.accentColor === 'purple'
+                ? { hoverBorder: 'hover:border-purple-400', tagBadge: 'bg-purple-50 text-purple-700 border-purple-200' }
+                : { hoverBorder: 'hover:border-blue-400', tagBadge: 'bg-blue-50 text-blue-700 border-blue-200' };
 
-            {/* Event 2: EA */}
-            <div className="p-5 rounded-3xl bg-slate-50 border-2 border-slate-200 hover:border-emerald-400 shadow-[0_4px_0_0_#e2e8f0] transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-sm">
-                  🏕️ EA
-                </div>
-                <h3 className="font-black text-sm text-slate-900">English Adventure</h3>
-                <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
-                  Kegiatan camp alam terbuka, outbond seru, bonding keakraban antar-angkatan, dan team building di alam.
-                </p>
-              </div>
-              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 w-fit">
-                Camp & Outbond
-              </span>
-            </div>
+              return (
+                <div 
+                  key={ev.id} 
+                  className={`relative p-5 rounded-3xl bg-slate-50 border-2 border-slate-200 ${theme.hoverBorder} shadow-[0_4px_0_0_#e2e8f0] transition-all flex flex-col justify-between space-y-4 group`}
+                >
+                  {/* Super Admin Control Buttons */}
+                  {isSuperAdmin && (
+                    <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur p-1 rounded-xl shadow-xs border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playPop();
+                          handleEditEvent(ev);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        title="Edit Agenda"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playPop();
+                          handleDeleteEvent(ev.id);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Hapus Agenda"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
 
-            {/* Event 3: Pelantikan */}
-            <div className="p-5 rounded-3xl bg-slate-50 border-2 border-slate-200 hover:border-indigo-400 shadow-[0_4px_0_0_#e2e8f0] transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-sm">
-                  🎓 PP
-                </div>
-                <h3 className="font-black text-sm text-slate-900">Pemantapan & Pelantikan</h3>
-                <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
-                  Masa pengukuhan sakral peserta baru Angkatan 21 menjadi anggota resmi EC SMEGA dan kaderisasi kepengurusan.
-                </p>
-              </div>
-              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 w-fit">
-                Regenerasi & Pengukuhan
-              </span>
-            </div>
+                  <div className="space-y-2 pt-1">
+                    <h3 className={`font-black text-base text-slate-900 leading-snug ${isSuperAdmin ? 'pr-14' : ''}`}>
+                      {ev.title}
+                    </h3>
+                    <p className="text-xs font-bold text-slate-600 leading-relaxed">
+                      {ev.description}
+                    </p>
+                  </div>
 
-            {/* Event 4: Dies Natalis */}
-            <div className="p-5 rounded-3xl bg-slate-50 border-2 border-slate-200 hover:border-amber-400 shadow-[0_4px_0_0_#e2e8f0] transition-all flex flex-col justify-between space-y-4">
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-black text-sm">
-                  🎂 23M
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-lg border w-fit ${theme.tagBadge}`}>
+                    {ev.tag}
+                  </span>
                 </div>
-                <h3 className="font-black text-sm text-slate-900">Ulang Tahun EC SMEGA</h3>
-                <p className="text-[11px] font-bold text-slate-500 leading-relaxed">
-                  Peringatan hari lahir English Club SMKN 1 Purbalingga setiap 23 Maret bersama alumni, guru pembina, dan anggota.
-                </p>
-              </div>
-              <span className="text-[10px] font-extrabold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 w-fit">
-                23 Maret (Sejak 2006)
-              </span>
-            </div>
+              );
+            })}
           </div>
         </div>
       </section>
@@ -583,49 +883,93 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Momen Seru @englishclubsvhs1pbg
               </h2>
             </div>
-            <a
-              href="https://www.instagram.com/englishclubsvhs1pbg/"
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => sound.playPop()}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-rose-600 text-white text-xs font-black border border-rose-700 shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer w-fit"
-            >
-              <Instagram className="w-4 h-4" />
-              <span>Kunjungi Instagram Resmi</span>
-              <ExternalLink className="w-3 h-3 ml-0.5" />
-            </a>
+            
+            <div className="flex items-center gap-2 flex-wrap">
+              {isSuperAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    handleOpenAddGallery();
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black border border-blue-700 shadow-[0_3px_0_0_#1d4ed8] active:translate-y-0.5 transition-all cursor-pointer"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>Tambah Foto / Momen</span>
+                </button>
+              )}
+
+              <a
+                href="https://www.instagram.com/englishclubsvhs1pbg/"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => sound.playPop()}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-rose-600 text-white text-xs font-black border border-rose-700 shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer w-fit"
+              >
+                <Instagram className="w-4 h-4" />
+                <span>Kunjungi Instagram Resmi</span>
+                <ExternalLink className="w-3 h-3 ml-0.5" />
+              </a>
+            </div>
           </div>
 
           {/* Tactile Photo Highlights Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-            <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-sm space-y-2 text-center">
-              <div className="aspect-square rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center font-black text-2xl shadow-inner">
-                🎙️
+            {galleryList.map((item) => (
+              <div 
+                key={item.id} 
+                className="relative p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-sm space-y-2 text-center group hover:border-slate-300 transition-all"
+              >
+                {/* Super Admin Control Buttons */}
+                {isSuperAdmin && (
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/95 backdrop-blur p-1 rounded-lg shadow-sm border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playPop();
+                        handleEditGallery(item);
+                      }}
+                      className="p-1 rounded text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                      title="Edit Foto & Teks"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playPop();
+                        handleDeleteGallery(item.id);
+                      }}
+                      className="p-1 rounded text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Hapus Momen"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+
+                <div className="aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative shadow-inner">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.title}
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      onError={(e) => {
+                        // Fallback jika link gambar bermasalah
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex flex-col items-center justify-center font-black text-2xl shadow-inner gap-1">
+                      <span>📸</span>
+                      <span className="text-[10px] font-bold text-white/80">Dokumentasi</span>
+                    </div>
+                  )}
+                </div>
+                <p className="text-xs font-black text-slate-800 line-clamp-1">{item.title}</p>
+                <span className="text-[10px] font-bold text-slate-400 block line-clamp-1">{item.subtitle}</span>
               </div>
-              <p className="text-xs font-black text-slate-800">Speaking & Speech</p>
-              <span className="text-[10px] font-bold text-slate-400">Latihan Rutin Rabu</span>
-            </div>
-            <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-sm space-y-2 text-center">
-              <div className="aspect-square rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center font-black text-2xl shadow-inner">
-                🏕️
-              </div>
-              <p className="text-xs font-black text-slate-800">English Adventure</p>
-              <span className="text-[10px] font-bold text-slate-400">Outdoor Camp & Games</span>
-            </div>
-            <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-sm space-y-2 text-center">
-              <div className="aspect-square rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white flex items-center justify-center font-black text-2xl shadow-inner">
-                🎭
-              </div>
-              <p className="text-xs font-black text-slate-800">English Expression</p>
-              <span className="text-[10px] font-bold text-slate-400">Panggung Seni Bakat</span>
-            </div>
-            <div className="p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-sm space-y-2 text-center">
-              <div className="aspect-square rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 text-white flex items-center justify-center font-black text-2xl shadow-inner">
-                🎂
-              </div>
-              <p className="text-xs font-black text-slate-800">Dies Natalis 2006</p>
-              <span className="text-[10px] font-bold text-slate-400">Ulang Tahun 23 Maret</span>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -806,20 +1150,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-bold text-slate-500">
+          <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-bold text-slate-500">
             <p>© 2006 – 2026 English Club SMEGA. All Rights Reserved.</p>
-            <p>
-              Dikembangkan oleh{' '}
-              <a 
-                href="https://github.com/channdraa-afk" 
-                target="_blank" 
-                rel="noreferrer" 
-                className="text-blue-400 hover:underline font-extrabold"
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  onOpenSuperAdminModal?.();
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700 text-[11px] font-black transition-all cursor-pointer"
               >
-                Chandra (@channdraa-afk)
-              </a>{' '}
-              — Ketua EC SMEGA.
-            </p>
+                <Crown className="w-3.5 h-3.5" />
+                <span>{isSuperAdmin ? '👑 Super Admin Aktif' : 'Portal Super Admin'}</span>
+              </button>
+              <p>
+                Dikembangkan oleh{' '}
+                <a 
+                  href="https://github.com/channdraa-afk" 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="text-blue-400 hover:underline font-extrabold"
+                >
+                  Chandra (@channdraa-afk)
+                </a>{' '}
+                — Ketua EC SMEGA.
+              </p>
+            </div>
           </div>
         </div>
       </footer>
@@ -838,6 +1195,194 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <span>PRESENSI</span>
         </button>
       </div>
+
+      {/* ================= MODAL EDIT/TAMBAH AGENDA BESAR ================= */}
+      {isEventModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#94a3b8] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-amber-500" />
+                <h3 className="font-black text-base text-slate-900">
+                  {editingEvent ? 'Edit Agenda Besar' : 'Tambah Agenda Besar'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsEventModalOpen(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEvent} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">Nama Agenda / Acara</label>
+                <input
+                  type="text"
+                  required
+                  value={eventForm.title}
+                  onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
+                  placeholder="Contoh: English Expression"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">Kategori / Tag Singkat</label>
+                <input
+                  type="text"
+                  required
+                  value={eventForm.tag}
+                  onChange={(e) => setEventForm({ ...eventForm, tag: e.target.value })}
+                  placeholder="Contoh: Pentas Seni & Ekspresi"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">Deskripsi Singkat</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={eventForm.description}
+                  onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
+                  placeholder="Jelaskan secara ringkas esensi dan kegiatan agenda ini..."
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all resize-none"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">Warna Aksen Kartu</label>
+                <select
+                  value={eventForm.accentColor}
+                  onChange={(e) => setEventForm({ ...eventForm, accentColor: e.target.value as any })}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 font-bold text-xs outline-hidden"
+                >
+                  <option value="blue">Biru (Utama)</option>
+                  <option value="emerald">Hijau (Alam / Camp)</option>
+                  <option value="indigo">Indigo (Resmi / Sakral)</option>
+                  <option value="amber">Kuning / Emas (Ulang Tahun)</option>
+                  <option value="rose">Merah Muda (Kreatif)</option>
+                  <option value="purple">Ungu (Prestisius)</option>
+                </select>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsEventModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black hover:bg-slate-200 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer"
+                >
+                  Simpan Agenda
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL EDIT/TAMBAH FOTO GALERI ================= */}
+      {isGalleryModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
+          <div className="w-full max-w-md bg-white rounded-3xl border-2 border-slate-300 shadow-[0_8px_0_0_#94a3b8] p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="w-5 h-5 text-blue-600" />
+                <h3 className="font-black text-base text-slate-900">
+                  {editingGallery ? 'Edit Momen / Foto' : 'Tambah Momen / Foto'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsGalleryModalOpen(false)}
+                className="p-1 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveGallery} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">Judul Momen</label>
+                <input
+                  type="text"
+                  required
+                  value={galleryForm.title}
+                  onChange={(e) => setGalleryForm({ ...galleryForm, title: e.target.value })}
+                  placeholder="Contoh: Speaking & Speech"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">Keterangan / Subteks</label>
+                <input
+                  type="text"
+                  required
+                  value={galleryForm.subtitle}
+                  onChange={(e) => setGalleryForm({ ...galleryForm, subtitle: e.target.value })}
+                  placeholder="Contoh: Agenda Rutin Rabu"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">URL Foto (Link Gambar Nyata)</label>
+                <input
+                  type="url"
+                  value={galleryForm.imageUrl}
+                  onChange={(e) => setGalleryForm({ ...galleryForm, imageUrl: e.target.value })}
+                  placeholder="https://... (Link foto Google Drive / Imgur / Supabase)"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
+                />
+                <p className="text-[10px] font-bold text-slate-400">
+                  Kosongkan jika ingin menggunakan ikon placeholder gradien.
+                </p>
+              </div>
+
+              {galleryForm.imageUrl && (
+                <div className="space-y-1">
+                  <span className="text-[10px] font-black text-slate-500">Pratinjau Gambar:</span>
+                  <div className="w-full h-32 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                    <img 
+                      src={galleryForm.imageUrl} 
+                      alt="Preview" 
+                      className="w-full h-full object-cover" 
+                      onError={(e) => {
+                        (e.target as HTMLElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsGalleryModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-black hover:bg-slate-200 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black shadow-[0_2px_0_0_#1d4ed8] active:translate-y-0.5 transition-all cursor-pointer"
+                >
+                  Simpan Foto
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

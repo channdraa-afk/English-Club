@@ -241,6 +241,26 @@
   - **Form Pendaftaran Anggota Baru Online**: Formulir pendaftaran terhubung langsung ke tabel `registrations` Supabase dengan konfeti selebrasi.
   - **Navigasi Bolak-Balik Terpadu**: Tombol `[ 🏛️ Web Utama ]` di navbar presensi dan dashboard pengurus untuk kembali ke beranda kapan saja.
 
+- [x] Refinement Redaksi, Koreksi 7 Sie Asli A20, & Dynamic Content Editor Super Admin:
+  - **Redaksi Presisi & Alami**:
+    - Banner jadwal resmi diperbarui ke format fleksibel: `📅 Agenda Rutin: Setiap Rabu, 15:40 – 17:30 WIB di SMKN 1 Purbalingga.` tanpa ruang kaku.
+    - Subtitle Hero diperbaiki menggantikan istilah kaku *"Wadah resmi"* menjadi *"Ekstrakurikuler resmi SMK Negeri 1 Purbalingga..."*.
+    - Kartu Championship Spirit diperbaiki menggantikan istilah pewayangan *"kawah candradimuka"* menjadi *"Mempersiapkan dan melatih delegasi lomba..."*.
+  - **Koreksi Data Asli 7 Sie Pengurus A20**:
+    - Menghapus asumsi filler Sie Kebersihan dan Perlengkapan.
+    - Menampilkan 7 Sie resmi sesuai dokumen sah A20: `👩‍🏫 Sie Pengajar & Pendamping`, `⚖️ Sie Kedisiplinan`, `📸 Sie PDD`, `📢 Sie Humas`, `🏢 Sie Sarpras`, `⚙️ Sie Operasional`, dan `📚 Sie Kurikulum`.
+  - **Pembersihan Kartu Agenda Besar (No Clunky Initials Logo)**:
+    - Menghapus kotak logo inisial mini yang kaku (`🎭 EE`, `🏕️ EA`, dll) sehingga kartu berpenampilan bersih, elegan, dan lega.
+    - Mengubah sub-judul agar dinamis tanpa mengunci jumlah agenda (*"Milestone dan program kerja tahunan..."*).
+  - **Integrasi Penuh Super Admin di Halaman Web**:
+    - Menghubungkan state `isSuperAdmin` dari root aplikasi ke `LandingPage`.
+    - Floating Top Admin Bar saat login: `👑 Mode Super Admin Aktif (Chandra) | [ 🏛️ Masuk Pusat Komando ] [ 🔒 Kunci ]`.
+    - Tombol jalan pintas login Super Admin langsung di footer web utama (`[ 👑 Portal Super Admin ]`) tanpa perlu memutar lewat halaman presensi.
+  - **Dynamic Content Management (Agenda & Galeri Dokumentasi)**:
+    - CRUD Agenda Besar langsung di website: tombol `[ ➕ Tambah Agenda Baru ]`, modal taktil edit judul, tag, deskripsi, dan warna aksen, serta tombol hapus.
+    - Galeri Dokumentasi Dinamis: tombol `[ ➕ Tambah Foto / Momen ]`, modal taktil edit judul, keterangan/subteks, dan link URL foto nyata (Google Drive, Imgur, Supabase, dll) dengan pratinjau langsung, serta tombol hapus.
+    - Tersimpan realtime ke database Supabase `app_settings` (key: `'big_events'` dan `'gallery_items'`).
+
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).

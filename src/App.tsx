@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabase';
-import { Member, Meeting, Attendance, Registration, TalentStar } from './types/database';
+import { Member, Meeting, Attendance, Registration, TalentStar, BigEvent, GalleryItem } from './types/database';
 import { Navbar } from './components/Navbar';
 import { MemberAttendance } from './components/MemberAttendance';
 import { WordOfTheDayModal } from './components/WordOfTheDayModal';
 import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
 import { MentorDashboard } from './components/MentorPortal/MentorDashboard';
-import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
+import { SuperAdminModal, SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
 import { LandingPage } from './components/LandingPage/LandingPage';
 import { sound } from './lib/audio';
 import { RefreshCw, AlertCircle } from 'lucide-react';
@@ -18,10 +18,13 @@ export const App: React.FC = () => {
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [talentStars, setTalentStars] = useState<TalentStar[]>([]);
+  const [bigEvents, setBigEvents] = useState<BigEvent[]>([]);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
   const [mentorPin, setMentorPin] = useState('123321');
   const [mentorToken, setMentorToken] = useState('CREW20');
   const [isManualBypass, setIsManualBypass] = useState(false);
+  const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -155,6 +158,10 @@ export const App: React.FC = () => {
             setIsManualBypass(Boolean(s.value));
           } else if (s.key === 'talent_stars' && Array.isArray(s.value)) {
             setTalentStars(s.value);
+          } else if (s.key === 'big_events' && Array.isArray(s.value)) {
+            setBigEvents(s.value);
+          } else if (s.key === 'gallery_items' && Array.isArray(s.value)) {
+            setGalleryItems(s.value);
           }
         });
       }
@@ -234,6 +241,24 @@ export const App: React.FC = () => {
     await supabase.from('app_settings').upsert({ key: 'manual_bypass', value: state });
   };
 
+  const handleUpdateBigEvents = async (events: BigEvent[]) => {
+    setBigEvents(events);
+    try {
+      await supabase.from('app_settings').upsert({ key: 'big_events', value: events });
+    } catch (err) {
+      console.error('Failed to save big_events:', err);
+    }
+  };
+
+  const handleUpdateGalleryItems = async (items: GalleryItem[]) => {
+    setGalleryItems(items);
+    try {
+      await supabase.from('app_settings').upsert({ key: 'gallery_items', value: items });
+    } catch (err) {
+      console.error('Failed to save gallery_items:', err);
+    }
+  };
+
   const handleAddTalentStar = async (newStar: Omit<TalentStar, 'id' | 'created_at'>) => {
     const star: TalentStar = {
       ...newStar,
@@ -302,6 +327,17 @@ export const App: React.FC = () => {
             a20: members.filter((m) => m.generation === 20).length || 59,
           }}
           isRegistrationOpen={isRegistrationOpen}
+          isSuperAdmin={isSuperAdmin}
+          onOpenSuperAdminModal={() => setIsSuperAdminModalOpen(true)}
+          onGoToMentorPortal={() => {
+            setCurrentView('mentor');
+            window.location.hash = '#mentor';
+          }}
+          onSuperAdminLock={handleSuperAdminLock}
+          bigEvents={bigEvents}
+          galleryItems={galleryItems}
+          onUpdateBigEvents={handleUpdateBigEvents}
+          onUpdateGalleryItems={handleUpdateGalleryItems}
         />
       ) : (
         <>
@@ -431,6 +467,16 @@ export const App: React.FC = () => {
           </footer>
         </>
       )}
+
+      {/* Global Super Admin Modal */}
+      <SuperAdminModal
+        isOpen={isSuperAdminModalOpen}
+        onClose={() => setIsSuperAdminModalOpen(false)}
+        onSuccess={(sig) => {
+          handleSuperAdminUnlock(sig);
+          setIsSuperAdminModalOpen(false);
+        }}
+      />
     </div>
   );
 };

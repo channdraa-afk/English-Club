@@ -72,3 +72,19 @@ export interface TalentStar {
   awarded_by: string;
   created_at: string;
 }
+
+export interface BigEvent {
+  id: string;
+  title: string;
+  description: string;
+  tag: string;
+  accentColor?: 'blue' | 'emerald' | 'indigo' | 'amber' | 'rose' | 'purple';
+}
+
+export interface GalleryItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  imageUrl?: string;
+  accentColor?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'indigo';
+}
