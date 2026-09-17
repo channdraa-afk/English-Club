@@ -7,12 +7,14 @@ import {
   Sparkles, 
   AlertCircle, 
   RefreshCw, 
-  HeartHandshake
+  HeartHandshake,
+  Clock
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { supabase } from '../../lib/supabase';
+import { getScheduleStatus } from '../../lib/schedule';
 import confetti from 'canvas-confetti';
 
 interface MentorAttendanceProps {
@@ -20,6 +22,7 @@ interface MentorAttendanceProps {
   activeMeeting: Meeting | null;
   attendances: Attendance[];
   mentorToken?: string;
+  isManualBypass?: boolean;
   onAttendanceChanged: () => void;
 }
 
@@ -28,6 +31,7 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   activeMeeting,
   attendances,
   mentorToken = 'CREW20',
+  isManualBypass = false,
   onAttendanceChanged,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +60,11 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   const attendedMentorSet = useMemo(() => {
     return new Set(currentMeetingAttendances.map((a) => a.member_id));
   }, [currentMeetingAttendances]);
+
+  // Schedule status specifically for mentors (active until 18:00 WIB)
+  const scheduleStatus = useMemo(() => {
+    return getScheduleStatus(activeMeeting, Boolean(isManualBypass), 'mentor');
+  }, [activeMeeting, isManualBypass]);
 
   // Autocomplete matching
   const searchResults = useMemo(() => {
@@ -91,6 +100,12 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+
+    if (!scheduleStatus.isActive) {
+      sound.playError();
+      setErrorMessage(scheduleStatus.statusText);
+      return;
+    }
 
     if (!activeMeeting) {
       sound.playError();
@@ -195,10 +210,27 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
           dan bagikan evaluasi/unek-unek riil eskul hari ini secara jujur!
         </p>
 
-        <div className="flex items-center gap-2 pt-1 text-xs font-bold text-indigo-200">
+        <div className="flex flex-wrap items-center gap-2 pt-1 text-xs font-bold text-indigo-200">
           <span>Sesi: <strong>{activeMeeting ? activeMeeting.title : 'Pertemuan Aktif'}</strong></span>
           <span>•</span>
           <span>Pengurus Hadir: <strong>{attendedMentorSet.size} / {a20Mentors.length}</strong></span>
+          <span>•</span>
+          <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black border ${
+            scheduleStatus.badgeColor === 'emerald' ? 'bg-emerald-500/20 text-emerald-300 border-emerald-400/40' :
+            scheduleStatus.badgeColor === 'amber' ? 'bg-amber-500/20 text-amber-300 border-amber-400/40' :
+            scheduleStatus.badgeColor === 'rose' ? 'bg-rose-500/20 text-rose-300 border-rose-400/40' :
+            'bg-slate-700/50 text-slate-300 border-slate-600'
+          }`}>
+            {scheduleStatus.statusText}
+          </span>
+        </div>
+
+        {/* 18:00 WIB Extension Info Card */}
+        <div className="p-3 rounded-2xl bg-indigo-900/60 border border-indigo-400/30 text-xs text-indigo-100 flex items-center gap-2.5">
+          <Clock className="w-4 h-4 text-amber-300 shrink-0" />
+          <span>
+            <strong>Batas Presensi Pengurus: 15:40 - 18:00 WIB</strong> (Spesial perpanjangan s.d. jam 6 sore untuk evaluasi & piket bersih-bersih).
+          </span>
         </div>
       </div>
 
@@ -425,8 +457,8 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
             {/* Submit button */}
             <TactileButton
               type="submit"
-              disabled={isLoading || !tokenInput.trim()}
-              variant="brand"
+              disabled={isLoading || !tokenInput.trim() || !scheduleStatus.isActive}
+              variant={scheduleStatus.isActive ? 'brand' : 'slate'}
               size="lg"
               className="w-full py-3 text-sm"
             >
@@ -435,7 +467,9 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
               ) : (
                 <CheckCircle2 className="w-4 h-4" />
               )}
-              <span>KIRIM PRESENSI & EVALUASI</span>
+              <span>
+                {!scheduleStatus.isActive ? scheduleStatus.statusText : 'KIRIM PRESENSI & EVALUASI'}
+              </span>
             </TactileButton>
           </form>
         )}

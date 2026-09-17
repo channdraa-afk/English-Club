@@ -11,8 +11,23 @@ import { Meeting } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { supabase } from '../../lib/supabase';
-import { getScheduleStatus } from '../../lib/schedule';
+import { getScheduleStatus, getTargetWednesdayDate } from '../../lib/schedule';
 import { getRandomIdiom } from '../../data/idioms';
+
+const formatMeetingDateIndo = (dateStr?: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr + 'T00:00:00');
+    return new Intl.DateTimeFormat('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    }).format(d);
+  } catch {
+    return dateStr;
+  }
+};
 
 interface MeetingControlProps {
   activeMeeting: Meeting | null;
@@ -39,7 +54,10 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   currentPin,
   onPinUpdated,
 }) => {
+  const targetWed = getTargetWednesdayDate();
+
   // New / Edit Meeting state
+  const [meetingDate, setMeetingDate] = useState(activeMeeting?.meeting_date || targetWed.dateStr);
   const [title, setTitle] = useState(activeMeeting?.title || 'Weekly English Gathering');
   const [token, setToken] = useState(activeMeeting?.token || 'EAGLE21');
   const [mentorTokenInput, setMentorTokenInput] = useState(mentorToken || 'CREW20');
@@ -63,6 +81,18 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     setMentorTokenInput(mentorToken);
   }, [mentorToken]);
 
+  useEffect(() => {
+    if (activeMeeting?.meeting_date) {
+      setMeetingDate(activeMeeting.meeting_date);
+    }
+    if (activeMeeting?.title) setTitle(activeMeeting.title);
+    if (activeMeeting?.token) setToken(activeMeeting.token);
+    if (activeMeeting?.word_of_the_day) setWord(activeMeeting.word_of_the_day);
+    if (activeMeeting?.word_meaning) setMeaning(activeMeeting.word_meaning);
+    setIsHoliday(Boolean(activeMeeting?.is_holiday));
+    setHolidayReason(activeMeeting?.holiday_reason || '');
+  }, [activeMeeting]);
+
   const handleRandomStudentToken = () => {
     sound.playPop();
     const rand = sampleStudentTokens[Math.floor(Math.random() * sampleStudentTokens.length)];
@@ -84,8 +114,20 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
   const handleToggleHoliday = async () => {
     if (!activeMeeting) return;
-    sound.playPop();
     const nextState = !isHoliday;
+    const sessionDateIndo = activeMeeting.meeting_date
+      ? formatMeetingDateIndo(activeMeeting.meeting_date)
+      : targetWed.formattedIndo;
+    const sessionTitle = activeMeeting.title || 'Weekly English Gathering';
+
+    if (nextState) {
+      const confirmed = window.confirm(
+        `Apakah kamu yakin ingin meliburkan sesi "${sessionTitle}" untuk hari ${sessionDateIndo}?\n\nPresensi pada sesi tersebut akan ditutup, dan TIDAK AKAN dihitung alpa di Rekap Rapor Bulanan.`
+      );
+      if (!confirmed) return;
+    }
+
+    sound.playPop();
     let reason = holidayReason;
     if (nextState && !reason.trim()) {
       reason = 'Libur Kegiatan / Ujian Sekolah';
@@ -115,6 +157,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         const { error } = await supabase
           .from('meetings')
           .update({
+            meeting_date: meetingDate || targetWed.dateStr,
             title: title.trim(),
             token: token.trim().toUpperCase(),
             word_of_the_day: word.trim(),
@@ -129,7 +172,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
       } else {
         // Create new meeting
         const { error } = await supabase.from('meetings').insert({
-          meeting_date: new Date().toISOString().split('T')[0],
+          meeting_date: meetingDate || targetWed.dateStr,
           title: title.trim(),
           token: token.trim().toUpperCase(),
           word_of_the_day: word.trim(),
@@ -179,6 +222,10 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     }
   };
 
+  const displaySessionDate = activeMeeting?.meeting_date 
+    ? formatMeetingDateIndo(activeMeeting.meeting_date)
+    : targetWed.formattedIndo;
+
   return (
     <div className="space-y-6">
       {/* Schedule Automation Banner */}
@@ -186,13 +233,13 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-indigo-600" />
-            <h4 className="font-black text-slate-900 text-sm">Jadwal Operasional Otomatis</h4>
+            <h4 className="font-black text-slate-900 text-sm">Jadwal Operasional Eskul</h4>
             <span className="text-[10px] font-black px-2 py-0.5 rounded bg-indigo-50 text-indigo-800 border border-indigo-200">
-              Rabu 15:40 - 17:30 WIB
+              Setiap Rabu (15:40 - 18:00 WIB)
             </span>
           </div>
           <p className="text-xs font-bold text-slate-500">
-            Status: <span className={`font-black ${
+            Status Sistem: <span className={`font-black ${
               scheduleStatus.badgeColor === 'emerald' ? 'text-emerald-600' :
               scheduleStatus.badgeColor === 'amber' ? 'text-amber-600' :
               scheduleStatus.badgeColor === 'rose' ? 'text-rose-600' : 'text-slate-600'
@@ -219,54 +266,96 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
       {/* Dual Active Token Hero Card */}
       <div className="p-6 rounded-3xl bg-slate-900 text-white border-2 border-slate-700 shadow-[0_6px_0_0_#0f172a] space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
-          <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded-md border border-emerald-800">
-              Token Presensi Hari Ini
-            </span>
-            <h3 className="text-base font-black text-white mt-1">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950 px-2.5 py-0.5 rounded-md border border-emerald-800">
+                Sesi Terjadwal English Club
+              </span>
+              <span className="text-xs font-bold text-indigo-300 bg-indigo-950/80 px-2.5 py-0.5 rounded-md border border-indigo-800">
+                📅 {displaySessionDate}
+              </span>
+            </div>
+            <h3 className="text-lg font-black text-white mt-1">
               {activeMeeting ? activeMeeting.title : 'Weekly Gathering'}
             </h3>
+            <p className="text-xs text-slate-400">
+              {isHoliday ? (
+                <span className="text-amber-400 font-bold">
+                  🏖️ Status: Sesi Ini Diliburkan ({holidayReason || 'Libur Kegiatan / Ujian'})
+                </span>
+              ) : (
+                <span className="text-emerald-400 font-bold">
+                  🟢 Status: Sesi Berjalan Terjadwal
+                </span>
+              )}
+            </p>
           </div>
 
           <button
             type="button"
             onClick={handleToggleHoliday}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs border transition-all cursor-pointer ${
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs border transition-all cursor-pointer shrink-0 ${
               isHoliday
                 ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-700 shadow-[0_3px_0_0_#b45309]'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-600'
+                : 'bg-rose-950/80 hover:bg-rose-900 text-rose-200 border-rose-800 shadow-[0_3px_0_0_#4c0519]'
             } active:translate-y-0.5`}
           >
-            <span>{isHoliday ? '🏖️ Status: LIBUR' : '🌴 Set Pertemuan Libur'}</span>
+            <span>
+              {isHoliday
+                ? '🏖️ Sesi Diliburkan (Klik untuk Buka Kembali)'
+                : `🌴 Liburkan Sesi: ${displaySessionDate}`}
+            </span>
           </button>
         </div>
 
         {/* Dual Tokens Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Token Siswa (A21) */}
-          <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
-              1. Token Siswa (Adik Kelas A21)
-            </span>
+          <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                1. Token Siswa (Adik Kelas A21)
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">
+                Batas 17:30 WIB
+              </span>
+            </div>
             <div className="text-2xl sm:text-3xl font-black text-emerald-400 font-mono tracking-wider">
-              {activeMeeting?.is_active ? activeMeeting.token : 'NONAKTIF'}
+              {isHoliday ? (
+                <span className="text-slate-500 text-lg">LIBUR (NONAKTIF)</span>
+              ) : activeMeeting?.is_active ? (
+                activeMeeting.token
+              ) : (
+                'NONAKTIF'
+              )}
             </div>
             <p className="text-[11px] font-bold text-slate-400">
-              Tuliskan kode ini di papan tulis kelas untuk adik kelas.
+              Tuliskan kode ini di papan tulis kelas untuk adik kelas. Hangus tepat pukul 17:30 WIB.
             </p>
           </div>
 
           {/* Token Khusus Pengurus (A20) */}
-          <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
-              2. Token Khusus Pengurus (Kakak Kelas A20)
-            </span>
-            <div className="text-2xl sm:text-3xl font-black text-amber-300 font-mono tracking-wider">
-              {activeMeeting?.is_active ? mentorToken : 'NONAKTIF'}
+          <div className="p-4 rounded-2xl bg-slate-800/80 border border-slate-700 space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-amber-400">
+                2. Token Pengurus (Kakak Kelas A20)
+              </span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                Batas 18:00 WIB (Jam 6 Sore)
+              </span>
             </div>
-            <p className="text-[11px] font-bold text-slate-400">
-              Token rahasia yang dibisikkan/diumumkan setelah eskul mulai.
+            <div className="text-2xl sm:text-3xl font-black text-amber-300 font-mono tracking-wider">
+              {isHoliday ? (
+                <span className="text-slate-500 text-lg">LIBUR (NONAKTIF)</span>
+              ) : activeMeeting?.is_active ? (
+                mentorToken
+              ) : (
+                'NONAKTIF'
+              )}
+            </div>
+            <p className="text-[11px] font-bold text-amber-200/80">
+              Kelonggaran spesial s.d. jam 6 sore untuk evaluasi & piket bersih-bersih kelas/aula.
             </p>
           </div>
         </div>
@@ -295,18 +384,38 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         )}
 
         <form onSubmit={handleSaveMeeting} className="space-y-4">
-          <div>
-            <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
-              Judul Sesi Pertemuan
-            </label>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Weekly English Gathering #1"
-              className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-800 focus:outline-none"
-              required
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
+                Judul Sesi Pertemuan
+              </label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Weekly English Gathering #1"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-800 focus:outline-none"
+                required
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                  Tanggal Sesi (Hari Rabu)
+                </label>
+                <span className="text-[11px] font-bold text-indigo-600">
+                  {formatMeetingDateIndo(meetingDate)}
+                </span>
+              </div>
+              <input
+                type="date"
+                value={meetingDate}
+                onChange={(e) => setMeetingDate(e.target.value)}
+                className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:bg-white focus:border-slate-800 focus:outline-none"
+                required
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

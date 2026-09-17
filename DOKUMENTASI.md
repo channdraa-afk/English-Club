@@ -172,7 +172,14 @@
   - **Non-Blocking Feedback**: Mengeliminasi spinner layar/baris yang sebelumnya memblokir interaksi selama 2 detik; tombol kini tetap interaktif dan hanya memunculkan indikator sinkronisasi mikro yang halus.
   - **Fail-Safe Automatic Rollback**: Jika jaringan internet terputus di tengah proses, state UI secara otomatis dikembalikan ke status sebelumnya disertai peringatan dan nada audio error.
 
+- [x] Perpanjangan Token Pengurus (18:00 WIB) & Target Sesi Otomatis Kelipatan Hari Rabu:
+  - **Kelonggaran Spesial Pengurus (s.d. 18:00 WIB / Jam 6 Sore)**: Memisahkan jendela waktu presensi di `schedule.ts` berdasarkan parameter `role`. Adik kelas (A21) hangus tepat pukul 17:30 WIB agar tidak ada celah titip absen dari rumah, sedangkan kakak kelas pengurus (A20) diberi kelonggaran 30 menit tambahan hingga pukul 18:00 WIB untuk menuntaskan piket menyapu/merapikan kelas/aula, inventaris proyektor/sound, dan rapat evaluasi harian BPH.
+  - **Target Wednesday Resolver (`getTargetWednesdayDate`)**: Logika cerdas berbasis kalender nyata zona waktu Jakarta (WIB). Karena eskul EC SMEGA hanya diadakan pada hari Rabu, jika admin mengakses di hari Kamis (misal: 17 September 2026), target sesi otomatis mengunci ke Rabu terdekat berikutnya (23 September 2026). Jika diakses pada Kamis 24 September, target otomatis maju ke Rabu 30 September 2026.
+  - **Tombol Libur Jelas & Konfirmasi Aman (`MeetingControl.tsx`)**: Mengganti label ambigu `[ Set Pertemuan Libur ]` menjadi dinamis `[ 🌴 Liburkan Sesi: Rabu, 23 September 2026 ]` atau `[ 🏖️ Sesi Diliburkan (Klik untuk Buka Kembali) ]` dengan pop-up konfirmasi yang menyebutkan nama sesi dan tanggal hari Rabu tersebut secara eksplisit.
+  - **Ketahanan Nilai Rapor**: Sesi yang diliburkan otomatis dikecualikan dari perhitungan total pertemuan wajib di `ReportRecap.tsx` dan `MentorDisciplineRadar.tsx`, sehingga tidak ada siswa maupun pengurus yang dihitung alpa/alpha.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
+
 
