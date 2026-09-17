@@ -1,0 +1,26 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased font-nunito;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Duolingo style 3D Pushable buttons */
+.btn-tactile {
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.btn-tactile:active {
+  transform: translateY(4px);
+  box-shadow: 0 0 0 0 transparent !important;
+}
+
+/* Card hover tactile bump */
+.card-tactile {
+  box-shadow: 0 4px 0 0 #e2e8f0;
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
