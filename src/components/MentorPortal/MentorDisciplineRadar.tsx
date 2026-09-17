@@ -9,7 +9,8 @@ import {
   Download, 
   Users, 
   ArrowUpDown,
-  CalendarCheck
+  CalendarCheck,
+  Printer
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -161,7 +162,13 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
       });
   }, [mentorEvaluations, searchName, selectedSie, selectedStatus, sortBy]);
 
-  // Export CSV function
+  // Handle Print PDF
+  const handlePrintPdf = () => {
+    sound.playPop();
+    window.print();
+  };
+
+  // Export CSV function (Standard Excel Windows Indonesia: ';' with UTF-8 BOM)
   const handleExportCsv = () => {
     sound.playSuccess();
 
@@ -187,18 +194,19 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         '2 Pertemuan',
         `"${item.statusLabel}"`,
         `"${datesStr || 'Belum Ada'}"`,
-      ].join(',');
+      ].join(';');
     });
 
-    const csvContent = [headers.join(','), ...rows].join('\n');
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows].join('\r\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Radar_Kedisiplinan_A20_${selectedMonth}.csv`);
+    link.href = url;
+    link.download = `Radar_Kedisiplinan_A20_${selectedMonth}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const formatMonthTitle = (str: string) => {
@@ -212,8 +220,56 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner */}
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-500 shadow-[0_6px_0_0_#312e81] space-y-3">
+      {/* Printable Area Specific Styles - Locked to A4 Landscape, zero clipping */}
+      <style>{`
+        @media print {
+          @page {
+            size: A4 landscape;
+            margin: 8mm 6mm;
+          }
+          html, body {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          body * {
+            visibility: hidden;
+          }
+          #printable-discipline-radar, #printable-discipline-radar * {
+            visibility: visible;
+          }
+          #printable-discipline-radar {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+            display: block !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          #printable-discipline-radar table {
+            width: 100% !important;
+            font-size: 8.5pt !important;
+            border-collapse: collapse !important;
+          }
+          #printable-discipline-radar th, #printable-discipline-radar td {
+            padding: 3px 5px !important;
+          }
+        }
+      `}</style>
+
+      {/* Top Banner (Hidden in Print) */}
+      <div className="no-print p-6 rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white border-2 border-indigo-500 shadow-[0_6px_0_0_#312e81] space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span className="p-2 rounded-2xl bg-indigo-500/30 text-indigo-300 border border-indigo-400/40">
@@ -271,8 +327,8 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* KPI Cards Grid (Hidden in Print) */}
+      <div className="no-print grid grid-cols-2 lg:grid-cols-4 gap-3">
         {/* Safe / Disciplined */}
         <div className="p-4 rounded-3xl bg-emerald-50 border-2 border-emerald-300 shadow-[0_4px_0_0_#86efac] space-y-1">
           <div className="flex items-center justify-between">
@@ -338,8 +394,8 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         </div>
       </div>
 
-      {/* Control Bar: Filters & Export */}
-      <div className="bg-white p-4 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">
+      {/* Control Bar: Filters & Export (Hidden in Print) */}
+      <div className="no-print bg-white p-4 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">
         <div className="flex flex-col sm:flex-row gap-2.5">
           {/* Search */}
           <div className="relative flex-1">
@@ -404,25 +460,37 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         </div>
 
         {/* Action Row */}
-        <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-slate-100">
           <span className="text-xs font-bold text-slate-500">
             Menampilkan <strong>{filteredList.length}</strong> dari {a20Mentors.length} pengurus
           </span>
 
-          <TactileButton
-            onClick={handleExportCsv}
-            variant="brand"
-            size="sm"
-            className="py-1.5 px-3 text-xs"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Ekspor CSV Kedisiplinan</span>
-          </TactileButton>
+          <div className="flex items-center gap-2">
+            <TactileButton
+              onClick={handlePrintPdf}
+              variant="white"
+              size="sm"
+              className="py-1.5 px-3 text-xs"
+            >
+              <Printer className="w-3.5 h-3.5 text-slate-700" />
+              <span>Cetak PDF Kedisiplinan</span>
+            </TactileButton>
+
+            <TactileButton
+              onClick={handleExportCsv}
+              variant="brand"
+              size="sm"
+              className="py-1.5 px-3 text-xs"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Ekspor CSV Kedisiplinan</span>
+            </TactileButton>
+          </div>
         </div>
       </div>
 
-      {/* List of Mentors */}
-      <div className="space-y-2.5">
+      {/* List of Mentors (Hidden in Print, replaced by Official Table) */}
+      <div className="no-print space-y-2.5">
         {filteredList.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-3xl border-2 border-dashed border-slate-300 p-6">
             <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -521,6 +589,96 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
             );
           })
         )}
+      </div>
+
+      {/* ========================================================= */}
+      {/* OFFICIAL PRINTABLE RECAP TABLE FOR KEDIS (A4 LANDSCAPE) */}
+      {/* ========================================================= */}
+      <div id="printable-discipline-radar" className="hidden print:block space-y-4 bg-white p-6">
+        {/* Official Clean Heading with EC Logo */}
+        <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-center justify-between gap-4 text-left">
+          <div className="flex items-center gap-3.5">
+            <img src="/logo.png" alt="EC SMEGA Logo" className="w-14 h-14 object-contain shrink-0" />
+            <div>
+              <h2 className="text-lg font-black text-slate-950 uppercase tracking-tight leading-tight">
+                REKAPITULASI KEDISIPLINAN & PRESENSI PENGURUS (ANGKATAN 20)
+              </h2>
+              <p className="text-xs font-black text-slate-700 mt-0.5">
+                EKSTRAKURIKULER ENGLISH CLUB — SMK NEGERI 1 PURBALINGGA
+              </p>
+              <p className="text-[11px] font-bold text-slate-500 mt-0.5">
+                Periode: {formatMonthTitle(selectedMonth)} • Standar Shift: Minimal 2x Hadir per Bulan • {effectiveMeetings.length} Pertemuan Aktif
+              </p>
+            </div>
+          </div>
+          <div className="text-right shrink-0">
+            <span className="inline-block px-3 py-1 rounded-xl bg-slate-100 text-slate-800 text-[10px] font-black border border-slate-300 uppercase tracking-wider">
+              Laporan Sie Kedisiplinan
+            </span>
+          </div>
+        </div>
+
+        {/* Compact KPI Summary Bar */}
+        <div className="grid grid-cols-4 gap-2.5 p-2.5 rounded-xl border border-slate-300 bg-slate-50 text-[11px] font-bold text-slate-800">
+          <div>Total Pengurus: <strong>{stats.total} Orang</strong></div>
+          <div>Aman (≥2x): <strong className="text-emerald-700">{stats.safeCount} Orang ({stats.complianceRate}%)</strong></div>
+          <div>Kurang 1 Sesi (1x): <strong className="text-amber-700">{stats.warningCount} Orang</strong></div>
+          <div>Kritis (0x): <strong className="text-rose-700">{stats.criticalCount} Orang</strong></div>
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs border-collapse border border-slate-300">
+            <thead className="bg-slate-100 text-slate-900 font-black">
+              <tr>
+                <th className="border border-slate-300 py-2 px-2 w-8 text-center">No</th>
+                <th className="border border-slate-300 py-2 px-3 min-w-[170px]">Nama Lengkap</th>
+                <th className="border border-slate-300 py-2 px-2 w-20 text-center">Kelas</th>
+                <th className="border border-slate-300 py-2 px-3 min-w-[140px]">Jabatan / Sie</th>
+                <th className="border border-slate-300 py-2 px-2 min-w-[150px] text-center">Kehadiran Sesi Rabu</th>
+                <th className="border border-slate-300 py-2 px-2 w-20 text-center">Total Hadir</th>
+                <th className="border border-slate-300 py-2 px-3 w-36 text-center">Status Kedisiplinan</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 font-bold">
+              {filteredList.map((item, idx) => (
+                <tr key={item.mentor.id}>
+                  <td className="border border-slate-300 py-1.5 px-2 text-center font-mono text-slate-500">{idx + 1}</td>
+                  <td className="border border-slate-300 py-1.5 px-3 text-slate-900 font-extrabold">{item.mentor.name}</td>
+                  <td className="border border-slate-300 py-1.5 px-2 text-center text-slate-600">{item.mentor.class_name}</td>
+                  <td className="border border-slate-300 py-1.5 px-3 text-slate-700">{item.mentor.position}</td>
+                  <td className="border border-slate-300 py-1.5 px-2 text-center text-[10px] font-mono">
+                    {item.attendedMeetings.length === 0 ? (
+                      <span className="text-slate-400 italic">Belum Ada</span>
+                    ) : (
+                      item.attendedMeetings.map((m) => m.meeting_date.slice(8)).join(', ')
+                    )}
+                  </td>
+                  <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-black text-slate-900">
+                    {item.count} Sesi
+                  </td>
+                  <td className="border border-slate-300 py-1.5 px-3 text-center">
+                    <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-black ${
+                      item.status === 'safe'
+                        ? 'bg-emerald-100 text-emerald-800'
+                        : item.status === 'warning'
+                        ? 'bg-yellow-100 text-yellow-800'
+                        : 'bg-rose-100 text-rose-800'
+                    }`}>
+                      {item.statusLabel}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Legend Footer (NO SIGNATURES) */}
+        <div className="mt-4 pt-3 border-t border-slate-300 flex items-center justify-between text-[10px] font-bold text-slate-500">
+          <div>Ketentuan Shift: Setiap pengurus wajib hadir minimal 2 kali pertemuan aktif per bulan. Sesi libur resmi tidak dihitung.</div>
+          <div>Total Data: {filteredList.length} Pengurus Angkatan 20</div>
+        </div>
       </div>
     </div>
   );

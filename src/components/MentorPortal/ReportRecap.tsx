@@ -13,7 +13,8 @@ import {
   MessageSquare,
   Copy,
   Check,
-  Layers
+  Layers,
+  Lock
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -25,6 +26,7 @@ interface ReportRecapProps {
   meetings: Meeting[];
   attendances: Attendance[];
   activeMeeting: Meeting | null;
+  isSuperAdmin?: boolean;
   onAttendanceChanged?: () => void;
 }
 
@@ -33,6 +35,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   meetings,
   attendances,
   activeMeeting,
+  isSuperAdmin = false,
   onAttendanceChanged,
 }) => {
   const [recapMode, setRecapMode] = useState<'single' | 'monthly' | 'cumulative'>('single');
@@ -739,6 +742,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               </TactileButton>
             </div>
 
+            {/* Read-Only Notice for Non-SuperAdmin */}
+            {!isSuperAdmin && (
+              <div className="p-3 rounded-2xl bg-slate-100 border border-slate-200 text-slate-600 text-xs font-bold flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-500 shrink-0" />
+                <span>Mode Laporan Terkunci (Read-Only) — Hak ubah dan pembatalan status presensi khusus Ketua / Super Admin.</span>
+              </div>
+            )}
+
             {/* Table */}
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <table className="w-full text-left text-xs">
@@ -748,7 +759,9 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                     <th className="py-3 px-3">Nama Siswa</th>
                     <th className="py-3 px-3">Kelas</th>
                     <th className="py-3 px-3 text-center">Status</th>
-                    <th className="py-3 px-3 text-center">Aksi (Bisa Diatur Kapan Saja)</th>
+                    {isSuperAdmin && (
+                      <th className="py-3 px-3 text-center">Aksi (Bisa Diatur Kapan Saja)</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 font-bold">
@@ -784,75 +797,77 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                           </span>
                         )}
                       </td>
-                      <td className="py-2.5 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1.5">
-                          {r.isPresent ? (
-                            <>
-                              <button
-                                type="button"
-                                disabled={manualLoadingId === r.member.id}
-                                onClick={() => handleSetStatus(r.member, 'permit')}
-                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                title="Ubah status ke Izin Surat Fisik"
-                              >
-                                📄 Jadi Izin
-                              </button>
-                              <button
-                                type="button"
-                                disabled={manualLoadingId === r.member.id}
-                                onClick={() => handleSetStatus(r.member, 'absent')}
-                                className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                title="Batalkan presensi (jadikan alpa)"
-                              >
-                                Batal
-                              </button>
-                            </>
-                          ) : r.isPermit ? (
-                            <>
-                              <button
-                                type="button"
-                                disabled={manualLoadingId === r.member.id}
-                                onClick={() => handleSetStatus(r.member, 'present')}
-                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                title="Ubah status ke Hadir"
-                              >
-                                ⚡ Jadi Hadir
-                              </button>
-                              <button
-                                type="button"
-                                disabled={manualLoadingId === r.member.id}
-                                onClick={() => handleSetStatus(r.member, 'absent')}
-                                className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                title="Batalkan izin (jadikan alpa)"
-                              >
-                                Batal
-                              </button>
-                            </>
-                          ) : (
-                            <>
-                              <button
-                                type="button"
-                                disabled={manualLoadingId === r.member.id}
-                                onClick={() => handleSetStatus(r.member, 'present')}
-                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
-                              >
-                                + Hadir
-                              </button>
-                              <button
-                                type="button"
-                                disabled={manualLoadingId === r.member.id}
-                                onClick={() => handleSetStatus(r.member, 'permit')}
-                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
-                              >
-                                📄 Izin (Surat)
-                              </button>
-                            </>
-                          )}
-                          {manualLoadingId === r.member.id && (
-                            <RefreshCw className="w-3 h-3 animate-spin text-slate-400 shrink-0" />
-                          )}
-                        </div>
-                      </td>
+                      {isSuperAdmin && (
+                        <td className="py-2.5 px-3 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {r.isPresent ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={manualLoadingId === r.member.id}
+                                  onClick={() => handleSetStatus(r.member, 'permit')}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                  title="Ubah status ke Izin Surat Fisik"
+                                >
+                                  📄 Jadi Izin
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={manualLoadingId === r.member.id}
+                                  onClick={() => handleSetStatus(r.member, 'absent')}
+                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                  title="Batalkan presensi (jadikan alpa)"
+                                >
+                                  Batal
+                                </button>
+                              </>
+                            ) : r.isPermit ? (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={manualLoadingId === r.member.id}
+                                  onClick={() => handleSetStatus(r.member, 'present')}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                  title="Ubah status ke Hadir"
+                                >
+                                  ⚡ Jadi Hadir
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={manualLoadingId === r.member.id}
+                                  onClick={() => handleSetStatus(r.member, 'absent')}
+                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                  title="Batalkan izin (jadikan alpa)"
+                                >
+                                  Batal
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={manualLoadingId === r.member.id}
+                                  onClick={() => handleSetStatus(r.member, 'present')}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
+                                >
+                                  + Hadir
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={manualLoadingId === r.member.id}
+                                  onClick={() => handleSetStatus(r.member, 'permit')}
+                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
+                                >
+                                  📄 Izin (Surat)
+                                </button>
+                              </>
+                            )}
+                            {manualLoadingId === r.member.id && (
+                              <RefreshCw className="w-3 h-3 animate-spin text-slate-400 shrink-0" />
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
@@ -867,17 +882,27 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       {/* ========================================================= */}
       {recapMode === 'monthly' && (
         <div id="printable-matrix" className="space-y-4 bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-6">
-          {/* Official Clean Heading for PDF (NO KOP SURAT / NO SIGNATURES) */}
-          <div className="border-b border-slate-200 pb-4 text-center">
-            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-              REKAPITULASI PRESENSI BULANAN EKSTRAKURIKULER ENGLISH CLUB
-            </h2>
-            <p className="text-sm font-extrabold text-slate-600 mt-1">
-              SMK NEGERI 1 PURBALINGGA — ANGKATAN 21
-            </p>
-            <p className="text-xs font-bold text-slate-500 mt-0.5">
-              Periode: {formatMonthTitle(selectedMonth)} • Sesi Berjalan: {heldNonHolidayMeetings.length} Pertemuan ({monthSlots.length} Slot Pekan)
-            </p>
+          {/* Official Clean Heading for PDF with EC Logo */}
+          <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-center justify-between gap-4 text-left">
+            <div className="flex items-center gap-3.5">
+              <img src="/logo.png" alt="EC SMEGA Logo" className="w-14 h-14 object-contain shrink-0" />
+              <div>
+                <h2 className="text-lg font-black text-slate-950 uppercase tracking-tight leading-tight">
+                  REKAPITULASI PRESENSI BULANAN EKSTRAKURIKULER ENGLISH CLUB
+                </h2>
+                <p className="text-xs font-black text-slate-700 mt-0.5">
+                  SMK NEGERI 1 PURBALINGGA — ANGKATAN 21
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-0.5">
+                  Periode: {formatMonthTitle(selectedMonth)} • Sesi Berjalan: {heldNonHolidayMeetings.length} Pertemuan ({monthSlots.length} Slot Pekan)
+                </p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="inline-block px-3 py-1 rounded-xl bg-slate-100 text-slate-800 text-[10px] font-black border border-slate-300 uppercase tracking-wider">
+                Laporan Resmi Sekretaris
+              </span>
+            </div>
           </div>
 
           {/* Filter Bar (Hidden in Print) */}
@@ -1026,17 +1051,27 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       {/* ========================================================= */}
       {recapMode === 'cumulative' && (
         <div id="printable-cumulative" className="space-y-4 bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-6">
-          {/* Official Clean Heading for PDF */}
-          <div className="border-b border-slate-200 pb-4 text-center">
-            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">
-              REKAPITULASI RAPOR KEHADIRAN KUMULATIF EKSTRAKURIKULER ENGLISH CLUB
-            </h2>
-            <p className="text-sm font-extrabold text-slate-600 mt-1">
-              SMK NEGERI 1 PURBALINGGA — ANGKATAN 21
-            </p>
-            <p className="text-xs font-bold text-slate-500 mt-0.5">
-              Akumulasi Seluruh Pertemuan: {allHeldMeetings.length} Sesi Terlaksana • Evaluasi Nilai Rapor
-            </p>
+          {/* Official Clean Heading for PDF with EC Logo */}
+          <div className="border-b-2 border-slate-900 pb-3 mb-4 flex items-center justify-between gap-4 text-left">
+            <div className="flex items-center gap-3.5">
+              <img src="/logo.png" alt="EC SMEGA Logo" className="w-14 h-14 object-contain shrink-0" />
+              <div>
+                <h2 className="text-lg font-black text-slate-950 uppercase tracking-tight leading-tight">
+                  REKAPITULASI RAPOR KEHADIRAN KUMULATIF EKSTRAKURIKULER ENGLISH CLUB
+                </h2>
+                <p className="text-xs font-black text-slate-700 mt-0.5">
+                  SMK NEGERI 1 PURBALINGGA — ANGKATAN 21
+                </p>
+                <p className="text-[11px] font-bold text-slate-500 mt-0.5">
+                  Akumulasi Seluruh Pertemuan: {allHeldMeetings.length} Sesi Terlaksana • Evaluasi Nilai Rapor
+                </p>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <span className="inline-block px-3 py-1 rounded-xl bg-slate-100 text-slate-800 text-[10px] font-black border border-slate-300 uppercase tracking-wider">
+                Rapor Resmi Semester
+              </span>
+            </div>
           </div>
 
           {/* Filter Bar (Hidden in Print) */}

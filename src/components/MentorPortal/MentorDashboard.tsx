@@ -96,11 +96,11 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     const saved = sessionStorage.getItem('ec_active_tab') as TabId | null;
     const allowedRegular: TabId[] = [
       'mentor_attendance',
+      'radar',
       'live_monitor',
       'helper_a21',
-      'agenda_a21',
-      'agenda_a20',
       'recap',
+      'agenda_a21',
       'structure'
     ];
     if (saved) {
@@ -117,7 +117,9 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     sessionStorage.setItem('ec_active_tab', tab);
   };
 
-  const [superAdminCategory, setSuperAdminCategory] = useState<'general' | 'a21' | 'a20' | 'all'>('general');
+  const [currentCategory, setCurrentCategory] = useState<'general' | 'a21' | 'a20' | 'all'>(
+    isSuperAdmin ? 'general' : 'a21'
+  );
   const [isSuperModalOpen, setIsSuperModalOpen] = useState(false);
   const tabsScrollRef = useRef<HTMLDivElement>(null);
 
@@ -125,11 +127,11 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   useEffect(() => {
     const allowedRegular: TabId[] = [
       'mentor_attendance',
+      'radar',
       'live_monitor',
       'helper_a21',
-      'agenda_a21',
-      'agenda_a20',
       'recap',
+      'agenda_a21',
       'structure'
     ];
     if (!isSuperAdmin && !allowedRegular.includes(activeTab)) {
@@ -161,18 +163,18 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
     // --- 🛡️ INTERNAL A20 (PENGURUS) ---
     { id: 'mentor_attendance', label: 'Presensi Mandiri A20', icon: Users, category: 'a20', superOnly: false },
-    { id: 'agenda_a20', label: 'Curhat & Evaluasi A20', icon: HeartHandshake, category: 'a20', superOnly: false },
-    { id: 'radar', label: 'Radar Kedisiplinan A20', icon: ShieldAlert, category: 'a20', superOnly: true },
+    { id: 'radar', label: 'Radar & Rekap Presensi A20', icon: ShieldAlert, category: 'a20', superOnly: false },
     { id: 'structure', label: 'Struktur Pengurus A20', icon: Award, category: 'a20', superOnly: false },
+    { id: 'agenda_a20', label: 'Curhat & Evaluasi A20', icon: HeartHandshake, category: 'a20', superOnly: true },
   ];
 
   // Filter tabs for display
   const visibleTabs = allTabs.filter((t) => {
-    if (!isSuperAdmin) {
-      return !t.superOnly;
+    if (!isSuperAdmin && t.superOnly) {
+      return false;
     }
-    if (superAdminCategory === 'all') return true;
-    return t.category === superAdminCategory;
+    if (currentCategory === 'all') return true;
+    return t.category === currentCategory;
   });
 
   const [hasOverflow, setHasOverflow] = useState(false);
@@ -277,85 +279,85 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         </div>
       </div>
 
-      {/* Super Admin Smart Category Switcher (Eliminates clunky horizontal scrolling) */}
-      {isSuperAdmin && (
-        <div className="flex items-center justify-between gap-1.5 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 overflow-x-auto scrollbar-none">
-          <div className="flex items-center gap-1 flex-1">
-            {/* 1. UMUM (SISTEM & PUSAT) */}
+      {/* Smart Category Switcher (Available to ALL Mentors & SuperAdmin) */}
+      <div className="flex items-center justify-between gap-1.5 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 overflow-x-auto scrollbar-none">
+        <div className="flex items-center gap-1 flex-1">
+          {/* 1. UMUM (SISTEM & PUSAT - KHUSUS SUPER ADMIN) */}
+          {isSuperAdmin && (
             <button
               onClick={() => {
                 sound.playPop();
-                setSuperAdminCategory('general');
+                setCurrentCategory('general');
                 if (activeTab !== 'session' && activeTab !== 'approvals') {
                   setActiveTab('session');
                 }
               }}
               className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
-                superAdminCategory === 'general'
+                currentCategory === 'general'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
               }`}
             >
               🌐 Umum
             </button>
+          )}
 
-            {/* 2. OPERASIONAL A21 (ADIK KELAS) */}
-            <button
-              onClick={() => {
-                sound.playPop();
-                setSuperAdminCategory('a21');
-                const a21TabIds: TabId[] = ['live_monitor', 'helper_a21', 'recap', 'agenda_a21'];
-                if (!a21TabIds.includes(activeTab)) {
-                  setActiveTab('live_monitor');
-                }
-              }}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
-                superAdminCategory === 'a21'
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              🎒 Operasional A21 (Adik Kelas)
-            </button>
+          {/* 2. OPERASIONAL A21 (ADIK KELAS) */}
+          <button
+            onClick={() => {
+              sound.playPop();
+              setCurrentCategory('a21');
+              const a21TabIds: TabId[] = ['live_monitor', 'helper_a21', 'recap', 'agenda_a21'];
+              if (!a21TabIds.includes(activeTab)) {
+                setActiveTab('live_monitor');
+              }
+            }}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+              currentCategory === 'a21'
+                ? 'bg-emerald-600 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
+          >
+            🎒 Operasional A21 (Adik Kelas)
+          </button>
 
-            {/* 3. INTERNAL A20 (PENGURUS) */}
-            <button
-              onClick={() => {
-                sound.playPop();
-                setSuperAdminCategory('a20');
-                const a20TabIds: TabId[] = ['mentor_attendance', 'agenda_a20', 'radar', 'structure'];
-                if (!a20TabIds.includes(activeTab)) {
-                  setActiveTab('mentor_attendance');
-                }
-              }}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
-                superAdminCategory === 'a20'
-                  ? 'bg-indigo-900 text-white shadow-sm'
-                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
-              }`}
-            >
-              🛡️ Internal A20 (Pengurus)
-            </button>
+          {/* 3. INTERNAL A20 (PENGURUS) */}
+          <button
+            onClick={() => {
+              sound.playPop();
+              setCurrentCategory('a20');
+              const a20TabIds: TabId[] = ['mentor_attendance', 'radar', 'structure', 'agenda_a20'];
+              if (!a20TabIds.includes(activeTab)) {
+                setActiveTab('mentor_attendance');
+              }
+            }}
+            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+              currentCategory === 'a20'
+                ? 'bg-indigo-900 text-white shadow-sm'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+            }`}
+          >
+            🛡️ Internal A20 (Pengurus)
+          </button>
 
-            {/* 4. SEMUA */}
-            <button
-              onClick={() => {
-                sound.playPop();
-                setSuperAdminCategory('all');
-              }}
-              className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
-                superAdminCategory === 'all'
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
-              }`}
-              title="Tampilkan Semua Tab"
-            >
-              <Layers className="w-3.5 h-3.5 inline mr-1" />
-              Semua
-            </button>
-          </div>
+          {/* 4. SEMUA */}
+          <button
+            onClick={() => {
+              sound.playPop();
+              setCurrentCategory('all');
+            }}
+            className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+              currentCategory === 'all'
+                ? 'bg-slate-900 text-white shadow-sm'
+                : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
+            }`}
+            title="Tampilkan Semua Tab"
+          >
+            <Layers className="w-3.5 h-3.5 inline mr-1" />
+            Semua
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Tabs Menu with Tactile Arrow Navigation Buttons */}
       <div className="relative flex items-center gap-1.5">
@@ -423,7 +425,6 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           members={members}
           activeMeeting={activeMeeting}
           attendances={attendances}
-          onAttendanceChanged={onAttendanceChanged}
         />
       )}
 
@@ -434,15 +435,6 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           activeMeeting={activeMeeting}
           attendances={attendances}
           onAttendanceChanged={onAttendanceChanged}
-        />
-      )}
-
-      {/* Radar Kedisiplinan A20 */}
-      {activeTab === 'radar' && isSuperAdmin && (
-        <MentorDisciplineRadar
-          members={members}
-          meetings={meetings}
-          attendances={attendances}
         />
       )}
 
@@ -469,7 +461,17 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           meetings={meetings}
           attendances={attendances}
           activeMeeting={activeMeeting}
+          isSuperAdmin={isSuperAdmin}
           onAttendanceChanged={onAttendanceChanged}
+        />
+      )}
+
+      {/* Radar & Rekap Presensi Pengurus A20 (Accessible by Kedis & ALL Mentors) */}
+      {activeTab === 'radar' && (
+        <MentorDisciplineRadar
+          members={members}
+          meetings={meetings}
+          attendances={attendances}
         />
       )}
 
@@ -497,8 +499,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         />
       )}
 
-      {/* Curhat & Evaluasi Pengurus A20 (Accessible by ALL Mentors & SuperAdmin) */}
-      {activeTab === 'agenda_a20' && (
+      {/* Curhat & Evaluasi Pengurus A20 (Strictly Super Admin Only) */}
+      {activeTab === 'agenda_a20' && isSuperAdmin && (
         <AgendaVault
           attendances={attendances}
           members={members}
