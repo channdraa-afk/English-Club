@@ -24,6 +24,7 @@ export const App: React.FC = () => {
   // View state
   const [currentView, setCurrentView] = useState<'student' | 'mentor'>('student');
   const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   // Modals state
   const [isWordModalOpen, setIsWordModalOpen] = useState(false);
@@ -31,11 +32,15 @@ export const App: React.FC = () => {
   const [successMeeting, setSuccessMeeting] = useState<Meeting | null>(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // Check saved mentor login in localStorage
+  // Check saved mentor login & superadmin in storage
   useEffect(() => {
     const savedAuth = localStorage.getItem('ec_mentor_auth');
     if (savedAuth === 'true') {
       setIsMentorLoggedIn(true);
+    }
+    const savedSuper = sessionStorage.getItem('ec_superadmin_auth');
+    if (savedSuper === 'true') {
+      setIsSuperAdmin(true);
     }
   }, []);
 
@@ -122,8 +127,20 @@ export const App: React.FC = () => {
 
   const handleMentorLogout = () => {
     localStorage.removeItem('ec_mentor_auth');
+    sessionStorage.removeItem('ec_superadmin_auth');
     setIsMentorLoggedIn(false);
+    setIsSuperAdmin(false);
     setCurrentView('student');
+  };
+
+  const handleSuperAdminUnlock = () => {
+    setIsSuperAdmin(true);
+    sessionStorage.setItem('ec_superadmin_auth', 'true');
+  };
+
+  const handleSuperAdminLock = () => {
+    setIsSuperAdmin(false);
+    sessionStorage.removeItem('ec_superadmin_auth');
   };
 
   const handleToggleRegistration = async (state: boolean) => {
@@ -192,6 +209,9 @@ export const App: React.FC = () => {
             registrations={registrations}
             isRegistrationOpen={isRegistrationOpen}
             currentPin={mentorPin}
+            isSuperAdmin={isSuperAdmin}
+            onSuperAdminUnlock={handleSuperAdminUnlock}
+            onSuperAdminLock={handleSuperAdminLock}
             onMeetingUpdated={fetchData}
             onToggleRegistration={handleToggleRegistration}
             onPinUpdated={(pin) => setMentorPin(pin)}
@@ -230,7 +250,7 @@ export const App: React.FC = () => {
             English Club SMK Negeri 1 Purbalingga (SMEGA)
           </p>
           <p className="text-[11px] text-slate-400">
-            Dikembangkan oleh Chandra (<a href="https://github.com/channdraa-afk" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline">@channdraa-afk</a>) — Pelajar Rekayasa Perangkat Lunak (RPL).
+            Dikembangkan oleh Chandra (<a href="https://github.com/channdraa-afk" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline">@channdraa-afk</a>).
           </p>
         </div>
       </footer>
