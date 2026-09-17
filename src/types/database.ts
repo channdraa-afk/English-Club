@@ -15,6 +15,8 @@ export interface Meeting {
   title: string;
   token: string;
   is_active: boolean;
+  is_holiday?: boolean;
+  holiday_reason?: string;
   word_of_the_day: string;
   word_meaning: string;
   starts_at?: string;

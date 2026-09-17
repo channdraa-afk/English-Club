@@ -27,6 +27,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   const [token, setToken] = useState(activeMeeting?.token || 'EAGLE21');
   const [word, setWord] = useState(activeMeeting?.word_of_the_day || 'Piece of cake (Sangat mudah)');
   const [meaning, setMeaning] = useState(activeMeeting?.word_meaning || 'Idiom yang digunakan saat sesuatu terasa sangat mudah diselesaikan.');
+  const [isHoliday, setIsHoliday] = useState(Boolean(activeMeeting?.is_holiday));
+  const [holidayReason, setHolidayReason] = useState(activeMeeting?.holiday_reason || '');
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -40,6 +42,28 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     sound.playPop();
     const rand = sampleTokens[Math.floor(Math.random() * sampleTokens.length)];
     setToken(rand);
+  };
+
+  const handleToggleHoliday = async () => {
+    if (!activeMeeting) return;
+    sound.playPop();
+    const nextState = !isHoliday;
+    let reason = holidayReason;
+    if (nextState && !reason.trim()) {
+      reason = 'Libur Kegiatan / Ujian Sekolah';
+      setHolidayReason(reason);
+    }
+    setIsHoliday(nextState);
+
+    await supabase
+      .from('meetings')
+      .update({
+        is_holiday: nextState,
+        holiday_reason: nextState ? reason : null,
+      })
+      .eq('id', activeMeeting.id);
+
+    onMeetingUpdated();
   };
 
   const handleSaveMeeting = async (e: React.FormEvent) => {
@@ -57,6 +81,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
             token: token.trim().toUpperCase(),
             word_of_the_day: word.trim(),
             word_meaning: meaning.trim(),
+            is_holiday: isHoliday,
+            holiday_reason: isHoliday ? holidayReason.trim() : null,
             is_active: true,
           })
           .eq('id', activeMeeting.id);
@@ -70,6 +96,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           token: token.trim().toUpperCase(),
           word_of_the_day: word.trim(),
           word_meaning: meaning.trim(),
+          is_holiday: isHoliday,
+          holiday_reason: isHoliday ? holidayReason.trim() : null,
           is_active: true,
         });
 
@@ -138,19 +166,36 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           </p>
         </div>
 
-        {activeMeeting && (
-          <button
-            onClick={handleToggleSessionActive}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs border transition-all cursor-pointer ${
-              activeMeeting.is_active
-                ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-800 shadow-[0_3px_0_0_#9f1239]'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-800 shadow-[0_3px_0_0_#15803d]'
-            } active:translate-y-0.5`}
-          >
-            {activeMeeting.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
-            <span>{activeMeeting.is_active ? 'Tutup Sesi Ini' : 'Buka Kembali Sesi'}</span>
-          </button>
-        )}
+        <div className="flex flex-col sm:flex-row items-center gap-2">
+          {activeMeeting && (
+            <button
+              type="button"
+              onClick={handleToggleHoliday}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs border transition-all cursor-pointer ${
+                isHoliday
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-700 shadow-[0_3px_0_0_#b45309]'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-600'
+              } active:translate-y-0.5`}
+            >
+              <span>{isHoliday ? '🏖️ Status: LIBUR' : '🌴 Set Pertemuan Libur'}</span>
+            </button>
+          )}
+
+          {activeMeeting && (
+            <button
+              type="button"
+              onClick={handleToggleSessionActive}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-xs border transition-all cursor-pointer ${
+                activeMeeting.is_active
+                  ? 'bg-rose-600 hover:bg-rose-700 text-white border-rose-800 shadow-[0_3px_0_0_#9f1239]'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-800 shadow-[0_3px_0_0_#15803d]'
+              } active:translate-y-0.5`}
+            >
+              {activeMeeting.is_active ? <ToggleRight className="w-5 h-5" /> : <ToggleLeft className="w-5 h-5" />}
+              <span>{activeMeeting.is_active ? 'Tutup Sesi Ini' : 'Buka Kembali Sesi'}</span>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Form Setup Pertemuan */}
@@ -159,6 +204,21 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           <Sparkles className="w-5 h-5 text-amber-500" />
           <span>Atur Sesi Pertemuan & Token</span>
         </h3>
+
+        {isHoliday && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-1.5">
+            <label className="block text-xs font-black text-amber-900 uppercase tracking-wider">
+              Alasan Pertemuan Libur (Ditampilkan ke Siswa)
+            </label>
+            <input
+              type="text"
+              value={holidayReason}
+              onChange={(e) => setHolidayReason(e.target.value)}
+              placeholder="Contoh: Libur Ujian Tengah Semester (PTS) / Tanggal Merah"
+              className="w-full px-3.5 py-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+            />
+          </div>
+        )}
 
         <form onSubmit={handleSaveMeeting} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

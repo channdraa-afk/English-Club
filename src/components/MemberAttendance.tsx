@@ -159,9 +159,27 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
         </p>
       </div>
 
-      {/* Main Attendance Card */}
-      <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-5 sm:p-7">
-        <form onSubmit={handleSubmit} className="space-y-6">
+      {activeMeeting?.is_holiday ? (
+        <div className="bg-white rounded-3xl border-2 border-amber-300 shadow-[0_6px_0_0_#fcd34d] p-8 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-100 text-amber-600 border-2 border-amber-300 flex items-center justify-center text-3xl">
+            🏖️
+          </div>
+          <div>
+            <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-black uppercase tracking-wider mb-2">
+              Pertemuan Hari Ini Libur
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              {activeMeeting.holiday_reason || 'Kegiatan English Club Ditiadakan'}
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
+              Presensi ditiadakan dan tidak mempengaruhi persentase nilai kehadiranmu. Selamat beristirahat dan sampai jumpa di hari Rabu minggu depan! ✨
+            </p>
+          </div>
+        </div>
+      ) : (
+        /* Main Attendance Card */
+        <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-5 sm:p-7">
+          <form onSubmit={handleSubmit} className="space-y-6">
           {/* STEP 1: Pilih Nama Kamu */}
           <div>
             <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
@@ -364,6 +382,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
           </TactileButton>
         </form>
       </div>
+      )}
     </div>
   );
 };
