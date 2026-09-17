@@ -140,6 +140,37 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     return t.category === superAdminCategory;
   });
 
+  const [hasOverflow, setHasOverflow] = useState(false);
+
+  // Horizontal mouse-wheel scroll translation & overflow detector
+  useEffect(() => {
+    const el = tabsScrollRef.current;
+    if (!el) return;
+
+    const checkOverflow = () => {
+      setHasOverflow(el.scrollWidth > el.clientWidth + 4);
+    };
+
+    checkOverflow();
+
+    const onWheel = (e: WheelEvent) => {
+      if (el.scrollWidth > el.clientWidth) {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.preventDefault();
+          el.scrollLeft += e.deltaY;
+        }
+      }
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    window.addEventListener('resize', checkOverflow);
+
+    return () => {
+      el.removeEventListener('wheel', onWheel);
+      window.removeEventListener('resize', checkOverflow);
+    };
+  }, [visibleTabs]);
+
   // Smooth scroll helper for tab navigation buttons
   const handleScrollTabs = (direction: 'left' | 'right') => {
     sound.playPop();
@@ -265,7 +296,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       {/* Tabs Menu with Tactile Arrow Navigation Buttons */}
       <div className="relative flex items-center gap-1.5">
         {/* Left Arrow Button */}
-        {isSuperAdmin && superAdminCategory === 'all' && (
+        {hasOverflow && (
           <button
             onClick={() => handleScrollTabs('left')}
             className="p-2 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border-2 border-slate-200 shadow-[0_2px_0_0_#cbd5e1] shrink-0 active:translate-y-0.5 transition-all"
@@ -278,9 +309,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         {/* Scrollable / Grid Tabs Container */}
         <div
           ref={tabsScrollRef}
-          className={`flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1 ${
-            !isSuperAdmin ? 'justify-start sm:justify-center' : ''
-          }`}
+          className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none flex-1 justify-start px-0.5"
         >
           {visibleTabs.map((tab) => {
             const Icon = tab.icon;
@@ -312,7 +341,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         </div>
 
         {/* Right Arrow Button */}
-        {isSuperAdmin && superAdminCategory === 'all' && (
+        {hasOverflow && (
           <button
             onClick={() => handleScrollTabs('right')}
             className="p-2 rounded-2xl bg-white hover:bg-slate-100 text-slate-700 border-2 border-slate-200 shadow-[0_2px_0_0_#cbd5e1] shrink-0 active:translate-y-0.5 transition-all"
