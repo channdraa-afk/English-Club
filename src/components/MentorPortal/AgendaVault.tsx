@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Sparkles, MessageSquareHeart, User, HeartHandshake, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { Attendance, Member, Meeting } from '../../types/database';
 import { sound } from '../../lib/audio';
@@ -8,6 +8,8 @@ interface AgendaVaultProps {
   members: Member[];
   activeMeeting: Meeting | null;
   isSuperAdmin?: boolean;
+  initialGroup?: 'a21' | 'a20';
+  lockGroup?: boolean;
 }
 
 export const AgendaVault: React.FC<AgendaVaultProps> = ({
@@ -15,8 +17,14 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
   members,
   activeMeeting,
   isSuperAdmin = false,
+  initialGroup = 'a21',
+  lockGroup = false,
 }) => {
-  const [activeGroup, setActiveGroup] = useState<'a21' | 'a20'>('a21');
+  const [activeGroup, setActiveGroup] = useState<'a21' | 'a20'>(initialGroup);
+
+  useEffect(() => {
+    setActiveGroup(initialGroup);
+  }, [initialGroup]);
 
   const memberMap = useMemo(() => {
     return new Map(members.map((m) => [m.id, m]));
@@ -78,7 +86,7 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
   return (
     <div className="space-y-6">
       {/* Category Tabs */}
-      {isSuperAdmin ? (
+      {isSuperAdmin && !lockGroup ? (
         <div className="grid grid-cols-2 gap-2 bg-white p-2 rounded-3xl border-2 border-slate-200 shadow-sm">
           <button
             onClick={() => {
@@ -111,22 +119,32 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
           </button>
         </div>
       ) : (
-        <div className="p-5 rounded-3xl bg-gradient-to-r from-blue-600 to-indigo-700 text-white border-2 border-blue-900 shadow-[0_4px_0_0_#1e3a8a] flex items-center justify-between">
+        <div className={`p-5 rounded-3xl text-white border-2 flex items-center justify-between ${
+          activeGroup === 'a20'
+            ? 'bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border-indigo-700 shadow-[0_4px_0_0_#312e81]'
+            : 'bg-gradient-to-r from-blue-600 to-indigo-700 border-blue-900 shadow-[0_4px_0_0_#1e3a8a]'
+        }`}>
           <div className="flex items-center gap-3">
             <span className="p-2.5 rounded-2xl bg-white/20 text-white">
-              <Sparkles className="w-6 h-6 text-amber-300" />
+              {activeGroup === 'a20' ? (
+                <HeartHandshake className="w-6 h-6 text-indigo-300" />
+              ) : (
+                <Sparkles className="w-6 h-6 text-amber-300" />
+              )}
             </span>
             <div>
               <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
-                Suara & Masukan Lapangan
+                {activeGroup === 'a20' ? 'Internal Angkatan 20' : 'Suara & Masukan Lapangan'}
               </span>
               <h3 className="text-lg font-black leading-tight">
-                Aspirasi & Ulasan Adik Kelas (Angkatan 21)
+                {activeGroup === 'a20'
+                  ? 'Curhat & Evaluasi Kendala Pengurus (A20)'
+                  : 'Aspirasi & Ulasan Adik Kelas (Angkatan 21)'}
               </h3>
             </div>
           </div>
           <span className="text-xs font-black px-3 py-1 rounded-xl bg-white/20 text-white border border-white/30">
-            {a21Feedbacks.length} Respon
+            {currentList.length} Respon
           </span>
         </div>
       )}

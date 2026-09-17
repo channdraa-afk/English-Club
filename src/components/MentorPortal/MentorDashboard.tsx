@@ -7,15 +7,16 @@ import {
   UserPlus, 
   Award, 
   LogOut, 
-  ArrowLeft,
-  Crown,
-  ShieldAlert,
-  Lock,
-  ChevronLeft,
-  ChevronRight,
-  HandHeart,
-  Radio,
-  Layers
+  ArrowLeft, 
+  Crown, 
+  ShieldAlert, 
+  Lock, 
+  ChevronLeft, 
+  ChevronRight, 
+  HandHeart, 
+  Radio, 
+  Layers,
+  HeartHandshake
 } from 'lucide-react';
 import { Member, Meeting, Attendance, Registration } from '../../types/database';
 import { MeetingControl } from './MeetingControl';
@@ -31,14 +32,15 @@ import { SuperAdminModal } from './SuperAdminModal';
 import { sound } from '../../lib/audio';
 
 export type TabId = 
+  | 'session'
+  | 'approvals'
   | 'live_monitor'
   | 'helper_a21'
-  | 'session'
   | 'recap'
-  | 'radar'
+  | 'agenda_a21'
   | 'mentor_attendance'
-  | 'agenda'
-  | 'approvals'
+  | 'agenda_a20'
+  | 'radar'
   | 'structure';
 
 interface MentorDashboardProps {
@@ -92,11 +94,22 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTabState] = useState<TabId>(() => {
     const saved = sessionStorage.getItem('ec_active_tab') as TabId | null;
-    const allowedRegular: TabId[] = ['mentor_attendance', 'live_monitor', 'helper_a21', 'agenda', 'recap', 'structure'];
-    if (saved && (isSuperAdmin || allowedRegular.includes(saved))) {
-      return saved;
+    const allowedRegular: TabId[] = [
+      'mentor_attendance',
+      'live_monitor',
+      'helper_a21',
+      'agenda_a21',
+      'agenda_a20',
+      'recap',
+      'structure'
+    ];
+    if (saved) {
+      if ((saved as any) === 'agenda') return 'agenda_a21';
+      if (isSuperAdmin || allowedRegular.includes(saved)) {
+        return saved;
+      }
     }
-    return isSuperAdmin ? 'live_monitor' : 'mentor_attendance';
+    return isSuperAdmin ? 'session' : 'mentor_attendance';
   });
 
   const setActiveTab = (tab: TabId) => {
@@ -104,13 +117,21 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     sessionStorage.setItem('ec_active_tab', tab);
   };
 
-  const [superAdminCategory, setSuperAdminCategory] = useState<'a21' | 'a20' | 'all'>('a21');
+  const [superAdminCategory, setSuperAdminCategory] = useState<'general' | 'a21' | 'a20' | 'all'>('general');
   const [isSuperModalOpen, setIsSuperModalOpen] = useState(false);
   const tabsScrollRef = useRef<HTMLDivElement>(null);
 
   // Safety fallback if regular mentor tries to stay on a super-admin tab
   useEffect(() => {
-    const allowedRegular: TabId[] = ['mentor_attendance', 'live_monitor', 'helper_a21', 'agenda', 'recap', 'structure'];
+    const allowedRegular: TabId[] = [
+      'mentor_attendance',
+      'live_monitor',
+      'helper_a21',
+      'agenda_a21',
+      'agenda_a20',
+      'recap',
+      'structure'
+    ];
     if (!isSuperAdmin && !allowedRegular.includes(activeTab)) {
       setActiveTab('mentor_attendance');
     }
@@ -123,24 +144,25 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     label: string;
     icon: React.ComponentType<{ className?: string }>;
     badge?: number;
-    category: 'a21' | 'a20';
+    category: 'general' | 'a21' | 'a20';
     superOnly: boolean;
   }
 
   const allTabs: TabItem[] = [
-    // Tab Prioritas Pengurus
-    { id: 'mentor_attendance', label: 'Presensi Mandiri A20', icon: Users, category: 'a20', superOnly: false },
+    // --- 🌐 UMUM (SISTEM & PUSAT) ---
+    { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'general', superOnly: true },
+    { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
+
+    // --- 🎒 OPERASIONAL A21 (ADIK KELAS) ---
     { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: false },
     { id: 'helper_a21', label: 'Bantu Absen A21', icon: HandHeart, category: 'a21', superOnly: false },
-    { id: 'agenda', label: isSuperAdmin ? 'Aspirasi & Curhat' : 'Suara & Masukan Adik', icon: Sparkles, category: 'a21', superOnly: false },
     { id: 'recap', label: 'Rekap Rapor Bulanan', icon: FileSpreadsheet, category: 'a21', superOnly: false },
-    
-    // Khusus Super Admin / BPH
-    { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'a21', superOnly: true },
-    { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'a21', superOnly: true },
+    { id: 'agenda_a21', label: 'Suara & Masukan Adik', icon: Sparkles, category: 'a21', superOnly: false },
+
+    // --- 🛡️ INTERNAL A20 (PENGURUS) ---
+    { id: 'mentor_attendance', label: 'Presensi Mandiri A20', icon: Users, category: 'a20', superOnly: false },
+    { id: 'agenda_a20', label: 'Curhat & Evaluasi A20', icon: HeartHandshake, category: 'a20', superOnly: false },
     { id: 'radar', label: 'Radar Kedisiplinan A20', icon: ShieldAlert, category: 'a20', superOnly: true },
-    
-    // Info Struktur
     { id: 'structure', label: 'Struktur Pengurus A20', icon: Award, category: 'a20', superOnly: false },
   ];
 
@@ -257,14 +279,37 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
       {/* Super Admin Smart Category Switcher (Eliminates clunky horizontal scrolling) */}
       {isSuperAdmin && (
-        <div className="flex items-center justify-between gap-2 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200">
+        <div className="flex items-center justify-between gap-1.5 bg-slate-100/90 p-1.5 rounded-2xl border border-slate-200 overflow-x-auto scrollbar-none">
           <div className="flex items-center gap-1 flex-1">
+            {/* 1. UMUM (SISTEM & PUSAT) */}
+            <button
+              onClick={() => {
+                sound.playPop();
+                setSuperAdminCategory('general');
+                if (activeTab !== 'session' && activeTab !== 'approvals') {
+                  setActiveTab('session');
+                }
+              }}
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
+                superAdminCategory === 'general'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
+              }`}
+            >
+              🌐 Umum
+            </button>
+
+            {/* 2. OPERASIONAL A21 (ADIK KELAS) */}
             <button
               onClick={() => {
                 sound.playPop();
                 setSuperAdminCategory('a21');
+                const a21TabIds: TabId[] = ['live_monitor', 'helper_a21', 'recap', 'agenda_a21'];
+                if (!a21TabIds.includes(activeTab)) {
+                  setActiveTab('live_monitor');
+                }
               }}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all ${
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
                 superAdminCategory === 'a21'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
@@ -273,12 +318,17 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
               🎒 Operasional A21 (Adik Kelas)
             </button>
 
+            {/* 3. INTERNAL A20 (PENGURUS) */}
             <button
               onClick={() => {
                 sound.playPop();
                 setSuperAdminCategory('a20');
+                const a20TabIds: TabId[] = ['mentor_attendance', 'agenda_a20', 'radar', 'structure'];
+                if (!a20TabIds.includes(activeTab)) {
+                  setActiveTab('mentor_attendance');
+                }
               }}
-              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all ${
+              className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
                 superAdminCategory === 'a20'
                   ? 'bg-indigo-900 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
@@ -287,12 +337,13 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
               🛡️ Internal A20 (Pengurus)
             </button>
 
+            {/* 4. SEMUA */}
             <button
               onClick={() => {
                 sound.playPop();
                 setSuperAdminCategory('all');
               }}
-              className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all ${
+              className={`py-1.5 px-3 rounded-xl text-xs font-black transition-all whitespace-nowrap ${
                 superAdminCategory === 'all'
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
@@ -434,13 +485,27 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         />
       )}
 
-      {/* Suara & Masukan Adik Kelas / Curhat Internal (Accessible by ALL Mentors & SuperAdmin) */}
-      {activeTab === 'agenda' && (
+      {/* Suara & Masukan Adik Kelas (Accessible by ALL Mentors & SuperAdmin) */}
+      {activeTab === 'agenda_a21' && (
         <AgendaVault
           attendances={attendances}
           members={members}
           activeMeeting={activeMeeting}
           isSuperAdmin={isSuperAdmin}
+          initialGroup="a21"
+          lockGroup={true}
+        />
+      )}
+
+      {/* Curhat & Evaluasi Pengurus A20 (Accessible by ALL Mentors & SuperAdmin) */}
+      {activeTab === 'agenda_a20' && (
+        <AgendaVault
+          attendances={attendances}
+          members={members}
+          activeMeeting={activeMeeting}
+          isSuperAdmin={isSuperAdmin}
+          initialGroup="a20"
+          lockGroup={true}
         />
       )}
 

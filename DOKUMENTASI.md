@@ -178,8 +178,16 @@
   - **Tombol Libur Jelas & Konfirmasi Aman (`MeetingControl.tsx`)**: Mengganti label ambigu `[ Set Pertemuan Libur ]` menjadi dinamis `[ 🌴 Liburkan Sesi: Rabu, 23 September 2026 ]` atau `[ 🏖️ Sesi Diliburkan (Klik untuk Buka Kembali) ]` dengan pop-up konfirmasi yang menyebutkan nama sesi dan tanggal hari Rabu tersebut secara eksplisit.
   - **Ketahanan Nilai Rapor**: Sesi yang diliburkan otomatis dikecualikan dari perhitungan total pertemuan wajib di `ReportRecap.tsx` dan `MentorDisciplineRadar.tsx`, sehingga tidak ada siswa maupun pengurus yang dihitung alpa/alpha.
 
+- [x] Menu Kategori "🌐 Umum" & Pemisahan Presisi Curhat A20 vs Aspirasi A21 (`MentorDashboard.tsx` & `AgendaVault.tsx`):
+  - **Menu Baru "🌐 Umum"**: Memindahkan fitur general yang sebelumnya terselip di kategori A21—yaitu **Kontrol Sesi & Token** (pengaturan sesi, token A21 & A20, bypass jadwal, sesi libur, PIN) dan **ACC Anggota Baru** (portal registrasi pendaftaran umum)—ke dalam kategori mandiri `🌐 Umum`.
+  - **Pemisahan Aspirasi Adik vs Curhat Pengurus**:
+    - Di `🎒 Operasional A21 (Adik Kelas)`: Tab khusus **`✨ Suara & Masukan Adik`** (fokus pada rating keseruan eskul & ide *Next Agenda* dari adik kelas).
+    - Di `🛡️ Internal A20 (Pengurus)`: Tab khusus **`💬 Curhat & Evaluasi A20`** (fokus pada kotak unek-unek riil, kendala teknis lapangan/sarpras, dan evaluasi sesama pengurus angkatan Chandra).
+  - **Auto-Switch Tab Cerdas**: Saat tombol kategori diklik (`🌐 Umum`, `🎒 Operasional A21`, `🛡️ Internal A20`), sistem secara cerdas memilih tab pertama yang relevan jika tab sebelumnya tidak berada di kategori tersebut, menjamin UX super ergonomis tanpa menu kosong.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
+
 
 
