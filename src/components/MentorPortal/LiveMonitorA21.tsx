@@ -1,17 +1,17 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
   Clock, 
   Search, 
   UserCheck, 
   TrendingUp, 
-  RefreshCw,
-  UserX,
-  Zap,
-  FileText,
-  MessageSquare,
-  Copy,
-  Check
+  RefreshCw, 
+  UserX, 
+  Zap, 
+  FileText, 
+  MessageSquare, 
+  Copy, 
+  Check 
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -37,6 +37,13 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [copiedWA, setCopiedWA] = useState(false);
 
+  // 0ms Optimistic UI State for instant responsiveness
+  const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
+
+  useEffect(() => {
+    setOptimisticAttendances(attendances);
+  }, [attendances]);
+
   // Filter Angkatan 21 active students (104 members)
   const a21Students = useMemo(() => {
     return members.filter((m) => m.generation === 21 && m.status === 'active');
@@ -45,8 +52,8 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   // Current meeting attendances
   const currentAttendances = useMemo(() => {
     if (!activeMeeting) return [];
-    return attendances.filter((a) => a.meeting_id === activeMeeting.id);
-  }, [attendances, activeMeeting]);
+    return optimisticAttendances.filter((a) => a.meeting_id === activeMeeting.id);
+  }, [optimisticAttendances, activeMeeting]);
 
   const attendedMap = useMemo(() => {
     const map = new Map<string, Attendance>();
@@ -154,7 +161,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     });
   };
 
-  // Manual mark attendance (Hadir) - Atomic Delete-Then-Insert (Anti-RLS Block & Anti-Unique Collision)
+  // Manual mark attendance (Hadir) - 0ms Optimistic UI + Atomic Delete-Then-Insert
   const handleMarkPresent = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
@@ -163,6 +170,24 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     }
 
     sound.playPop();
+    const previousAttendances = [...optimisticAttendances];
+
+    // 0ms Optimistic UI update
+    const updated = previousAttendances.filter(
+      (a) => !(a.meeting_id === activeMeeting.id && a.member_id === student.id)
+    );
+    updated.push({
+      id: 'opt_' + Date.now() + '_' + Math.random(),
+      meeting_id: activeMeeting.id,
+      member_id: student.id,
+      feedback_rating: 'super_fun',
+      next_agenda_suggestion: 'Ditandai hadir oleh Kakak Kelas',
+      critique: undefined,
+      is_anonymous: false,
+      submitted_at: new Date().toISOString(),
+    });
+
+    setOptimisticAttendances(updated);
     setLoadingId(student.id);
 
     try {
@@ -188,6 +213,8 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
       onAttendanceChanged();
     } catch (err: any) {
       console.error('Error marking attendance:', err);
+      // Rollback on failure
+      setOptimisticAttendances(previousAttendances);
       sound.playError();
       alert('Gagal menandai presensi: ' + err.message);
     } finally {
@@ -195,7 +222,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     }
   };
 
-  // Manual mark permit (Izin Surat Fisik - Kapan saja) - Atomic Delete-Then-Insert
+  // Manual mark permit (Izin Surat Fisik - Kapan saja) - 0ms Optimistic UI + Atomic Delete-Then-Insert
   const handleMarkPermit = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
@@ -204,6 +231,24 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     }
 
     sound.playPop();
+    const previousAttendances = [...optimisticAttendances];
+
+    // 0ms Optimistic UI update
+    const updated = previousAttendances.filter(
+      (a) => !(a.meeting_id === activeMeeting.id && a.member_id === student.id)
+    );
+    updated.push({
+      id: 'opt_' + Date.now() + '_' + Math.random(),
+      meeting_id: activeMeeting.id,
+      member_id: student.id,
+      feedback_rating: 'okay',
+      next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+      critique: 'IZIN_SURAT_FISIK',
+      is_anonymous: false,
+      submitted_at: new Date().toISOString(),
+    });
+
+    setOptimisticAttendances(updated);
     setLoadingId(student.id);
 
     try {
@@ -229,6 +274,8 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
       onAttendanceChanged();
     } catch (err: any) {
       console.error('Error recording permit:', err);
+      // Rollback on failure
+      setOptimisticAttendances(previousAttendances);
       sound.playError();
       alert('Gagal mencatat izin: ' + err.message);
     } finally {
@@ -236,12 +283,20 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     }
   };
 
-  // Cancel attendance
+  // Cancel attendance - 0ms Optimistic UI
   const handleCancelAttendance = async (student: Member) => {
     if (!activeMeeting) return;
     if (!confirm(`Batalkan status presensi untuk ${student.name}?`)) return;
 
     sound.playPop();
+    const previousAttendances = [...optimisticAttendances];
+
+    // 0ms Optimistic UI update
+    const updated = previousAttendances.filter(
+      (a) => !(a.meeting_id === activeMeeting.id && a.member_id === student.id)
+    );
+
+    setOptimisticAttendances(updated);
     setLoadingId(student.id);
 
     try {
@@ -256,6 +311,8 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
       onAttendanceChanged();
     } catch (err: any) {
       console.error('Error canceling attendance:', err);
+      // Rollback on failure
+      setOptimisticAttendances(previousAttendances);
       sound.playError();
     } finally {
       setLoadingId(null);

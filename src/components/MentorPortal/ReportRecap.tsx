@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Download, 
   Search, 
@@ -44,6 +44,13 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   const [searchName, setSearchName] = useState('');
   const [manualLoadingId, setManualLoadingId] = useState<string | null>(null);
 
+  // 0ms Optimistic UI State for instant tactile response
+  const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
+
+  useEffect(() => {
+    setOptimisticAttendances(attendances);
+  }, [attendances]);
+
   // Month selector for Monthly Matrix view (format: YYYY-MM)
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [selectedMonth, setSelectedMonth] = useState<string>(currentMonthStr);
@@ -79,8 +86,8 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   // Attendances in selected meeting
   const currentMeetingAttendances = useMemo(() => {
     if (!selectedMeetingId) return [];
-    return attendances.filter((a) => a.meeting_id === selectedMeetingId);
-  }, [attendances, selectedMeetingId]);
+    return optimisticAttendances.filter((a) => a.meeting_id === selectedMeetingId);
+  }, [optimisticAttendances, selectedMeetingId]);
 
   // Rows for Single Meeting Report
   const singleReportRows = useMemo(() => {
@@ -149,17 +156,52 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
     });
   };
 
-  // Handler: Atur status presensi (Hadir / Izin Surat Fisik / Alpa) - Atomic Delete-Then-Insert (Anti-RLS & Anti-Collision)
+  // Handler: Atur status presensi (Hadir / Izin Surat Fisik / Alpa) - 0ms Optimistic UI + Atomic Delete-Then-Insert
   const handleSetStatus = async (
     member: Member, 
     targetStatus: 'present' | 'permit' | 'absent'
   ) => {
     if (!selectedMeetingId) return;
     sound.playPop();
+
+    // 1. Snapshot previous state for instant rollback if network fails
+    const previousAttendances = [...optimisticAttendances];
+
+    // 2. Compute 0ms optimistic state immediately
+    const nextAttendances = previousAttendances.filter(
+      (a) => !(a.meeting_id === selectedMeetingId && a.member_id === member.id)
+    );
+
+    if (targetStatus === 'permit') {
+      nextAttendances.push({
+        id: 'opt_' + Date.now() + '_' + Math.random(),
+        meeting_id: selectedMeetingId,
+        member_id: member.id,
+        feedback_rating: 'okay',
+        critique: 'IZIN_SURAT_FISIK',
+        next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+        is_anonymous: false,
+        submitted_at: new Date().toISOString(),
+      });
+    } else if (targetStatus === 'present') {
+      nextAttendances.push({
+        id: 'opt_' + Date.now() + '_' + Math.random(),
+        meeting_id: selectedMeetingId,
+        member_id: member.id,
+        feedback_rating: 'super_fun',
+        critique: undefined,
+        next_agenda_suggestion: 'Ditandai hadir manual oleh Pengurus',
+        is_anonymous: false,
+        submitted_at: new Date().toISOString(),
+      });
+    }
+
+    // Apply optimistic update instantly (0ms)
+    setOptimisticAttendances(nextAttendances);
     setManualLoadingId(member.id);
 
     try {
-      // 1. Delete any existing record for this meeting & member (clean slate, allowed by RLS DELETE policy)
+      // 3. Delete any existing record for this meeting & member (clean slate, allowed by RLS DELETE policy)
       const { error: delError } = await supabase
         .from('attendances')
         .delete()
@@ -168,7 +210,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
 
       if (delError) throw delError;
 
-      // 2. Insert fresh record if not absent (allowed by RLS INSERT policy)
+      // 4. Insert fresh record if not absent (allowed by RLS INSERT policy)
       if (targetStatus === 'permit') {
         const { error: insError } = await supabase.from('attendances').insert({
           meeting_id: selectedMeetingId,
@@ -195,6 +237,8 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       if (onAttendanceChanged) onAttendanceChanged();
     } catch (err: any) {
       console.error('Error changing attendance status:', err);
+      // Rollback to previous state on failure
+      setOptimisticAttendances(previousAttendances);
       sound.playError();
       alert('Gagal mengubah status presensi: ' + err.message);
     } finally {
@@ -268,11 +312,11 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   // Attendance lookup: Map key = `${meeting_id}_${member_id}`
   const attendanceLookup = useMemo(() => {
     const map = new Map<string, Attendance>();
-    attendances.forEach((a) => {
+    optimisticAttendances.forEach((a) => {
       map.set(`${a.meeting_id}_${a.member_id}`, a);
     });
     return map;
-  }, [attendances]);
+  }, [optimisticAttendances]);
 
   const monthlyMatrixRows = useMemo(() => {
     return a21Students
@@ -741,68 +785,73 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                         )}
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        {manualLoadingId === r.member.id ? (
-                          <RefreshCw className="w-3.5 h-3.5 animate-spin mx-auto text-slate-500" />
-                        ) : (
-                          <div className="flex items-center justify-center gap-1.5">
-                            {r.isPresent ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStatus(r.member, 'permit')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-colors"
-                                  title="Ubah status ke Izin Surat Fisik"
-                                >
-                                  📄 Jadi Izin
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStatus(r.member, 'absent')}
-                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-colors"
-                                  title="Batalkan presensi (jadikan alpa)"
-                                >
-                                  Batal
-                                </button>
-                              </>
-                            ) : r.isPermit ? (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStatus(r.member, 'present')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors"
-                                  title="Ubah status ke Hadir"
-                                >
-                                  ⚡ Jadi Hadir
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStatus(r.member, 'absent')}
-                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-colors"
-                                  title="Batalkan izin (jadikan alpa)"
-                                >
-                                  Batal
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStatus(r.member, 'present')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all"
-                                >
-                                  + Hadir
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleSetStatus(r.member, 'permit')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all"
-                                >
-                                  📄 Izin (Surat)
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        )}
+                        <div className="flex items-center justify-center gap-1.5">
+                          {r.isPresent ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={manualLoadingId === r.member.id}
+                                onClick={() => handleSetStatus(r.member, 'permit')}
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                title="Ubah status ke Izin Surat Fisik"
+                              >
+                                📄 Jadi Izin
+                              </button>
+                              <button
+                                type="button"
+                                disabled={manualLoadingId === r.member.id}
+                                onClick={() => handleSetStatus(r.member, 'absent')}
+                                className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                title="Batalkan presensi (jadikan alpa)"
+                              >
+                                Batal
+                              </button>
+                            </>
+                          ) : r.isPermit ? (
+                            <>
+                              <button
+                                type="button"
+                                disabled={manualLoadingId === r.member.id}
+                                onClick={() => handleSetStatus(r.member, 'present')}
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                title="Ubah status ke Hadir"
+                              >
+                                ⚡ Jadi Hadir
+                              </button>
+                              <button
+                                type="button"
+                                disabled={manualLoadingId === r.member.id}
+                                onClick={() => handleSetStatus(r.member, 'absent')}
+                                className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                title="Batalkan izin (jadikan alpa)"
+                              >
+                                Batal
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                disabled={manualLoadingId === r.member.id}
+                                onClick={() => handleSetStatus(r.member, 'present')}
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
+                              >
+                                + Hadir
+                              </button>
+                              <button
+                                type="button"
+                                disabled={manualLoadingId === r.member.id}
+                                onClick={() => handleSetStatus(r.member, 'permit')}
+                                className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
+                              >
+                                📄 Izin (Surat)
+                              </button>
+                            </>
+                          )}
+                          {manualLoadingId === r.member.id && (
+                            <RefreshCw className="w-3 h-3 animate-spin text-slate-400 shrink-0" />
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

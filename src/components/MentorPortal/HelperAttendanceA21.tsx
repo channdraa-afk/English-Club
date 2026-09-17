@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Search, 
   CheckCircle2, 
@@ -30,6 +30,13 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [recentHelped, setRecentHelped] = useState<string | null>(null);
 
+  // 0ms Optimistic UI State
+  const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
+
+  useEffect(() => {
+    setOptimisticAttendances(attendances);
+  }, [attendances]);
+
   // Filter Angkatan 21 active students (104 members)
   const a21Students = useMemo(() => {
     return members.filter((m) => m.generation === 21 && m.status === 'active');
@@ -38,8 +45,8 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
   // Current meeting attendances
   const currentAttendances = useMemo(() => {
     if (!activeMeeting) return [];
-    return attendances.filter((a) => a.meeting_id === activeMeeting.id);
-  }, [attendances, activeMeeting]);
+    return optimisticAttendances.filter((a) => a.meeting_id === activeMeeting.id);
+  }, [optimisticAttendances, activeMeeting]);
 
   const attendedSet = useMemo(() => {
     return new Set(currentAttendances.map((a) => a.member_id));
@@ -66,7 +73,7 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
       .sort((a, b) => a.class_name.localeCompare(b.class_name) || a.name.localeCompare(b.name));
   }, [a21Students, attendedSet, selectedClass, searchQuery]);
 
-  // Handle Quick Assist (Bantu Hadirkan)
+  // Handle Quick Assist (Bantu Hadirkan) - 0ms Optimistic UI
   const handleQuickAssist = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
@@ -75,6 +82,25 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
     }
 
     sound.playPop();
+    const previousAttendances = [...optimisticAttendances];
+
+    // 0ms Optimistic UI update
+    const updated = previousAttendances.filter(
+      (a) => !(a.meeting_id === activeMeeting.id && a.member_id === student.id)
+    );
+    updated.push({
+      id: 'opt_' + Date.now() + '_' + Math.random(),
+      meeting_id: activeMeeting.id,
+      member_id: student.id,
+      feedback_rating: 'super_fun',
+      next_agenda_suggestion: 'Dibantu absen hadir oleh Kakak Kelas',
+      is_anonymous: false,
+      submitted_at: new Date().toISOString(),
+    });
+
+    setOptimisticAttendances(updated);
+    setRecentHelped(`${student.name} (✓ Hadir)`);
+    setTimeout(() => setRecentHelped(null), 3000);
     setLoadingId(student.id);
 
     try {
@@ -96,11 +122,11 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
 
       if (error) throw error;
       sound.playSuccess();
-      setRecentHelped(`${student.name} (✓ Hadir)`);
-      setTimeout(() => setRecentHelped(null), 3000);
       onAttendanceChanged();
     } catch (err: any) {
       console.error('Error assisting attendance:', err);
+      // Rollback on failure
+      setOptimisticAttendances(previousAttendances);
       sound.playError();
       alert('Gagal membantu presensi: ' + err.message);
     } finally {
@@ -108,7 +134,7 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
     }
   };
 
-  // Handle Quick Permit (Tandai Izin Surat Fisik)
+  // Handle Quick Permit (Tandai Izin Surat Fisik) - 0ms Optimistic UI
   const handleQuickPermit = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
@@ -117,6 +143,26 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
     }
 
     sound.playPop();
+    const previousAttendances = [...optimisticAttendances];
+
+    // 0ms Optimistic UI update
+    const updated = previousAttendances.filter(
+      (a) => !(a.meeting_id === activeMeeting.id && a.member_id === student.id)
+    );
+    updated.push({
+      id: 'opt_' + Date.now() + '_' + Math.random(),
+      meeting_id: activeMeeting.id,
+      member_id: student.id,
+      feedback_rating: 'okay',
+      next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+      critique: 'IZIN_SURAT_FISIK',
+      is_anonymous: false,
+      submitted_at: new Date().toISOString(),
+    });
+
+    setOptimisticAttendances(updated);
+    setRecentHelped(`${student.name} (📄 Izin Surat Fisik)`);
+    setTimeout(() => setRecentHelped(null), 3000);
     setLoadingId(student.id);
 
     try {
@@ -139,11 +185,11 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
 
       if (error) throw error;
       sound.playSuccess();
-      setRecentHelped(`${student.name} (📄 Izin Surat Fisik)`);
-      setTimeout(() => setRecentHelped(null), 3000);
       onAttendanceChanged();
     } catch (err: any) {
       console.error('Error recording permit:', err);
+      // Rollback on failure
+      setOptimisticAttendances(previousAttendances);
       sound.playError();
       alert('Gagal mencatat izin: ' + err.message);
     } finally {

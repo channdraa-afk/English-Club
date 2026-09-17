@@ -167,6 +167,10 @@
   - **Persistensi Tab Aktif (`sessionStorage`)**: Menyimpan state `activeTab` di `sessionStorage` sehingga tab yang sedang dibuka (misal: Rekap & Cetak Nilai) tidak akan pernah mental kembali ke tab awal.
   - **Anti-Layout Shift Mode Switcher**: Mengunci baris tab mode switcher dengan `flex-nowrap`, `overflow-x-auto`, dan `shrink-0` serta menyeragamkan tombol aksi kanan (`[ 🖨️ Cetak PDF ]` dan `[ 📥 Ekspor CSV ]`) sehingga tidak ada tombol yang melompat/patah ke baris kedua.
   - **Penyesuaian Etis "Status Keaktifan"**: Mengganti istilah "Predikat Rapor" dan grading A/B/C/D menjadi **"Status Keaktifan"** (*Sangat Aktif, Aktif, Cukup Aktif, Kurang Aktif*) untuk menghormati wewenang nilai rapor Guru Pembina SMEGA.
+- [x] Sensasi Taktil Instan 0ms (Optimistic UI Updates di ReportRecap, LiveMonitorA21, & HelperAttendanceA21):
+  - **Zero Millisecond Response**: Begitu tombol `+ Hadir`, `Izin (Surat)`, `Jadi Hadir`, atau `Batal` diklik, status badge siswa, tombol aksi, dan counter statistik langsung berganti di milidetik ke-0 secara instan tanpa menunggu siklus round-trip jaringan.
+  - **Non-Blocking Feedback**: Mengeliminasi spinner layar/baris yang sebelumnya memblokir interaksi selama 2 detik; tombol kini tetap interaktif dan hanya memunculkan indikator sinkronisasi mikro yang halus.
+  - **Fail-Safe Automatic Rollback**: Jika jaringan internet terputus di tengah proses, state UI secara otomatis dikembalikan ke status sebelumnya disertai peringatan dan nada audio error.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
