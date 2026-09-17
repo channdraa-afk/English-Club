@@ -156,6 +156,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           meetings={meetings}
           attendances={attendances}
           activeMeeting={activeMeeting}
+          onAttendanceChanged={onAttendanceChanged}
         />
       )}
 
