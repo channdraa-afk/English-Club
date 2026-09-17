@@ -16,7 +16,7 @@ import {
   Layers,
   Lock
 } from 'lucide-react';
-import { Member, Meeting, Attendance } from '../../types/database';
+import { Member, Meeting, Attendance, TalentStar } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { supabase } from '../../lib/supabase';
@@ -28,6 +28,7 @@ interface ReportRecapProps {
   activeMeeting: Meeting | null;
   isSuperAdmin?: boolean;
   onAttendanceChanged?: () => void;
+  talentStars?: TalentStar[];
 }
 
 export const ReportRecap: React.FC<ReportRecapProps> = ({
@@ -37,6 +38,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   activeMeeting,
   isSuperAdmin = false,
   onAttendanceChanged,
+  talentStars = [],
 }) => {
   const [recapMode, setRecapMode] = useState<'single' | 'monthly' | 'cumulative'>('single');
   const [copiedWA, setCopiedWA] = useState(false);
@@ -62,6 +64,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   const a21Students = useMemo(() => {
     return members.filter((m) => m.generation === 21 && m.status === 'active');
   }, [members]);
+
+  const starsByMemberId = useMemo(() => {
+    const map = new Map<string, number>();
+    talentStars.forEach((s) => {
+      map.set(s.member_id, (map.get(s.member_id) || 0) + 1);
+    });
+    return map;
+  }, [talentStars]);
 
   // Distinct classes in Angkatan 21
   const classList = useMemo(() => {
@@ -773,7 +783,20 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                       }`}
                     >
                       <td className="py-2.5 px-3 text-center text-slate-400 font-mono">{idx + 1}</td>
-                      <td className="py-2.5 px-3 text-slate-900 font-extrabold">{r.member.name}</td>
+                      <td className="py-2.5 px-3 text-slate-900 font-extrabold">
+                        <div className="flex items-center gap-1.5">
+                          <span>{r.member.name}</span>
+                          {(starsByMemberId.get(r.member.id) || 0) > 0 && (
+                            <span 
+                              className="px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black inline-flex items-center gap-0.5"
+                              title="Bintang Keaktifan Lomba"
+                            >
+                              <span>⭐</span>
+                              <span>{starsByMemberId.get(r.member.id)}</span>
+                            </span>
+                          )}
+                        </div>
+                      </td>
                       <td className="py-2.5 px-3">
                         <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px]">
                           {r.member.class_name}

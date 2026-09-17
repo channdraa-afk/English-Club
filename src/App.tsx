@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabase';
-import { Member, Meeting, Attendance, Registration } from './types/database';
+import { Member, Meeting, Attendance, Registration, TalentStar } from './types/database';
 import { Navbar } from './components/Navbar';
 import { MemberAttendance } from './components/MemberAttendance';
 import { WordOfTheDayModal } from './components/WordOfTheDayModal';
@@ -15,6 +15,7 @@ export const App: React.FC = () => {
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [attendances, setAttendances] = useState<Attendance[]>([]);
   const [registrations, setRegistrations] = useState<Registration[]>([]);
+  const [talentStars, setTalentStars] = useState<TalentStar[]>([]);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
   const [mentorPin, setMentorPin] = useState('123321');
   const [mentorToken, setMentorToken] = useState('CREW20');
@@ -100,8 +101,20 @@ export const App: React.FC = () => {
             setMentorToken(typeof s.value === 'string' ? s.value : String(s.value));
           } else if (s.key === 'manual_bypass') {
             setIsManualBypass(Boolean(s.value));
+          } else if (s.key === 'talent_stars' && Array.isArray(s.value)) {
+            setTalentStars(s.value);
           }
         });
+      }
+
+      // 6. Fetch talent_stars table if available
+      try {
+        const { data: starData, error: starErr } = await supabase.from('talent_stars').select('*');
+        if (!starErr && starData && starData.length > 0) {
+          setTalentStars(starData);
+        }
+      } catch {
+        // Handled via app_settings fallback
       }
     } catch (err: any) {
       console.error('Error fetching Supabase data:', err);
@@ -164,6 +177,56 @@ export const App: React.FC = () => {
   const handleToggleManualBypass = async (state: boolean) => {
     setIsManualBypass(state);
     await supabase.from('app_settings').upsert({ key: 'manual_bypass', value: state });
+  };
+
+  const handleAddTalentStar = async (newStar: Omit<TalentStar, 'id' | 'created_at'>) => {
+    const star: TalentStar = {
+      ...newStar,
+      id: crypto.randomUUID(),
+      created_at: new Date().toISOString(),
+    };
+
+    const updated = [...talentStars, star];
+    setTalentStars(updated);
+
+    try {
+      const { error } = await supabase.from('talent_stars').insert(star);
+      if (error) {
+        await supabase.from('app_settings').upsert({
+          key: 'talent_stars',
+          value: updated,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch {
+      await supabase.from('app_settings').upsert({
+        key: 'talent_stars',
+        value: updated,
+        updated_at: new Date().toISOString(),
+      });
+    }
+  };
+
+  const handleRemoveTalentStar = async (starId: string) => {
+    const updated = talentStars.filter((s) => s.id !== starId);
+    setTalentStars(updated);
+
+    try {
+      const { error } = await supabase.from('talent_stars').delete().eq('id', starId);
+      if (error) {
+        await supabase.from('app_settings').upsert({
+          key: 'talent_stars',
+          value: updated,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch {
+      await supabase.from('app_settings').upsert({
+        key: 'talent_stars',
+        value: updated,
+        updated_at: new Date().toISOString(),
+      });
+    }
   };
 
   return (
@@ -239,6 +302,9 @@ export const App: React.FC = () => {
             onAttendanceChanged={() => fetchData(true)}
             onRefreshRegistrations={() => fetchData(true)}
             onMemberAdded={() => fetchData(true)}
+            talentStars={talentStars}
+            onAddTalentStar={handleAddTalentStar}
+            onRemoveTalentStar={handleRemoveTalentStar}
             onLogout={handleMentorLogout}
             onBackToStudent={() => setCurrentView('student')}
           />

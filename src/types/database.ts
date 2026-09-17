@@ -52,3 +52,23 @@ export interface AppSetting {
   value: any;
   updated_at?: string;
 }
+
+export type CompetitionCategory = 
+  | 'speech'
+  | 'storytelling'
+  | 'debate'
+  | 'newscasting'
+  | 'scrabble'
+  | 'spelling_bee'
+  | 'read_aloud'
+  | 'general_active';
+
+export interface TalentStar {
+  id: string;
+  member_id: string;
+  meeting_id: string;
+  category: CompetitionCategory;
+  notes: string;
+  awarded_by: string;
+  created_at: string;
+}

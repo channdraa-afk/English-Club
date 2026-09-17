@@ -11,7 +11,7 @@ import {
   Copy, 
   Check 
 } from 'lucide-react';
-import { Member, Meeting, Attendance } from '../../types/database';
+import { Member, Meeting, Attendance, TalentStar } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 
@@ -19,12 +19,14 @@ interface LiveMonitorA21Props {
   members: Member[];
   activeMeeting: Meeting | null;
   attendances: Attendance[];
+  talentStars?: TalentStar[];
 }
 
 export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   members,
   activeMeeting,
   attendances,
+  talentStars = [],
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'absent' | 'present' | 'permit' | 'all'>('absent');
   const [searchQuery, setSearchQuery] = useState('');
@@ -56,6 +58,14 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     });
     return map;
   }, [currentAttendances]);
+
+  const starsByMemberId = useMemo(() => {
+    const map = new Map<string, number>();
+    talentStars.forEach((s) => {
+      map.set(s.member_id, (map.get(s.member_id) || 0) + 1);
+    });
+    return map;
+  }, [talentStars]);
 
   // Lists: Hadir, Izin (Surat Fisik), and Belum Hadir / Alpa
   const presentStudents = useMemo(() => {
@@ -395,6 +405,16 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
                     <span className="px-2 py-0.2 rounded-md bg-slate-100 border border-slate-200 text-slate-600 text-[10px] font-black">
                       {student.class_name}
                     </span>
+
+                    {(starsByMemberId.get(student.id) || 0) > 0 && (
+                      <span 
+                        className="px-1.5 py-0.2 rounded-md bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black inline-flex items-center gap-0.5"
+                        title="Bintang Keaktifan Lomba"
+                      >
+                        <span>⭐</span>
+                        <span>{starsByMemberId.get(student.id)}</span>
+                      </span>
+                    )}
 
                     {isPresent && (
                       <span className="px-2 py-0.2 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200 text-[10px] font-black">

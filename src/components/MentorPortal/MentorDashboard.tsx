@@ -16,14 +16,16 @@ import {
   HandHeart, 
   Radio, 
   Layers,
-  HeartHandshake
+  HeartHandshake,
+  Star
 } from 'lucide-react';
-import { Member, Meeting, Attendance, Registration } from '../../types/database';
+import { Member, Meeting, Attendance, Registration, TalentStar } from '../../types/database';
 import { MeetingControl } from './MeetingControl';
 import { ReportRecap } from './ReportRecap';
 import { MentorAttendance } from './MentorAttendance';
 import { HelperAttendanceA21 } from './HelperAttendanceA21';
 import { LiveMonitorA21 } from './LiveMonitorA21';
+import { TalentScoutA21 } from './TalentScoutA21';
 import { AgendaVault } from './AgendaVault';
 import { RegistrationApprovals } from './RegistrationApprovals';
 import { StructureView } from './StructureView';
@@ -35,6 +37,7 @@ export type TabId =
   | 'session'
   | 'approvals'
   | 'live_monitor'
+  | 'talent_scout'
   | 'helper_a21'
   | 'recap'
   | 'agenda_a21'
@@ -64,6 +67,9 @@ interface MentorDashboardProps {
   onAttendanceChanged: () => void;
   onRefreshRegistrations: () => void;
   onMemberAdded: () => void;
+  talentStars?: TalentStar[];
+  onAddTalentStar?: (star: Omit<TalentStar, 'id' | 'created_at'>) => Promise<void>;
+  onRemoveTalentStar?: (starId: string) => Promise<void>;
   onLogout: () => void;
   onBackToStudent: () => void;
 }
@@ -89,6 +95,9 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   onAttendanceChanged,
   onRefreshRegistrations,
   onMemberAdded,
+  talentStars = [],
+  onAddTalentStar,
+  onRemoveTalentStar,
   onLogout,
   onBackToStudent,
 }) => {
@@ -98,6 +107,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       'mentor_attendance',
       'radar',
       'live_monitor',
+      'talent_scout',
       'helper_a21',
       'recap',
       'agenda_a21',
@@ -129,6 +139,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       'mentor_attendance',
       'radar',
       'live_monitor',
+      'talent_scout',
       'helper_a21',
       'recap',
       'agenda_a21',
@@ -157,6 +168,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
     // --- 🎒 OPERASIONAL A21 (ADIK KELAS) ---
     { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: false },
+    { id: 'talent_scout', label: 'Radar Bibit Lomba', icon: Star, category: 'a21', superOnly: false },
     { id: 'helper_a21', label: 'Bantu Absen A21', icon: HandHeart, category: 'a21', superOnly: false },
     { id: 'recap', label: 'Rekap Rapor Bulanan', icon: FileSpreadsheet, category: 'a21', superOnly: false },
     { id: 'agenda_a21', label: 'Suara & Masukan Adik', icon: Sparkles, category: 'a21', superOnly: false },
@@ -307,7 +319,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
             onClick={() => {
               sound.playPop();
               setCurrentCategory('a21');
-              const a21TabIds: TabId[] = ['live_monitor', 'helper_a21', 'recap', 'agenda_a21'];
+              const a21TabIds: TabId[] = ['live_monitor', 'talent_scout', 'helper_a21', 'recap', 'agenda_a21'];
               if (!a21TabIds.includes(activeTab)) {
                 setActiveTab('live_monitor');
               }
@@ -425,6 +437,19 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           members={members}
           activeMeeting={activeMeeting}
           attendances={attendances}
+          talentStars={talentStars}
+        />
+      )}
+
+      {/* Radar Bibit Lomba A21 (Accessible by ALL Mentors & SuperAdmin) */}
+      {activeTab === 'talent_scout' && onAddTalentStar && onRemoveTalentStar && (
+        <TalentScoutA21
+          members={members}
+          meetings={meetings}
+          talentStars={talentStars}
+          onAddStar={onAddTalentStar}
+          onRemoveStar={onRemoveTalentStar}
+          activeMeeting={activeMeeting}
         />
       )}
 
@@ -463,6 +488,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           activeMeeting={activeMeeting}
           isSuperAdmin={isSuperAdmin}
           onAttendanceChanged={onAttendanceChanged}
+          talentStars={talentStars}
         />
       )}
 

@@ -80,6 +80,21 @@ CREATE TABLE app_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- 8. Radar Bibit Lomba (Talent Scout Stars A21)
+CREATE TABLE IF NOT EXISTS talent_stars (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    member_id UUID NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+    meeting_id UUID NOT NULL REFERENCES meetings(id) ON DELETE CASCADE,
+    category TEXT NOT NULL DEFAULT 'speech', -- speech, storytelling, debate, newscasting, scrabble, spelling_bee, read_aloud, general_active
+    notes TEXT NOT NULL,
+    awarded_by TEXT NOT NULL DEFAULT 'Mentor SMEGA',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT unique_meeting_member_star UNIQUE (meeting_id, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_talent_stars_member ON talent_stars (member_id);
+CREATE INDEX IF NOT EXISTS idx_talent_stars_meeting ON talent_stars (meeting_id);
+
 -- ==============================================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
 -- ==============================================================================
@@ -88,6 +103,12 @@ ALTER TABLE meetings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE attendances ENABLE ROW LEVEL SECURITY;
 ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE talent_stars ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read & manage talent_stars
+CREATE POLICY "Allow public read talent_stars" ON talent_stars FOR SELECT USING (true);
+CREATE POLICY "Allow public insert talent_stars" ON talent_stars FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow public delete talent_stars" ON talent_stars FOR DELETE USING (true);
 
 -- Allow public read access to active members
 CREATE POLICY "Allow public read members" ON members FOR SELECT USING (true);

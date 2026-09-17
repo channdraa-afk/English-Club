@@ -206,9 +206,27 @@
   - **Anti-Pause 7 Hari**: Menjaga database tetap terjaga dan aktif tanpa perlu Chandra menambah data dummy/palsu ataupun membuka laptop/web secara manual di hari libur.
   - **Bersih & Ringan**: Cukup melakukan query ringan `SELECT key FROM app_settings LIMIT 1` (hanya butuh 2-3 detik eksekusi cURL) yang langsung me-reset timer istirahat Supabase menjadi 0.
 
+- [x] Fitur Radar Bibit Lomba (Talent Scout Bintang A21) untuk Seleksi Delegasi Lomba SMEGA:
+  - **Akses Terbuka Semua Mentor**: Terbuka di tab `⭐ Radar Bibit Lomba` di bawah kategori `🎒 Operasional A21 (Adik Kelas)`.
+  - **Aturan Sakral Bintang Anti-Dobel**: 1x pertemuan maksimal 1 bintang per anak. Jika sudah diberi oleh 1 mentor, mentor lain melihat statusnya terkunci berbintang untuk sesi tersebut.
+  - **Modal Wajib Cabang Lomba & Catatan Alasan**:
+    - Mentor wajib memilih cabang lomba/kategori keunggulan: 🎙️ *Speech*, 📖 *Storytelling*, ⚔️ *Debate*, 📺 *Newscasting*, 🔠 *Scrabble*, 🐝 *Spelling Bee*, 🗣️ *Read Aloud*, atau 🌟 *Active Vocal / General*.
+    - Mentor wajib mengisi catatan ulasan alasan adik kelas tersebut menonjol untuk dibaca mentor lain.
+  - **Penempatan Bintang Anti-Meluber & Gamifikasi Octalysis**:
+    - Menggunakan badge taktil 3D ringkas `⭐ N` (misal `⭐ 5`).
+    - Sistem Tier Gelar Bakat: 🥉 *Rising Star* (1-2 ⭐), 🥈 *Active Speaker* (3-5 ⭐), 🥇 *Champion Talent* (6+ ⭐).
+    - Modal lembar riwayat catatan ulasan per siswa jika badge diklik.
+    - Podium Leaderboard 3 Besar (Piala Emas, Perak, Perunggu) untuk peraih bintang terbanyak.
+    - Fitur copot / hapus bintang jika terjadi salah semat.
+  - **Integrasi Badge Multi-Modul**:
+    - Tampilan badge `⭐ N` otomatis muncul di samping nama siswa di `LiveMonitorA21` dan `ReportRecap` (rekap per pertemuan).
+  - **Resilience Data Architecture**:
+    - Menyimpan ke tabel `talent_stars` dengan skema RLS mandiri, serta fallback otomatis ke `app_settings` (key `'talent_stars'`) sehingga fitur langsung bekerja instan tanpa jeda dependensi.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
+- [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
 
 
 
