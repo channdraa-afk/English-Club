@@ -8,6 +8,7 @@ import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
 import { MentorDashboard } from './components/MentorPortal/MentorDashboard';
 import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
+import { LandingPage } from './components/LandingPage/LandingPage';
 import { sound } from './lib/audio';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 
@@ -25,8 +26,38 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // View state
-  const [currentView, setCurrentView] = useState<'student' | 'mentor'>('student');
+  // View state: 'landing' | 'student' | 'mentor' (Smart Time-Aware System)
+  const [currentView, setCurrentView] = useState<'landing' | 'student' | 'mentor'>(() => {
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#absen' || hash === '#presensi') return 'student';
+      if (hash === '#mentor') return 'mentor';
+      if (hash === '#beranda') return 'landing';
+    }
+    // Check schedule: if Wednesday between 15:40 and 17:30 WIB, default to student
+    try {
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Asia/Jakarta',
+        weekday: 'short',
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false,
+      });
+      const parts = formatter.formatToParts(now);
+      const weekday = parts.find((p) => p.type === 'weekday')?.value;
+      const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
+      const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
+      const totalMinutes = hour * 60 + minute;
+      // Wednesday 15:40 (940) to 17:30 (1050)
+      if (weekday === 'Wed' && totalMinutes >= 940 && totalMinutes <= 1050) {
+        return 'student';
+      }
+    } catch {
+      // fallback
+    }
+    return 'landing';
+  });
   const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
@@ -50,6 +81,22 @@ export const App: React.FC = () => {
       sessionStorage.removeItem('ec_superadmin_auth');
       sessionStorage.removeItem('ec_superadmin_sig');
     }
+  }, []);
+
+  // Listen for browser back/forward or hash change (#absen, #mentor, #beranda)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#absen' || hash === '#presensi') {
+        setCurrentView('student');
+      } else if (hash === '#mentor') {
+        setCurrentView('mentor');
+      } else if (hash === '#beranda' || hash === '') {
+        setCurrentView('landing');
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
   // Fetch all data from Supabase
@@ -237,116 +284,153 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 selection:bg-blue-200 selection:text-blue-900">
-      {/* Navbar */}
-      <Navbar
-        activeMeetingTitle={activeMeeting?.title}
-        isMeetingActive={Boolean(activeMeeting?.is_active)}
-        onOpenMentor={() => {
-          sound.playPop();
-          setCurrentView('mentor');
-        }}
-        onOpenRegister={() => {
-          sound.playPop();
-          setIsRegisterModalOpen(true);
-        }}
-        isRegistrationOpen={isRegistrationOpen}
-        isMentorLoggedIn={isMentorLoggedIn}
-        currentView={currentView}
-        onSwitchView={(v) => setCurrentView(v)}
-      />
-
-      {/* Main Content Area */}
-      <main className="flex-1">
-        {isLoading && members.length === 0 ? (
-          <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-slate-400">
-            <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
-            <p className="text-sm font-bold">Memuat Data English Club SMEGA...</p>
-          </div>
-        ) : dbError && members.length === 0 ? (
-          <div className="max-w-md mx-auto px-4 py-12 text-center">
-            <div className="p-6 rounded-3xl bg-amber-50 border-2 border-amber-300 shadow-[0_4px_0_0_#fcd34d] space-y-3">
-              <AlertCircle className="w-10 h-10 text-amber-600 mx-auto" />
-              <h3 className="text-base font-black text-amber-950">Inisialisasi Database Supabase</h3>
-              <p className="text-xs font-bold text-amber-800 leading-relaxed">
-                Tabel database belum dibuat di Supabase project kamu. Silakan jalankan skrip <code className="bg-white px-1.5 py-0.5 rounded border border-amber-300">supabase/schema.sql</code> dan <code className="bg-white px-1.5 py-0.5 rounded border border-amber-300">supabase/seed.sql</code> di SQL Editor Supabase.
-              </p>
-              <button
-                onClick={() => fetchData()}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-black shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Coba Muat Ulang</span>
-              </button>
-            </div>
-          </div>
-        ) : currentView === 'student' ? (
-          <MemberAttendance
-            members={members}
-            activeMeeting={activeMeeting}
-            isManualBypass={isManualBypass}
-            onAttendanceSuccess={handleAttendanceSuccess}
-          />
-        ) : isMentorLoggedIn ? (
-          <MentorDashboard
-            members={members}
-            meetings={meetings}
-            attendances={attendances}
-            activeMeeting={activeMeeting}
-            registrations={registrations}
+      {/* If Landing View: Tampilkan Official Flagship Website EC SMEGA */}
+      {currentView === 'landing' ? (
+        <LandingPage
+          activeMeeting={activeMeeting}
+          isManualBypass={isManualBypass}
+          onOpenAttendance={() => {
+            setCurrentView('student');
+            window.location.hash = '#absen';
+          }}
+          onOpenMentor={() => {
+            setCurrentView('mentor');
+            window.location.hash = '#mentor';
+          }}
+          membersCount={{
+            a21: members.filter((m) => m.generation === 21).length || 104,
+            a20: members.filter((m) => m.generation === 20).length || 59,
+          }}
+          isRegistrationOpen={isRegistrationOpen}
+        />
+      ) : (
+        <>
+          {/* Navbar untuk Mode Presensi & Portal Pengurus */}
+          <Navbar
+            activeMeetingTitle={activeMeeting?.title}
+            isMeetingActive={Boolean(activeMeeting?.is_active)}
+            onOpenMentor={() => {
+              sound.playPop();
+              setCurrentView('mentor');
+              window.location.hash = '#mentor';
+            }}
+            onOpenRegister={() => {
+              sound.playPop();
+              setIsRegisterModalOpen(true);
+            }}
             isRegistrationOpen={isRegistrationOpen}
-            currentPin={mentorPin}
-            mentorToken={mentorToken}
-            onMentorTokenUpdated={handleMentorTokenUpdated}
-            isManualBypass={isManualBypass}
-            onToggleManualBypass={handleToggleManualBypass}
-            isSuperAdmin={isSuperAdmin}
-            onSuperAdminUnlock={handleSuperAdminUnlock}
-            onSuperAdminLock={handleSuperAdminLock}
-            onMeetingUpdated={() => fetchData(true)}
-            onToggleRegistration={handleToggleRegistration}
-            onPinUpdated={(pin) => setMentorPin(pin)}
-            onAttendanceChanged={() => fetchData(true)}
-            onRefreshRegistrations={() => fetchData(true)}
-            onMemberAdded={() => fetchData(true)}
-            talentStars={talentStars}
-            onAddTalentStar={handleAddTalentStar}
-            onRemoveTalentStar={handleRemoveTalentStar}
-            onLogout={handleMentorLogout}
-            onBackToStudent={() => setCurrentView('student')}
+            isMentorLoggedIn={isMentorLoggedIn}
+            currentView={currentView}
+            onSwitchView={(v) => {
+              setCurrentView(v);
+              window.location.hash = v === 'mentor' ? '#mentor' : v === 'student' ? '#absen' : '#beranda';
+            }}
+            onGoHome={() => {
+              setCurrentView('landing');
+              window.location.hash = '#beranda';
+            }}
           />
-        ) : (
-          <MentorLogin
-            currentPin={mentorPin}
-            onLoginSuccess={handleMentorLoginSuccess}
-            onBackToStudent={() => setCurrentView('student')}
+
+          {/* Main Content Area */}
+          <main className="flex-1">
+            {isLoading && members.length === 0 ? (
+              <div className="flex flex-col items-center justify-center min-h-[60vh] gap-3 text-slate-400">
+                <RefreshCw className="w-8 h-8 animate-spin text-emerald-500" />
+                <p className="text-sm font-bold">Memuat Data English Club SMEGA...</p>
+              </div>
+            ) : dbError && members.length === 0 ? (
+              <div className="max-w-md mx-auto px-4 py-12 text-center">
+                <div className="p-6 rounded-3xl bg-amber-50 border-2 border-amber-300 shadow-[0_4px_0_0_#fcd34d] space-y-3">
+                  <AlertCircle className="w-10 h-10 text-amber-600 mx-auto" />
+                  <h3 className="text-base font-black text-amber-950">Inisialisasi Database Supabase</h3>
+                  <p className="text-xs font-bold text-amber-800 leading-relaxed">
+                    Tabel database belum dibuat di Supabase project kamu. Silakan jalankan skrip <code className="bg-white px-1.5 py-0.5 rounded border border-amber-300">supabase/setup_database.sql</code> di SQL Editor Supabase.
+                  </p>
+                  <button
+                    onClick={() => fetchData()}
+                    className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-600 text-white text-xs font-black shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    <span>Coba Muat Ulang</span>
+                  </button>
+                </div>
+              </div>
+            ) : currentView === 'student' ? (
+              <MemberAttendance
+                members={members}
+                activeMeeting={activeMeeting}
+                isManualBypass={isManualBypass}
+                onAttendanceSuccess={handleAttendanceSuccess}
+              />
+            ) : isMentorLoggedIn ? (
+              <MentorDashboard
+                members={members}
+                meetings={meetings}
+                attendances={attendances}
+                activeMeeting={activeMeeting}
+                registrations={registrations}
+                isRegistrationOpen={isRegistrationOpen}
+                currentPin={mentorPin}
+                mentorToken={mentorToken}
+                onMentorTokenUpdated={handleMentorTokenUpdated}
+                isManualBypass={isManualBypass}
+                onToggleManualBypass={handleToggleManualBypass}
+                isSuperAdmin={isSuperAdmin}
+                onSuperAdminUnlock={handleSuperAdminUnlock}
+                onSuperAdminLock={handleSuperAdminLock}
+                onMeetingUpdated={() => fetchData(true)}
+                onToggleRegistration={handleToggleRegistration}
+                onPinUpdated={(pin) => setMentorPin(pin)}
+                onAttendanceChanged={() => fetchData(true)}
+                onRefreshRegistrations={() => fetchData(true)}
+                onMemberAdded={() => fetchData(true)}
+                talentStars={talentStars}
+                onAddTalentStar={handleAddTalentStar}
+                onRemoveTalentStar={handleRemoveTalentStar}
+                onLogout={handleMentorLogout}
+                onBackToStudent={() => {
+                  setCurrentView('student');
+                  window.location.hash = '#absen';
+                }}
+              />
+            ) : (
+              <MentorLogin
+                currentPin={mentorPin}
+                onLoginSuccess={handleMentorLoginSuccess}
+                onBackToStudent={() => {
+                  setCurrentView('student');
+                  window.location.hash = '#absen';
+                }}
+              />
+            )}
+          </main>
+
+          {/* Modals */}
+          <WordOfTheDayModal
+            isOpen={isWordModalOpen}
+            onClose={() => setIsWordModalOpen(false)}
+            member={successMember}
+            meeting={successMeeting}
           />
-        )}
-      </main>
 
-      {/* Modals */}
-      <WordOfTheDayModal
-        isOpen={isWordModalOpen}
-        onClose={() => setIsWordModalOpen(false)}
-        member={successMember}
-        meeting={successMeeting}
-      />
+          <RegistrationModal
+            isOpen={isRegisterModalOpen}
+            onClose={() => setIsRegisterModalOpen(false)}
+          />
 
-      <RegistrationModal
-        isOpen={isRegisterModalOpen}
-        onClose={() => setIsRegisterModalOpen(false)}
-      />
-
-      {/* Clean Footer (Standard RPL Professional) */}
-      <footer className="py-6 border-t-2 border-slate-200 bg-white text-center text-xs font-bold text-slate-400">
-        <div className="max-w-xl mx-auto px-4 space-y-1">
-          <p className="text-slate-600 font-extrabold flex items-center justify-center gap-1">
-            English Club SMK Negeri 1 Purbalingga (SMEGA)
-          </p>
-          <p className="text-[11px] text-slate-400">
-            Dikembangkan oleh Chandra (<a href="https://github.com/channdraa-afk" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline">@channdraa-afk</a>).
-          </p>
-        </div>
-      </footer>
+          {/* Clean Footer (Standard RPL Professional) */}
+          <footer className="py-6 border-t-2 border-slate-200 bg-white text-center text-xs font-bold text-slate-400">
+            <div className="max-w-xl mx-auto px-4 space-y-1">
+              <p className="text-slate-600 font-extrabold flex items-center justify-center gap-1">
+                English Club SMK Negeri 1 Purbalingga (SMEGA)
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Dikembangkan oleh Chandra (<a href="https://github.com/channdraa-afk" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline font-bold">@channdraa-afk</a>) — Ketua EC SMEGA.
+              </p>
+            </div>
+          </footer>
+        </>
+      )}
     </div>
   );
 };

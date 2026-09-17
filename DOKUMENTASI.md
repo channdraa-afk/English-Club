@@ -231,7 +231,15 @@
   - **Kriptografi One-Way Hashing SHA-256 (Web Crypto API)**: Kata sandi ketua diverifikasi menggunakan hash 64-karakter (`bfa576d3...`). Teks sandi asli lenyap 100% dari file bundle JavaScript (`index-*.js`), kebal dari pencarian `Ctrl + F` di DevTools / Inspect Element.
   - **Anti-Console Tampering (Signature Verification)**: Akses Super Admin mewajibkan pencocokan signature hash kriptografis. Manipulasi primitif `sessionStorage.setItem('ec_superadmin_auth', 'true')` di console langsung ditolak dan di-purge otomatis oleh sistem.
   - **Proteksi Master Data Siswa (RLS Hardening)**: Tabel `members` (165 siswa) dikunci menjadi *Read-Only* bagi client publik melalui skrip `supabase/security_hardening.sql`, mencegah vandalisme database lewat REST API.
-  - **Pembersihan Aset Sampah & Fix Sinkronisasi Bintang**: Menghapus file sampah `public/logo.svg`, memperbaiki edge-case reset array bintang kosong saat seluruh bintang dicopot, serta menyinkronkan dual-layer backup `talent_stars` dan `app_settings`.
+- [x] Peluncuran Official Flagship Website EC SMEGA (`englishclub.site` Unified Route):
+  - **Identitas Sejarah Sejak 23 Maret 2006**: Menampilkan warisan 20 tahun sejarah English Club SMKN 1 Purbalingga dengan yel-yel kebanggaan (*"Spirit of English Club! Improve Your English Skill!"*).
+  - **Sistem Cerdas Peka Waktu (Smart Time-Aware)**: Pada hari Rabu pukul 15:40 – 17:30 WIB, web otomatis langsung membuka Form Presensi Siswa tanpa scroll. Di luar jam eskul, web otomatis menyajikan halaman landing page resmi yang megah dan berkelas.
+  - **Direct Hash Link Papan Tulis**: URL `englishclub.site/#absen` atau `/#presensi` langsung membuka form presensi kapan pun secara instan.
+  - **Showcase 2 Divisi Unggulan**: Memperkenalkan *Speaking Division* (Hanan Aditya Zahid) dan *Writing Division* (Amirah Nur Fairuza) serta 7 Sie Kerja Pengurus A20.
+  - **Kalender 4 Agenda Besar Ikonik**: Menampilkan *English Expression (EE)*, *English Adventure (EA)*, *Pemantapan & Pelantikan*, dan *Dies Natalis 23 Maret*.
+  - **Galeri & Integrasi Instagram**: Menghubungkan langsung profil resmi Instagram `@englishclubsvhs1pbg` dan highlight dokumentasi lapangan.
+  - **Form Pendaftaran Anggota Baru Online**: Formulir pendaftaran terhubung langsung ke tabel `registrations` Supabase dengan konfeti selebrasi.
+  - **Navigasi Bolak-Balik Terpadu**: Tombol `[ 🏛️ Web Utama ]` di navbar presensi dan dashboard pengurus untuk kembali ke beranda kapan saja.
 
 
 ### 3.2. Roadmap Selanjutnya

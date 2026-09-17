@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, UserPlus } from 'lucide-react';
+import { Shield, UserPlus, Globe } from 'lucide-react';
 import { sound } from '../lib/audio';
 
 interface NavbarProps {
@@ -9,8 +9,9 @@ interface NavbarProps {
   onOpenRegister: () => void;
   isRegistrationOpen: boolean;
   isMentorLoggedIn: boolean;
-  currentView: 'student' | 'mentor';
-  onSwitchView: (view: 'student' | 'mentor') => void;
+  currentView: 'student' | 'mentor' | 'landing';
+  onSwitchView: (view: 'student' | 'mentor' | 'landing') => void;
+  onGoHome?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -22,6 +23,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isMentorLoggedIn,
   currentView,
   onSwitchView,
+  onGoHome,
 }) => {
   const [tapCount, setTapCount] = useState(0);
 
@@ -69,6 +71,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className={`w-2 h-2 rounded-full ${isMeetingActive ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
             <span>{isMeetingActive ? 'Sesi Dibuka' : 'Sesi Ditutup'}</span>
           </div>
+
+          {/* Back to Official Website */}
+          {onGoHome && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                onGoHome();
+              }}
+              title="Kembali ke Website Resmi EC SMEGA"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-black shadow-[0_2px_0_0_#cbd5e1] active:translate-y-0.5 transition-all shrink-0 cursor-pointer"
+            >
+              <Globe className="w-3.5 h-3.5 text-blue-600" />
+              <span>
+                <span className="sm:hidden">Web</span>
+                <span className="hidden sm:inline">Web Utama</span>
+              </span>
+            </button>
+          )}
 
           {/* New Member Registration CTA */}
           {isRegistrationOpen && currentView === 'student' && (
