@@ -78,6 +78,14 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
     setLoadingId(student.id);
 
     try {
+      // 1. Delete any existing record for this meeting & member (clean slate)
+      await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', activeMeeting.id)
+        .eq('member_id', student.id);
+
+      // 2. Insert fresh presence record
       const { error } = await supabase.from('attendances').insert({
         meeting_id: activeMeeting.id,
         member_id: student.id,
@@ -112,6 +120,14 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
     setLoadingId(student.id);
 
     try {
+      // 1. Delete any existing record for this meeting & member (clean slate)
+      await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', activeMeeting.id)
+        .eq('member_id', student.id);
+
+      // 2. Insert fresh permit record
       const { error } = await supabase.from('attendances').insert({
         meeting_id: activeMeeting.id,
         member_id: student.id,

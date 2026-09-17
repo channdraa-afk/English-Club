@@ -8,7 +8,10 @@ import {
   RefreshCw,
   UserX,
   Zap,
-  FileText
+  FileText,
+  MessageSquare,
+  Copy,
+  Check
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -32,6 +35,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [copiedWA, setCopiedWA] = useState(false);
 
   // Filter Angkatan 21 active students (104 members)
   const a21Students = useMemo(() => {
@@ -119,7 +123,38 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     });
   }, [activeSubTab, presentStudents, permitStudents, absentStudents, a21Students, selectedClass, searchQuery]);
 
-  // Manual mark attendance (Hadir)
+  // 1-Click Copy Absent List to WhatsApp
+  const handleCopyAbsentWA = () => {
+    sound.playPop();
+    if (absentStudents.length === 0) {
+      alert('Alhamdulillah, semua adik kelas pada sesi ini tercatat Hadir atau Izin resmi! 🎉');
+      return;
+    }
+
+    const meetingTitle = activeMeeting ? activeMeeting.title : 'Sesi Pertemuan English Club';
+    const meetingDate = activeMeeting?.meeting_date 
+      ? new Date(activeMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      : 'Hari Ini';
+
+    let text = `📢 *DAFTAR SISWA BELUM HADIR / ALPA — ENGLISH CLUB SMEGA*\n`;
+    text += `📅 *Sesi:* ${meetingTitle} (${meetingDate})\n`;
+    text += `👥 *Total Alpa:* ${absentStudents.length} Siswa\n\n`;
+    text += `Berikut adik kelas Angkatan 21 yang tercatat *Tanpa Keterangan*:\n`;
+
+    absentStudents.forEach((st, idx) => {
+      text += `${idx + 1}. ${st.name} — *${st.class_name}*\n`;
+    });
+
+    text += `\n⚠️ *Perhatian:* Bagi adik kelas yang berhalangan hadir karena sakit/izin keperluan, wajib segera menyerahkan *Surat Izin Fisik resmi* langsung ke Kakak Kelas agar status tercatat Izin resmi di rapor. Terima kasih! 🙏✨`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      sound.playSuccess();
+      setCopiedWA(true);
+      setTimeout(() => setCopiedWA(false), 3000);
+    });
+  };
+
+  // Manual mark attendance (Hadir) - Atomic Delete-Then-Insert (Anti-RLS Block & Anti-Unique Collision)
   const handleMarkPresent = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
@@ -131,28 +166,23 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     setLoadingId(student.id);
 
     try {
-      const existing = attendedMap.get(student.id);
-      if (existing) {
-        // Switch from permit to present
-        const { error } = await supabase
-          .from('attendances')
-          .update({
-            critique: null,
-            next_agenda_suggestion: 'Ditandai hadir oleh Kakak Kelas',
-          })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('attendances').insert({
-          meeting_id: activeMeeting.id,
-          member_id: student.id,
-          feedback_rating: 'super_fun',
-          next_agenda_suggestion: 'Ditandai hadir oleh Kakak Kelas',
-          critique: null,
-          is_anonymous: false,
-        });
-        if (error) throw error;
-      }
+      // 1. Delete any existing record for this meeting & member
+      await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', activeMeeting.id)
+        .eq('member_id', student.id);
+
+      // 2. Insert fresh present record
+      const { error } = await supabase.from('attendances').insert({
+        meeting_id: activeMeeting.id,
+        member_id: student.id,
+        feedback_rating: 'super_fun',
+        next_agenda_suggestion: 'Ditandai hadir oleh Kakak Kelas',
+        critique: null,
+        is_anonymous: false,
+      });
+      if (error) throw error;
 
       sound.playSuccess();
       onAttendanceChanged();
@@ -165,7 +195,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     }
   };
 
-  // Manual mark permit (Izin Surat Fisik - Kapan saja)
+  // Manual mark permit (Izin Surat Fisik - Kapan saja) - Atomic Delete-Then-Insert
   const handleMarkPermit = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
@@ -177,28 +207,23 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     setLoadingId(student.id);
 
     try {
-      const existing = attendedMap.get(student.id);
-      if (existing) {
-        // Switch from present to permit
-        const { error } = await supabase
-          .from('attendances')
-          .update({
-            critique: 'IZIN_SURAT_FISIK',
-            next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
-          })
-          .eq('id', existing.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('attendances').insert({
-          meeting_id: activeMeeting.id,
-          member_id: student.id,
-          feedback_rating: 'okay',
-          next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
-          critique: 'IZIN_SURAT_FISIK',
-          is_anonymous: false,
-        });
-        if (error) throw error;
-      }
+      // 1. Delete any existing record for this meeting & member
+      await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', activeMeeting.id)
+        .eq('member_id', student.id);
+
+      // 2. Insert fresh permit record
+      const { error } = await supabase.from('attendances').insert({
+        meeting_id: activeMeeting.id,
+        member_id: student.id,
+        feedback_rating: 'okay',
+        next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+        critique: 'IZIN_SURAT_FISIK',
+        is_anonymous: false,
+      });
+      if (error) throw error;
 
       sound.playSuccess();
       onAttendanceChanged();
@@ -279,6 +304,33 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
             <span>🔴 Belum Hadir: {absentCount}</span>
           </div>
         </div>
+      </div>
+
+      {/* 1-Click WhatsApp Broadcast Bar for Absent Students */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300/80 p-4 rounded-3xl shadow-[0_3px_0_0_#a7f3d0]">
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="p-2.5 rounded-2xl bg-emerald-600 text-white shadow-sm shrink-0">
+            <MessageSquare className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black text-emerald-950">
+              Salin Daftar Alpa / Bolos ke Grup WhatsApp
+            </h4>
+            <p className="text-[11px] font-bold text-emerald-700 mt-0.5">
+              Tercatat <strong>{absentCount}</strong> adik kelas belum hadir tanpa keterangan pada sesi ini.
+            </p>
+          </div>
+        </div>
+
+        <TactileButton
+          variant="emerald"
+          size="sm"
+          onClick={handleCopyAbsentWA}
+          className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-2 px-4"
+        >
+          {copiedWA ? <Check className="w-4 h-4 text-amber-300" /> : <Copy className="w-4 h-4" />}
+          <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
+        </TactileButton>
       </div>
 
       {/* Class Breakdown Grid (Bento) */}

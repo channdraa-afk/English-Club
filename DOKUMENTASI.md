@@ -153,7 +153,17 @@
     - `LiveMonitorA21`: Filter 4 sub-tab (Belum, Hadir, Izin, Semua) dengan aksi ubah status bolak-balik antara Hadir dan Izin.
     - `ReportRecap`: Selector status 3-arah interaktif pada rekap per pertemuan.
   - **Standar Rapor SMEGA (H | I | A)**: Matriks 4 pekan, cetak PDF resmi, dan ekspor CSV memuat breakdown kolom Hadir (H), Izin (I), dan Alpa (A) dengan persentase kehadiran sah.
+- [x] Resolusi Bug Izin, Dual-Mode Matriks, 1-Click WhatsApp Bot, & Perbaikan Format Cetak/CSV:
+  - **Siklus Atomik Delete-Then-Insert**: Mengeliminasi kegagalan silent update Supabase RLS dan tabrakan `unique_meeting_member`. Status Izin, Hadir, dan Alpa kini tersimpan 100% instan dan permanen di Supabase.
+  - **Filter Bersih AgendaVault**: Menyaring entri `IZIN_SURAT_FISIK` agar ruang unek-unek dan aspirasi adik kelas tetap bersih dari penanda status sistem.
+  - **Dual-Mode Rekap Matriks**:
+    1. *Mode Bulanan Resmi (Standar 4 Pekan)*: Menormalisasi tepat 4 slot pekan (Pekan 1–4) per bulan kalender untuk laporan wali kelas/pembina bulanan.
+    2. *Mode Kumulatif Semester (Rapor Akhir)*: Menampilkan tabel rangkuman 9 kolom (`No | Nama | Kelas | Total Sesi | H | I | A | % Rapor | Predikat`) yang kebal terhadap risiko kertas terpotong meskipun eskul berjalan hingga 48 minggu.
+  - **Cetak PDF A4 Landscape Anti-Kepotong**: Mengunci `@page { size: A4 landscape; margin: 8mm 6mm; }`, menetralkan padding/border/shadow card, dan mengaktifkan `print-color-adjust: exact` sehingga seluruh tabel termuat utuh tanpa huruf/kolom terpotong.
+  - **Perbaikan Format CSV untuk Excel Windows Indonesia**: Menggunakan delimiter titik koma (`;`) dan UTF-8 BOM (`\uFEFF`) via Web Blob URL, sehingga saat dibuka di Microsoft Excel laptop Chandra, data otomatis terbagi ke Kolom A, B, C, D, dst tanpa menumpuk di Kolom A.
+  - **Fitur 1-Klik Salin Alpa untuk WhatsApp**: Tombol taktil di `LiveMonitorA21` dan `ReportRecap` yang menyalin daftar nama adik kelas yang bolos / alpa beserta kelasnya dalam format pesan WhatsApp rapi siap paste (`Ctrl + V`).
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
+

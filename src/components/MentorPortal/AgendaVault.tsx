@@ -22,12 +22,13 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
     return new Map(members.map((m) => [m.id, m]));
   }, [members]);
 
-  // Separate attendances by generation
+  // Separate attendances by generation (excluding internal system status markers)
   const a21Feedbacks = useMemo(() => {
     return attendances
       .filter((a) => {
         const m = memberMap.get(a.member_id);
-        return m?.generation === 21 && (a.next_agenda_suggestion || a.critique || a.feedback_rating);
+        const isSystemStatusMarker = a.critique === 'IZIN_SURAT_FISIK';
+        return m?.generation === 21 && !isSystemStatusMarker && (a.next_agenda_suggestion || a.critique || a.feedback_rating);
       })
       .map((a) => {
         const m = memberMap.get(a.member_id);

@@ -9,7 +9,11 @@ import {
   CalendarRange, 
   FileSpreadsheet, 
   RefreshCw,
-  FileText
+  FileText,
+  MessageSquare,
+  Copy,
+  Check,
+  Layers
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -31,7 +35,8 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   activeMeeting,
   onAttendanceChanged,
 }) => {
-  const [recapMode, setRecapMode] = useState<'single' | 'monthly'>('single');
+  const [recapMode, setRecapMode] = useState<'single' | 'monthly' | 'cumulative'>('single');
+  const [copiedWA, setCopiedWA] = useState(false);
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>(
     activeMeeting ? activeMeeting.id : meetings[0]?.id || ''
   );
@@ -110,59 +115,82 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
     ? Math.round((singleEffectiveCount / singleReportRows.length) * 100) 
     : 0;
 
-  // Handler: Atur status presensi (Hadir / Izin Surat Fisik / Alpa) - BISA KAPAN SAJA TANPA BATASAN JAM
+  // 1-Click Copy Absent List to WhatsApp (Per Sesi Terpilih)
+  const handleCopySingleAbsentWA = () => {
+    sound.playPop();
+    const currentMeeting = meetings.find((m) => m.id === selectedMeetingId);
+    const absentRows = singleReportRows.filter((r) => r.isAbsent);
+
+    if (absentRows.length === 0) {
+      alert('Alhamdulillah, semua adik kelas pada sesi ini tercatat Hadir atau Izin resmi! 🎉');
+      return;
+    }
+
+    const meetingTitle = currentMeeting ? currentMeeting.title : 'Sesi Pertemuan English Club';
+    const meetingDate = currentMeeting?.meeting_date 
+      ? new Date(currentMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+      : 'Hari Ini';
+
+    let text = `📢 *DAFTAR SISWA BELUM HADIR / ALPA — ENGLISH CLUB SMEGA*\n`;
+    text += `📅 *Sesi:* ${meetingTitle} (${meetingDate})\n`;
+    text += `👥 *Total Alpa:* ${absentRows.length} Siswa\n\n`;
+    text += `Berikut adik kelas Angkatan 21 yang tercatat *Tanpa Keterangan*:\n`;
+
+    absentRows.forEach((r, idx) => {
+      text += `${idx + 1}. ${r.member.name} — *${r.member.class_name}*\n`;
+    });
+
+    text += `\n⚠️ *Perhatian:* Bagi adik kelas yang berhalangan hadir karena sakit/izin keperluan, wajib segera menyerahkan *Surat Izin Fisik resmi* langsung ke Kakak Kelas agar status tercatat Izin resmi di rapor. Terima kasih! 🙏✨`;
+
+    navigator.clipboard.writeText(text).then(() => {
+      sound.playSuccess();
+      setCopiedWA(true);
+      setTimeout(() => setCopiedWA(false), 3000);
+    });
+  };
+
+  // Handler: Atur status presensi (Hadir / Izin Surat Fisik / Alpa) - Atomic Delete-Then-Insert (Anti-RLS & Anti-Collision)
   const handleSetStatus = async (
     member: Member, 
-    targetStatus: 'present' | 'permit' | 'absent', 
-    attRecord?: Attendance
+    targetStatus: 'present' | 'permit' | 'absent'
   ) => {
     if (!selectedMeetingId) return;
     sound.playPop();
     setManualLoadingId(member.id);
 
     try {
-      if (targetStatus === 'absent') {
-        if (attRecord) {
-          const { error } = await supabase.from('attendances').delete().eq('id', attRecord.id);
-          if (error) throw error;
-        }
-      } else if (targetStatus === 'permit') {
-        if (attRecord) {
-          const { error } = await supabase.from('attendances').update({
-            critique: 'IZIN_SURAT_FISIK',
-            next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
-          }).eq('id', attRecord.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('attendances').insert({
-            meeting_id: selectedMeetingId,
-            member_id: member.id,
-            feedback_rating: 'okay',
-            critique: 'IZIN_SURAT_FISIK',
-            next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
-            is_anonymous: false,
-          });
-          if (error) throw error;
-        }
+      // 1. Delete any existing record for this meeting & member (clean slate, allowed by RLS DELETE policy)
+      const { error: delError } = await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', selectedMeetingId)
+        .eq('member_id', member.id);
+
+      if (delError) throw delError;
+
+      // 2. Insert fresh record if not absent (allowed by RLS INSERT policy)
+      if (targetStatus === 'permit') {
+        const { error: insError } = await supabase.from('attendances').insert({
+          meeting_id: selectedMeetingId,
+          member_id: member.id,
+          feedback_rating: 'okay',
+          critique: 'IZIN_SURAT_FISIK',
+          next_agenda_suggestion: 'Izin Resmi (Menyerahkan Surat Fisik)',
+          is_anonymous: false,
+        });
+        if (insError) throw insError;
       } else if (targetStatus === 'present') {
-        if (attRecord) {
-          const { error } = await supabase.from('attendances').update({
-            critique: null,
-            next_agenda_suggestion: 'Ditandai hadir manual oleh Pengurus',
-          }).eq('id', attRecord.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase.from('attendances').insert({
-            meeting_id: selectedMeetingId,
-            member_id: member.id,
-            feedback_rating: 'super_fun',
-            critique: null,
-            next_agenda_suggestion: 'Ditandai hadir manual oleh Pengurus',
-            is_anonymous: false,
-          });
-          if (error) throw error;
-        }
+        const { error: insError } = await supabase.from('attendances').insert({
+          meeting_id: selectedMeetingId,
+          member_id: member.id,
+          feedback_rating: 'super_fun',
+          critique: null,
+          next_agenda_suggestion: 'Ditandai hadir manual oleh Pengurus',
+          is_anonymous: false,
+        });
+        if (insError) throw insError;
       }
+
       sound.playSuccess();
       if (onAttendanceChanged) onAttendanceChanged();
     } catch (err: any) {
@@ -185,7 +213,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
     isPastOrToday: boolean;
   }
 
-  // Menghitung seluruh hari Rabu dalam bulan yang dipilih + sesi yang tersimpan di DB
+  // Menghitung standar tepat 4 Pekan Bulanan (Pekan 1 s.d. Pekan 4)
   const monthSlots = useMemo<MonthSlot[]>(() => {
     const [yStr, mStr] = selectedMonth.split('-');
     const year = parseInt(yStr, 10);
@@ -193,16 +221,15 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
     const todayStr = new Date().toISOString().slice(0, 10);
 
     // 1. Sesi yang sudah ada di database untuk bulan ini
-    const existingMeetings = meetings.filter(
-      (m) => m.meeting_date && m.meeting_date.startsWith(selectedMonth)
-    );
+    const existingMeetings = meetings
+      .filter((m) => m.meeting_date && m.meeting_date.startsWith(selectedMonth))
+      .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
 
     // 2. Kumpulkan seluruh hari Rabu dalam bulan ini
     const wednesdayDates: string[] = [];
     const d = new Date(year, month, 1);
     while (d.getMonth() === month) {
       if (d.getDay() === 3) {
-        // 3 = Rabu
         const yyyy = d.getFullYear();
         const mm = String(d.getMonth() + 1).padStart(2, '0');
         const dd = String(d.getDate()).padStart(2, '0');
@@ -211,26 +238,26 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       d.setDate(d.getDate() + 1);
     }
 
-    // Gabungkan tanggal hari Rabu & tanggal pertemuan DB
-    const allDateSet = new Set<string>([
-      ...wednesdayDates,
-      ...existingMeetings.map((m) => m.meeting_date),
-    ]);
-    const sortedDates = Array.from(allDateSet).sort();
-
-    return sortedDates.map((dateStr, idx) => {
-      const matchedMeeting = existingMeetings.find((m) => m.meeting_date === dateStr) || null;
+    // Buat tepat 4 slot pekan utama (Pekan 1 s.d. Pekan 4)
+    const slots: MonthSlot[] = [];
+    for (let i = 0; i < 4; i++) {
+      const wedDate = wednesdayDates[i];
+      const matchedMeeting = (wedDate ? existingMeetings.find((m) => m.meeting_date === wedDate) : null) || existingMeetings[i] || null;
+      const dateStr = matchedMeeting?.meeting_date || wedDate || `${selectedMonth}-${String((i + 1) * 7).padStart(2, '0')}`;
       const parts = dateStr.split('-');
-      const dd = parts[2];
-      const mm = parts[1];
-      return {
+      const dd = parts[2] || '01';
+      const mm = parts[1] || '01';
+
+      slots.push({
         dateStr,
         displayDate: `${dd}/${mm}`,
-        weekLabel: `Pekan ${idx + 1}`,
+        weekLabel: `Pekan ${i + 1}`,
         meeting: matchedMeeting,
         isPastOrToday: dateStr <= todayStr,
-      };
-    });
+      });
+    }
+
+    return slots;
   }, [selectedMonth, meetings]);
 
   // Sesi efektif yang sudah benar-benar berjalan & bukan libur (pembagi nilai rapor)
@@ -302,20 +329,77 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       .sort((a, b) => a.member.class_name.localeCompare(b.member.class_name) || a.member.name.localeCompare(b.member.name));
   }, [a21Students, selectedClass, searchName, monthSlots, heldNonHolidayMeetings, attendanceLookup]);
 
+  // ==========================================
+  // CUMULATIVE SEMESTER REPORT LOGIC (ALL SESSIONS - 9 COLS SUMMARY)
+  // ==========================================
+  const allHeldMeetings = useMemo(() => {
+    return meetings
+      .filter((m) => !m.is_holiday)
+      .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
+  }, [meetings]);
+
+  const cumulativeMatrixRows = useMemo(() => {
+    return a21Students
+      .filter((m) => {
+        const matchesClass = selectedClass === 'all' || m.class_name === selectedClass;
+        const matchesName =
+          !searchName.trim() || m.name.toLowerCase().includes(searchName.toLowerCase());
+        return matchesClass && matchesName;
+      })
+      .map((m) => {
+        let presentCount = 0;
+        let permitCount = 0;
+        let absentCount = 0;
+
+        allHeldMeetings.forEach((meeting) => {
+          const att = attendanceLookup.get(`${meeting.id}_${m.id}`);
+          if (att) {
+            if (att.critique === 'IZIN_SURAT_FISIK') {
+              permitCount++;
+            } else {
+              presentCount++;
+            }
+          } else {
+            absentCount++;
+          }
+        });
+
+        const totalMeetings = allHeldMeetings.length;
+        const effectiveCount = presentCount + permitCount;
+        const percent = totalMeetings > 0 ? Math.round((effectiveCount / totalMeetings) * 100) : 100;
+
+        let grade = 'Sangat Baik (A)';
+        if (percent < 60) grade = 'Kurang (D)';
+        else if (percent < 75) grade = 'Cukup (C)';
+        else if (percent < 85) grade = 'Baik (B)';
+
+        return {
+          member: m,
+          totalMeetings,
+          presentCount,
+          permitCount,
+          absentCount,
+          percent,
+          grade,
+        };
+      })
+      .sort((a, b) => a.member.class_name.localeCompare(b.member.class_name) || a.member.name.localeCompare(b.member.name));
+  }, [a21Students, selectedClass, searchName, allHeldMeetings, attendanceLookup]);
+
   // Print to PDF (Clean table without kop surat and without signatures)
   const handlePrintPDF = () => {
     sound.playPop();
     window.print();
   };
 
-  // Export Monthly CSV
+  // Export Monthly CSV (Format Semicolon ; dan UTF-8 BOM untuk Excel Windows Indonesia)
   const handleExportMonthlyCSV = () => {
     sound.playPop();
     const dateHeaders = monthSlots.map((s) => {
       if (s.meeting?.is_holiday) return `"${s.displayDate} (LIBUR)"`;
       return `"${s.displayDate} (${s.weekLabel})"`;
     });
-    const headers = ['No', 'Nama Lengkap', 'Kelas', ...dateHeaders, 'Hadir (H)', 'Izin (I)', 'Alpa (A)', 'Persentase'];
+    const headers = ['"No"', '"Nama Lengkap"', '"Kelas"', ...dateHeaders, '"Hadir (H)"', '"Izin (I)"', '"Alpa (A)"', '"Persentase"'];
 
     const rows = monthlyMatrixRows.map((r, idx) => {
       const datesData = r.slotStatuses.map((s) => {
@@ -338,14 +422,45 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       ];
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((e) => e.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Rekap_Bulanan_EC_SMEGA_${selectedMonth}.csv`);
+    link.href = url;
+    link.download = `Rekap_Bulanan_EC_SMEGA_${selectedMonth}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Export Cumulative Semester CSV
+  const handleExportCumulativeCSV = () => {
+    sound.playPop();
+    const headers = ['"No"', '"Nama Lengkap"', '"Kelas"', '"Total Pertemuan"', '"Hadir (H)"', '"Izin (I)"', '"Alpa (A)"', '"% Kehadiran"', '"Predikat Rapor"'];
+
+    const rows = cumulativeMatrixRows.map((r, idx) => [
+      `"${idx + 1}"`,
+      `"${r.member.name}"`,
+      `"${r.member.class_name}"`,
+      `"${r.totalMeetings}"`,
+      `"${r.presentCount}"`,
+      `"${r.permitCount}"`,
+      `"${r.absentCount}"`,
+      `"${r.percent}%"`,
+      `"${r.grade}"`,
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((e) => e.join(';'))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Rekap_Kumulatif_Semester_EC_SMEGA_${new Date().getFullYear()}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Format month label
@@ -361,22 +476,50 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Printable Area Specific Styles */}
+      {/* Printable Area Specific Styles - Locked to A4 Landscape, zero clipping */}
       <style>{`
         @media print {
+          @page {
+            size: A4 landscape;
+            margin: 8mm 6mm;
+          }
+          html, body {
+            width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
           body * {
             visibility: hidden;
           }
-          #printable-matrix, #printable-matrix * {
+          #printable-matrix, #printable-matrix *, #printable-cumulative, #printable-cumulative * {
             visibility: visible;
           }
-          #printable-matrix {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
+          #printable-matrix, #printable-cumulative {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
             background: white !important;
-            padding: 20px;
+          }
+          #printable-matrix .overflow-x-auto, #printable-cumulative .overflow-x-auto {
+            overflow: visible !important;
+          }
+          #printable-matrix table, #printable-cumulative table {
+            width: 100% !important;
+            font-size: 8.5pt !important;
+            border-collapse: collapse !important;
+          }
+          #printable-matrix th, #printable-matrix td, #printable-cumulative th, #printable-cumulative td {
+            padding: 3px 4px !important;
           }
           .no-print {
             display: none !important;
@@ -385,8 +528,8 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       `}</style>
 
       {/* Mode Switcher Tabs */}
-      <div className="no-print flex items-center justify-between gap-3 bg-white p-2 rounded-2xl border-2 border-slate-200 shadow-sm">
-        <div className="flex items-center gap-1.5">
+      <div className="no-print flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border-2 border-slate-200 shadow-sm">
+        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => {
@@ -400,7 +543,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
             }`}
           >
             <Calendar className="w-4 h-4" />
-            <span>Rekap Sesi Hari Ini</span>
+            <span>Rekap Sesi Harian</span>
           </button>
 
           <button
@@ -416,20 +559,50 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
             }`}
           >
             <CalendarRange className="w-4 h-4" />
-            <span>Rekap Bulanan (Sekretaris)</span>
+            <span>Rekap Bulanan (4 Pekan)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setRecapMode('cumulative');
+            }}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              recapMode === 'cumulative'
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Rekap Rapor Semester</span>
           </button>
         </div>
 
         {recapMode === 'monthly' && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-center">
             <TactileButton variant="white" size="sm" onClick={handlePrintPDF}>
               <Printer className="w-3.5 h-3.5 text-slate-700" />
-              <span>Cetak / Simpan PDF</span>
+              <span>Cetak / PDF</span>
             </TactileButton>
 
             <TactileButton variant="brand" size="sm" onClick={handleExportMonthlyCSV}>
               <Download className="w-3.5 h-3.5" />
               <span>Ekspor CSV</span>
+            </TactileButton>
+          </div>
+        )}
+
+        {recapMode === 'cumulative' && (
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <TactileButton variant="white" size="sm" onClick={handlePrintPDF}>
+              <Printer className="w-3.5 h-3.5 text-slate-700" />
+              <span>Cetak Rapor PDF</span>
+            </TactileButton>
+
+            <TactileButton variant="blue" size="sm" onClick={handleExportCumulativeCSV}>
+              <Download className="w-3.5 h-3.5" />
+              <span>Ekspor CSV Rapor</span>
             </TactileButton>
           </div>
         )}
@@ -505,6 +678,33 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               </div>
             </div>
 
+            {/* 1-Click WhatsApp Broadcast Bar for Absent Students in this meeting */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300/80 p-3.5 rounded-2xl shadow-sm">
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm shrink-0">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-emerald-950">
+                    Kirim Rekap Alpa Sesi Ini ke Grup WhatsApp
+                  </h4>
+                  <p className="text-[11px] font-bold text-emerald-700">
+                    Tercatat <strong>{singleAbsentCount}</strong> adik kelas belum hadir / tanpa keterangan pada sesi ini.
+                  </p>
+                </div>
+              </div>
+
+              <TactileButton
+                variant="emerald"
+                size="sm"
+                onClick={handleCopySingleAbsentWA}
+                className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-1.5 px-3.5"
+              >
+                {copiedWA ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
+              </TactileButton>
+            </div>
+
             {/* Table */}
             <div className="overflow-x-auto rounded-2xl border border-slate-200">
               <table className="w-full text-left text-xs">
@@ -559,7 +759,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => handleSetStatus(r.member, 'permit', r.attendance)}
+                                  onClick={() => handleSetStatus(r.member, 'permit')}
                                   className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-colors"
                                   title="Ubah status ke Izin Surat Fisik"
                                 >
@@ -567,7 +767,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleSetStatus(r.member, 'absent', r.attendance)}
+                                  onClick={() => handleSetStatus(r.member, 'absent')}
                                   className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-colors"
                                   title="Batalkan presensi (jadikan alpa)"
                                 >
@@ -578,7 +778,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => handleSetStatus(r.member, 'present', r.attendance)}
+                                  onClick={() => handleSetStatus(r.member, 'present')}
                                   className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-colors"
                                   title="Ubah status ke Hadir"
                                 >
@@ -586,7 +786,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleSetStatus(r.member, 'absent', r.attendance)}
+                                  onClick={() => handleSetStatus(r.member, 'absent')}
                                   className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-colors"
                                   title="Batalkan izin (jadikan alpa)"
                                 >
@@ -597,14 +797,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => handleSetStatus(r.member, 'present', r.attendance)}
+                                  onClick={() => handleSetStatus(r.member, 'present')}
                                   className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all"
                                 >
                                   + Hadir
                                 </button>
                                 <button
                                   type="button"
-                                  onClick={() => handleSetStatus(r.member, 'permit', r.attendance)}
+                                  onClick={() => handleSetStatus(r.member, 'permit')}
                                   className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all"
                                 >
                                   📄 Izin (Surat)
@@ -772,6 +972,130 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-bold text-slate-600">
                 <div>
                   <strong>Keterangan:</strong> <span className="text-emerald-700 font-black">H</span> = Hadir • <span className="text-amber-700 font-black">I</span> = Izin Resmi (Surat Fisik) • <span className="text-rose-700 font-black">A</span> = Alpa / Tanpa Keterangan • <strong>LIBUR</strong> = Hari Libur Resmi
+                </div>
+                <div>
+                  Total Angkatan 21: <strong>{a21Students.length} siswa aktif</strong>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ========================================================= */}
+      {/* MODE 3: REKAP KUMULATIF SEMESTER (RAPOR AKHIR - 9 KOLOM LEGA) */}
+      {/* ========================================================= */}
+      {recapMode === 'cumulative' && (
+        <div id="printable-cumulative" className="space-y-4 bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-6">
+          {/* Official Clean Heading for PDF */}
+          <div className="border-b border-slate-200 pb-4 text-center">
+            <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+              REKAPITULASI RAPOR KEHADIRAN KUMULATIF EKSTRAKURIKULER ENGLISH CLUB
+            </h2>
+            <p className="text-sm font-extrabold text-slate-600 mt-1">
+              SMK NEGERI 1 PURBALINGGA — ANGKATAN 21
+            </p>
+            <p className="text-xs font-bold text-slate-500 mt-0.5">
+              Akumulasi Seluruh Pertemuan: {allHeldMeetings.length} Sesi Terlaksana • Evaluasi Nilai Rapor
+            </p>
+          </div>
+
+          {/* Filter Bar (Hidden in Print) */}
+          <div className="no-print grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                Filter Kelas
+              </label>
+              <select
+                value={selectedClass}
+                onChange={(e) => setSelectedClass(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+              >
+                <option value="all">Semua Kelas ({a21Students.length} Siswa)</option>
+                {classList.map((cls) => (
+                  <option key={cls} value={cls}>
+                    Kelas {cls}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                Cari Siswa
+              </label>
+              <div className="relative flex items-center">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+                <input
+                  type="text"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  placeholder="Cari nama adik kelas..."
+                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Cumulative Table */}
+          {allHeldMeetings.length === 0 ? (
+            <div className="text-center py-12 text-slate-400">
+              <FileSpreadsheet className="w-10 h-10 mx-auto opacity-40 mb-2" />
+              <p className="text-xs font-bold">Belum ada sesi pertemuan yang terselenggara di database.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse border border-slate-300">
+                <thead className="bg-slate-100 text-slate-800 font-black">
+                  <tr>
+                    <th className="border border-slate-300 py-2.5 px-2 w-10 text-center">No</th>
+                    <th className="border border-slate-300 py-2.5 px-3 min-w-[180px]">Nama Lengkap</th>
+                    <th className="border border-slate-300 py-2.5 px-3 w-24 text-center">Kelas</th>
+                    <th className="border border-slate-300 py-2.5 px-3 text-center w-28 bg-slate-200/80">Total Sesi</th>
+                    <th className="border border-slate-300 py-2.5 px-2 text-center w-20 bg-emerald-100 text-emerald-900" title="Total Hadir (H)">Hadir (H)</th>
+                    <th className="border border-slate-300 py-2.5 px-2 text-center w-20 bg-amber-100 text-amber-900" title="Total Izin Resmi (I)">Izin (I)</th>
+                    <th className="border border-slate-300 py-2.5 px-2 text-center w-20 bg-rose-100 text-rose-900" title="Total Alpa (A)">Alpa (A)</th>
+                    <th className="border border-slate-300 py-2.5 px-3 text-center w-24 bg-blue-100 text-blue-900">% Kehadiran</th>
+                    <th className="border border-slate-300 py-2.5 px-3 text-center w-32 bg-indigo-100 text-indigo-900">Predikat Rapor</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 font-bold">
+                  {cumulativeMatrixRows.map((r, idx) => (
+                    <tr key={r.member.id} className="hover:bg-slate-50">
+                      <td className="border border-slate-300 py-2 px-2 text-center text-slate-500 font-mono text-[11px]">{idx + 1}</td>
+                      <td className="border border-slate-300 py-2 px-3 text-slate-900 font-extrabold">{r.member.name}</td>
+                      <td className="border border-slate-300 py-2 px-3 text-center text-slate-600 text-[11px]">{r.member.class_name}</td>
+                      <td className="border border-slate-300 py-2 px-3 text-center font-mono text-slate-700">{r.totalMeetings} Pertemuan</td>
+                      <td className="border border-slate-300 py-2 px-2 text-center font-mono font-black text-emerald-700 bg-emerald-50/40">{r.presentCount}</td>
+                      <td className="border border-slate-300 py-2 px-2 text-center font-mono font-black text-amber-700 bg-amber-50/40">{r.permitCount}</td>
+                      <td className="border border-slate-300 py-2 px-2 text-center font-mono font-black text-rose-700 bg-rose-50/40">{r.absentCount}</td>
+                      <td className={`border border-slate-300 py-2 px-3 text-center font-mono font-black ${
+                        r.percent >= 75 ? 'text-emerald-700 bg-emerald-50/50' : 'text-rose-700 bg-rose-50/50'
+                      }`}>
+                        {r.percent}%
+                      </td>
+                      <td className="border border-slate-300 py-2 px-3 text-center">
+                        <span className={`inline-block px-2.5 py-0.5 rounded-full text-[11px] font-black ${
+                          r.percent >= 85
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : r.percent >= 75
+                            ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                            : r.percent >= 60
+                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            : 'bg-rose-100 text-rose-800 border border-rose-300'
+                        }`}>
+                          {r.grade}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Legend & Summary Footer for Print & Screen */}
+              <div className="mt-4 pt-3 border-t border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] font-bold text-slate-600">
+                <div>
+                  <strong>Standar Rapor:</strong> ≥85% = Sangat Baik (A) • 75-84% = Baik (B) • 60-74% = Cukup (C) • &lt;60% = Kurang (D) • Izin fisik dihitung sah.
                 </div>
                 <div>
                   Total Angkatan 21: <strong>{a21Students.length} siswa aktif</strong>

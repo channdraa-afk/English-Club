@@ -97,9 +97,10 @@ CREATE POLICY "Allow public insert/update members" ON members FOR ALL USING (tru
 CREATE POLICY "Allow public read meetings" ON meetings FOR SELECT USING (true);
 CREATE POLICY "Allow public manage meetings" ON meetings FOR ALL USING (true) WITH CHECK (true);
 
--- Allow public insert & read attendances
+-- Allow public insert, read, update & delete attendances
 CREATE POLICY "Allow public insert attendances" ON attendances FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public read attendances" ON attendances FOR SELECT USING (true);
+CREATE POLICY "Allow public update attendances" ON attendances FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "Allow public delete attendances" ON attendances FOR DELETE USING (true);
 
 -- Allow public register and manage registrations
