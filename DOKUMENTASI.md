@@ -191,9 +191,10 @@
   - **Mode Switcher (Bulanan vs Kumulatif Semester/Tahunan)**:
     - *Mode Bulanan (Shift 2x)*: Mengevaluasi target kuota 2x kehadiran per bulan aktif, matriks per tanggal sesi hari Rabu, dan persentase kepatuhan bulanan.
     - *Mode Kumulatif / Tahunan*: Mengakumulasi total seluruh sesi eskul yang terlaksana sepanjang semester/tahun ajaran, total hadir, target shift 50%, persentase kehadiran, dan predikat dedikasi (*Super Dedikasi ≥75%*, *Disiplin Sesuai Shift ≥50%*, *Kurang Kuota <50%*, *Kritis 0x Hadir*).
-  - **1-Klik Salin Alpa / Kritis ke WhatsApp untuk Sie Kedisiplinan (Kedis)**:
-    - Tombol taktil cerdas `[ 📋 Salin Alpa / Kritis ke WA ]` dengan feedback Web Audio API & visual konfirmasi 3 detik.
-    - Otomatis merangkum daftar kakak pengurus A20 yang tercatat alpa / kritis (0x hadir) beserta jabatan/sie dan kelasnya ke format pesan resmi WA yang santun namun tegas untuk grup pengurus.
+  - **1-Klik Salin Konfirmasi Kehadiran ke WhatsApp Per Sesi Minggu / Per Tanggal untuk Kedis**:
+    - Selector Sesi Pertemuan: Memungkinkan Kedis memilih tanggal sesi eskul yang baru saja selesai (misal: Sesi Rabu kemarin) tanpa harus menunggu rekap sebulan penuh.
+    - Tombol taktil cerdas `[ 📋 Salin Belum Hadir (WA) ]` dengan feedback Web Audio API & visual konfirmasi 3 detik.
+    - Otomatis merangkum daftar pengurus A20 yang tidak hadir pada sesi tersebut beserta jabatan/sie dan kelasnya ke format pesan resmi WA yang santun namun tegas untuk menagih konfirmasi kejelasan.
   - **Dual Ekspor Cetak PDF A4 Landscape Resmi**:
     - Mode Bulanan: Menghasilkan lembar cetak PDF rekap bulanan dengan kop Logo Resmi EC (`/logo.png`), ringkasan KPI, dan matriks tanggal kehadiran.
     - Mode Kumulatif: Menghasilkan lembar cetak PDF rekap kumulatif dengan kop Logo Resmi EC (`/logo.png`), ringkasan KPI tahunan, total sesi, dan status dedikasi.

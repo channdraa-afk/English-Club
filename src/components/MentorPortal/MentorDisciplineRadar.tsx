@@ -39,6 +39,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'critical' | 'warning' | 'safe'>('all');
   const [sortBy, setSortBy] = useState<'attention' | 'highest' | 'name'>('attention');
   const [copiedWA, setCopiedWA] = useState(false);
+  const [selectedMeetingIdForWA, setSelectedMeetingIdForWA] = useState<string>('');
 
   // Filter only Angkatan 20 active mentors (59 members)
   const a20Mentors = useMemo(() => {
@@ -229,35 +230,99 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
       });
   }, [currentEvaluations, searchName, selectedSie, selectedStatus, sortBy]);
 
-  // 1-Click Copy Absent/Critical List to WhatsApp for Kedis
+  // Meetings available for weekly WhatsApp evaluation
+  const availableMeetingsForWA = useMemo(() => {
+    if (radarMode === 'monthly') {
+      return effectiveMeetings.length > 0 ? effectiveMeetings : allHeldMeetings;
+    }
+    return allHeldMeetings;
+  }, [radarMode, effectiveMeetings, allHeldMeetings]);
+
+  // Active meeting for WhatsApp
+  const activeMeetingForWA = useMemo(() => {
+    return (
+      availableMeetingsForWA.find((m) => m.id === selectedMeetingIdForWA) ||
+      availableMeetingsForWA[availableMeetingsForWA.length - 1] ||
+      null
+    );
+  }, [availableMeetingsForWA, selectedMeetingIdForWA]);
+
+  // Mentors attendance for the selected session
+  const sessionAttendanceStats = useMemo(() => {
+    if (!activeMeetingForWA) {
+      return {
+        presentList: [],
+        absentList: [],
+        presentCount: 0,
+        absentCount: 0,
+      };
+    }
+
+    const meetingId = activeMeetingForWA.id;
+    const presentList: Member[] = [];
+    const absentList: Member[] = [];
+
+    a20Mentors.forEach((mentor) => {
+      const hasAttended = attendances.some(
+        (a) => a.meeting_id === meetingId && a.member_id === mentor.id
+      );
+      if (hasAttended) {
+        presentList.push(mentor);
+      } else {
+        absentList.push(mentor);
+      }
+    });
+
+    // Sort by class and name
+    absentList.sort((a, b) => a.class_name.localeCompare(b.class_name) || a.name.localeCompare(b.name));
+    presentList.sort((a, b) => a.class_name.localeCompare(b.class_name) || a.name.localeCompare(b.name));
+
+    return {
+      presentList,
+      absentList,
+      presentCount: presentList.length,
+      absentCount: absentList.length,
+    };
+  }, [activeMeetingForWA, a20Mentors, attendances]);
+
+  // 1-Click Copy Absent List for Selected Session / Date to WhatsApp for Kedis
   const handleCopyAbsentWA = () => {
     sound.playPop();
-    const criticalMentors = filteredList.filter((item) => item.status === 'critical');
-
-    if (criticalMentors.length === 0) {
-      alert(
-        radarMode === 'monthly'
-          ? `Alhamdulillah, seluruh pengurus Angkatan 20 tercatat sudah bertugas minimal 1x di bulan ${formatMonthTitle(selectedMonth)}! 🎉`
-          : 'Alhamdulillah, seluruh pengurus Angkatan 20 tercatat aktif bertugas di sesi semester ini! 🎉'
-      );
+    if (!activeMeetingForWA) {
+      alert('Belum ada sesi pertemuan yang tersedia untuk dievaluasi.');
       return;
     }
 
-    const periodTitle = radarMode === 'monthly' 
-      ? formatMonthTitle(selectedMonth) 
-      : `Akumulasi Seluruh Pertemuan (${allHeldMeetings.length} Sesi Terlaksana)`;
+    const { absentList, presentCount, absentCount } = sessionAttendanceStats;
 
-    let text = `📢 *EVALUASI KEDISIPLINAN PENGURUS A20 — ENGLISH CLUB SMEGA*\n`;
-    text += `📅 *Periode:* ${periodTitle}\n`;
-    text += `👥 *Total Pengurus Kritis (0x Hadir):* ${criticalMentors.length} Pengurus\n\n`;
-    text += `Berikut Kakak Pengurus Angkatan 20 yang tercatat *Belum Hadir / Belum Memenuhi Shift*:\n`;
+    if (absentCount === 0) {
+      alert(`Alhamdulillah, seluruh pengurus Angkatan 20 tercatat hadir pada agenda sesi ini! 🎉`);
+      return;
+    }
 
-    criticalMentors.forEach((item, idx) => {
-      text += `${idx + 1}. ${item.mentor.name} — *${item.mentor.position}* (${item.mentor.class_name})\n`;
+    const meetingDateFormatted = activeMeetingForWA.meeting_date
+      ? new Date(activeMeetingForWA.meeting_date).toLocaleDateString('id-ID', {
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        })
+      : 'Hari Ini';
+
+    const meetingTitle = activeMeetingForWA.title || 'Agenda Pertemuan Eskul';
+
+    let text = `📢 *KONFIRMASI KEHADIRAN PENGURUS A20 — ENGLISH CLUB SMEGA*\n`;
+    text += `📅 *Sesi Pertemuan:* ${meetingTitle}\n`;
+    text += `🗓️ *Hari/Tanggal:* ${meetingDateFormatted}\n`;
+    text += `👥 *Belum Hadir / Belum Presensi:* ${absentCount} Pengurus (${presentCount} Hadir)\n\n`;
+    text += `Berikut rekan pengurus Angkatan 20 yang tidak tercatat hadir pada agenda sesi ini:\n`;
+
+    absentList.forEach((mentor, idx) => {
+      text += `${idx + 1}. ${mentor.name} — *${mentor.position}* (${mentor.class_name})\n`;
     });
 
-    text += `\n⚠️ *Peringatan Kedisiplinan:*
-Sesuai komitmen awal kepengurusan, setiap pengurus wajib memenuhi kuota shift minimal 2x sesi aktif per bulan untuk mendampingi adik-adik kelas A21. Mohon konfirmasi kendala dan segera jadwalkan kehadiran shift di pekan berikutnya ke Sie Kedisiplinan. Terima kasih! 🙏✨`;
+    text += `\n⚠️ *Catatan Sie Kedisiplinan:*
+Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki kendala mendesak/tugas sekolah, mohon segera memberikan konfirmasi kejelasan langsung ke Sie Kedisiplinan yaa agar rekap kehadiran shift tetap tercatat rapi. Terima kasih atas kerjasamanya! 🙏✨`;
 
     navigator.clipboard.writeText(text).then(() => {
       sound.playSuccess();
@@ -545,44 +610,85 @@ Sesuai komitmen awal kepengurusan, setiap pengurus wajib memenuhi kuota shift mi
         </div>
       </div>
 
-      {/* WhatsApp Broadcast Banner for Kedis (Hidden in Print) */}
-      <div className="no-print p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-300 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+      {/* WhatsApp Broadcast Banner for Kedis (Per Minggu / Per Tanggal Sesi) */}
+      <div className="no-print p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-300 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-sm">
+        <div className="flex items-start sm:items-center gap-3">
+          <div className="w-11 h-11 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
             <MessageSquare className="w-5 h-5" />
           </div>
-          <div>
-            <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
-              Teguran WhatsApp Sie Kedisiplinan (Kedis)
-            </h4>
-            <p className="text-[11px] font-bold text-emerald-800">
-              {stats.criticalCount > 0
-                ? `Terdapat ${stats.criticalCount} pengurus A20 berstatus Kritis (0x hadir) pada periode ini.`
-                : 'Alhamdulillah, seluruh pengurus Angkatan 20 sudah hadir memenuhi kuota sesi.'}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h4 className="text-xs font-black text-emerald-950 uppercase tracking-wide">
+                Teguran WhatsApp Sie Kedisiplinan (Kedis)
+              </h4>
+              <span className="px-2 py-0.5 rounded-lg bg-emerald-200/60 text-emerald-900 border border-emerald-300 text-[10px] font-black">
+                Evaluasi Per Sesi Minggu
+              </span>
+            </div>
+            <p className="text-[11px] font-bold text-emerald-800 leading-snug">
+              {activeMeetingForWA ? (
+                <>
+                  Sesi: <strong>{activeMeetingForWA.meeting_date ? new Date(activeMeetingForWA.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' }) : '-'}</strong> • Hadir: <strong>{sessionAttendanceStats.presentCount}</strong> • Belum Hadir / Perlu Konfirmasi: <strong className="text-rose-700">{sessionAttendanceStats.absentCount} Pengurus</strong>
+                </>
+              ) : (
+                'Belum ada pertemuan yang dapat dievaluasi.'
+              )}
             </p>
           </div>
         </div>
 
-        <TactileButton
-          onClick={handleCopyAbsentWA}
-          variant="brand"
-          size="sm"
-          className={`shrink-0 py-2 px-4 text-xs font-black ${
-            stats.criticalCount === 0 ? 'opacity-75' : ''
-          }`}
-        >
-          {copiedWA ? (
-            <>
-              <Check className="w-4 h-4 text-white" />
-              <span>Tersalin ke WhatsApp!</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-4 h-4" />
-              <span>Salin Alpa / Kritis ke WA</span>
-            </>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+          {/* Meeting Selector for WA */}
+          {availableMeetingsForWA.length > 0 && (
+            <div className="flex items-center gap-1.5 bg-white border-2 border-emerald-300 rounded-2xl px-2.5 py-1.5 shadow-sm">
+              <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+              <select
+                value={activeMeetingForWA?.id || ''}
+                onChange={(e) => {
+                  sound.playPop();
+                  setSelectedMeetingIdForWA(e.target.value);
+                }}
+                className="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer max-w-[210px] truncate"
+              >
+                {availableMeetingsForWA.map((m) => {
+                  const dateStr = m.meeting_date
+                    ? new Date(m.meeting_date).toLocaleDateString('id-ID', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                    : m.id;
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {dateStr} — {m.title || 'Sesi Eskul'}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
           )}
-        </TactileButton>
+
+          {/* Copy WA Button */}
+          <TactileButton
+            onClick={handleCopyAbsentWA}
+            variant="brand"
+            size="sm"
+            className="py-2 px-4 text-xs font-black shrink-0 justify-center"
+            disabled={!activeMeetingForWA || sessionAttendanceStats.absentCount === 0}
+          >
+            {copiedWA ? (
+              <>
+                <Check className="w-4 h-4 text-white" />
+                <span>Tersalin ke WhatsApp!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4" />
+                <span>Salin Belum Hadir (WA)</span>
+              </>
+            )}
+          </TactileButton>
+        </div>
       </div>
 
       {/* KPI Cards Grid (Hidden in Print) */}
