@@ -77,8 +77,18 @@
   - Visualisasi bagan pengurus 59 anggota.
 - [x] Manajemen berkas bersih: dokumen mentah docx & json dirapikan ke dalam subfolder `arsip-data/` (di-ignore di Git).
 - [x] Standar dokumentasi `README.md` & `DOKUMENTASI.md` tanpa prompt leak.
+- [x] Integrasi Logo Resmi EC SMEGA (`public/logo.png`) pada Navbar taktil dan Favicon tab browser.
+- [x] Perapihan footer developer: pembersihan teks embel-embel jurusan sehingga bersih dan profesional (`Dikembangkan oleh Chandra (@channdraa-afk).`).
+- [x] Pemisahan Akses 2-Tier:
+  - **Tier 1 (Kakak Kelas / Pengurus A20)**: Akses 5-tap logo + PIN `123321`. Terkunci hanya untuk Presensi Mandiri Pengurus dan Struktur Bagan.
+  - **Tier 2 (Super Admin Ketua - Chandra)**: Akses rahasia 3-tap pada kartu Ketua + kata sandi persis `mybinivioletevergarden`. Membuka kontrol sesi & token, libur eskul, rekap rapor bulanan A21, ACC pendaftaran, aspirasi, dan Radar Kedisiplinan. Dilengkapi tombol "Kunci Admin".
+- [x] Modul Radar Kedisiplinan Pengurus Angkatan 20 (`MentorDisciplineRadar.tsx`):
+  - Mengakomodasi shift kerja 50% mingguan (fleksibel tukar jadwal).
+  - Standar evaluasi bulanan: minimal hadir **2x dalam 1 bulan** dinyatakan 🟢 **Aman / Disiplin**.
+  - Klasifikasi status: ⭐ Overachiever (>2x), 🟢 Aman/Disiplin (2x), 🟡 Kurang 1 Sesi (1x), 🔴 Kritis (0x).
+  - Kartu KPI ringkasan, filter per Sie & Status, search nama, detail tanggal kehadiran, dan tombol Ekspor CSV untuk Sie Kedisiplinan.
 
 ### 3.2. Roadmap Selanjutnya
-- [ ] Menjalankan skrip `supabase/setup_database.sql` di dashboard Supabase milik Chandra.
-- [ ] Push kode pertama ke GitHub `channdraa-afk/English-Club` untuk memicu deploy otomatis di Vercel.
-- [ ] Menghubungkan domain custom `.my.id` di dashboard Vercel.
+- [ ] Evaluasi kehadiran perdana pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah).
+- [ ] Menghubungkan domain custom `.my.id` di dashboard Vercel jika diperlukan.
+
