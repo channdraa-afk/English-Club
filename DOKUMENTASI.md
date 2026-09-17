@@ -223,6 +223,10 @@
     - Tampilan badge `⭐ N` otomatis muncul di samping nama siswa di `LiveMonitorA21` dan `ReportRecap` (rekap per pertemuan).
   - **Resilience Data Architecture**:
     - Menyimpan ke tabel `talent_stars` dengan skema RLS mandiri, serta fallback otomatis ke `app_settings` (key `'talent_stars'`) sehingga fitur langsung bekerja instan tanpa jeda dependensi.
+  - **Eliminasi Dialog Native Browser (`window.confirm` ➔ Modal Taktil 3D)**:
+    - Menghapus total dialog konfirmasi kaku bawaan browser (`window.confirm` & `alert`).
+    - Menggantinya dengan **Modal Konfirmasi Taktil 3D** serasi tema Duolingo: ikon squircle tempat sampah 3D rose (`[ 🗑️ ]`), teks konfirmasi ramah yang menyebutkan nama siswa secara spesifik, tombol `[ Batal ]` taktil abu-abu, dan tombol eksekusi `[ Ya, Copot 🗑️ ]` merah rose 3D pushable dengan feedback Web Audio API murni.
+
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
