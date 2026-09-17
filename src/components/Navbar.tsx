@@ -47,8 +47,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="flex items-center gap-3 cursor-pointer select-none group"
           title="English Club SMEGA"
         >
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500 border-2 border-emerald-700 shadow-[0_3px_0_0_#15803d] flex items-center justify-center text-white font-black text-xl group-active:translate-y-0.5 transition-transform">
-            EC
+          <div className="w-11 h-11 rounded-2xl bg-white border-2 border-emerald-600 shadow-[0_3px_0_0_#059669] flex items-center justify-center p-1 group-active:translate-y-0.5 transition-transform overflow-hidden">
+            <img src="/logo.png" alt="EC SMEGA Logo" className="w-full h-full object-contain" />
           </div>
           <div>
             <div className="flex items-center gap-1.5">
