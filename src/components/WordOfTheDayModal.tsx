@@ -4,6 +4,7 @@ import { Sparkles, CheckCircle2, Share2, X, BookmarkCheck } from 'lucide-react';
 import { Member, Meeting } from '../types/database';
 import { TactileButton } from './TactileButton';
 import { sound } from '../lib/audio';
+import { getWeeklyIdiom } from '../data/idioms';
 
 interface WordOfTheDayModalProps {
   isOpen: boolean;
@@ -18,6 +19,9 @@ export const WordOfTheDayModal: React.FC<WordOfTheDayModalProps> = ({
   member,
   meeting,
 }) => {
+  const weeklyFallback = getWeeklyIdiom(meeting?.meeting_date);
+  const displayWord = meeting?.word_of_the_day?.trim() || weeklyFallback.word;
+  const displayMeaning = meeting?.word_meaning?.trim() || weeklyFallback.meaning;
   useEffect(() => {
     if (isOpen) {
       sound.playSuccess();
@@ -87,11 +91,11 @@ export const WordOfTheDayModal: React.FC<WordOfTheDayModalProps> = ({
             </div>
 
             <h3 className="text-lg font-black text-amber-950 italic">
-              "{meeting.word_of_the_day || 'Break a leg!'}"
+              "{displayWord}"
             </h3>
 
             <p className="text-xs font-bold text-amber-800 mt-2 leading-relaxed">
-              {meeting.word_meaning || 'Idiom yang digunakan untuk mendoakan seseorang agar sukses dan memberikan performa terbaik.'}
+              {displayMeaning}
             </p>
 
             <div className="mt-3 pt-2 border-t border-amber-200 flex items-center justify-center gap-1 text-[11px] font-extrabold text-amber-700">

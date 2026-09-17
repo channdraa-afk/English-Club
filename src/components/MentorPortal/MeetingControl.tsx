@@ -12,6 +12,7 @@ import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { supabase } from '../../lib/supabase';
 import { getScheduleStatus } from '../../lib/schedule';
+import { getRandomIdiom } from '../../data/idioms';
 
 interface MeetingControlProps {
   activeMeeting: Meeting | null;
@@ -72,6 +73,13 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     sound.playPop();
     const rand = sampleMentorTokens[Math.floor(Math.random() * sampleMentorTokens.length)];
     setMentorTokenInput(rand);
+  };
+
+  const handleRandomIdiom = () => {
+    sound.playPop();
+    const item = getRandomIdiom();
+    setWord(item.word);
+    setMeaning(item.meaning);
   };
 
   const handleToggleHoliday = async () => {
@@ -353,9 +361,19 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1">
-                Word of the Day (Idiom / Quote)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                  Word of the Day (Idiom)
+                </label>
+                <button
+                  type="button"
+                  onClick={handleRandomIdiom}
+                  className="flex items-center gap-1 text-[11px] font-black text-amber-600 hover:text-amber-700"
+                >
+                  <Dices className="w-3 h-3" />
+                  <span>Acak dari Bank Idiom</span>
+                </button>
+              </div>
               <input
                 type="text"
                 value={word}
