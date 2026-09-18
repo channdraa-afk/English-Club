@@ -34,6 +34,7 @@ import { MentorDisciplineRadar } from './MentorDisciplineRadar';
 import { SuperAdminModal } from './SuperAdminModal';
 import { DataVault } from './DataVault';
 import { sound } from '../../lib/audio';
+import { safeStorage } from '../../lib/storage';
 
 export type TabId = 
   | 'session'
@@ -105,7 +106,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   onBackToStudent,
 }) => {
   const [activeTab, setActiveTabState] = useState<TabId>(() => {
-    const saved = sessionStorage.getItem('ec_active_tab') as TabId | null;
+    const saved = safeStorage.get('ec_active_tab', 'session') as TabId | null;
     const allowedRegular: TabId[] = [
       'mentor_attendance',
       'radar',
@@ -127,7 +128,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
   const setActiveTab = (tab: TabId) => {
     setActiveTabState(tab);
-    sessionStorage.setItem('ec_active_tab', tab);
+    safeStorage.set('ec_active_tab', tab, 'session');
   };
 
   const [currentCategory, setCurrentCategory] = useState<'general' | 'a21' | 'a20' | 'all'>(

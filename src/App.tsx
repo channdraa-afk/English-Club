@@ -17,6 +17,7 @@ const MentorDashboard = React.lazy(() =>
 import { sound } from './lib/audio';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { isSessionActiveNow } from './lib/schedule';
+import { safeStorage } from './lib/storage';
 
 export const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
@@ -32,10 +33,7 @@ export const App: React.FC = () => {
 
   // Instant local cache read for zero-delay bypass detection
   const [isManualBypass, setIsManualBypass] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('ec_manual_bypass') === 'true';
-    }
-    return false;
+    return safeStorage.get('ec_manual_bypass') === 'true';
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -50,7 +48,7 @@ export const App: React.FC = () => {
       if (hash === '#beranda') return 'landing';
 
       // If opening root URL without hash, check if extracurricular session or bypass is active!
-      const cachedBypass = localStorage.getItem('ec_manual_bypass') === 'true';
+      const cachedBypass = safeStorage.get('ec_manual_bypass') === 'true';
       if (isSessionActiveNow(cachedBypass, 'student')) {
         window.location.hash = '#absen';
         return 'student';
@@ -69,17 +67,17 @@ export const App: React.FC = () => {
 
   // Check saved mentor login & superadmin cryptographic signature in storage
   useEffect(() => {
-    const savedAuth = localStorage.getItem('ec_mentor_auth');
+    const savedAuth = safeStorage.get('ec_mentor_auth');
     if (savedAuth === 'true') {
       setIsMentorLoggedIn(true);
     }
-    const savedSuperSig = sessionStorage.getItem('ec_superadmin_sig');
+    const savedSuperSig = safeStorage.get('ec_superadmin_sig', 'session');
     if (savedSuperSig === SUPERADMIN_HASH) {
       setIsSuperAdmin(true);
     } else {
       // Purge any fake console injection / legacy value
-      sessionStorage.removeItem('ec_superadmin_auth');
-      sessionStorage.removeItem('ec_superadmin_sig');
+      safeStorage.remove('ec_superadmin_auth', 'session');
+      safeStorage.remove('ec_superadmin_sig', 'session');
     }
   }, []);
 
@@ -121,7 +119,7 @@ export const App: React.FC = () => {
             const isBypass = Boolean(row.value);
             setIsManualBypass(isBypass);
             if (isBypass) {
-              localStorage.setItem('ec_manual_bypass', 'true');
+              safeStorage.set('ec_manual_bypass', 'true');
               // If user is on root (empty hash), auto-open attendance
               const hash = window.location.hash.toLowerCase();
               if (hash === '' || hash === '#') {
@@ -129,7 +127,7 @@ export const App: React.FC = () => {
                 window.location.hash = '#absen';
               }
             } else {
-              localStorage.removeItem('ec_manual_bypass');
+              safeStorage.remove('ec_manual_bypass');
             }
           } else if (row.key === 'registration_open') {
             setIsRegistrationOpen(Boolean(row.value));
@@ -217,9 +215,9 @@ export const App: React.FC = () => {
             const bypassVal = Boolean(s.value);
             setIsManualBypass(bypassVal);
             if (bypassVal) {
-              localStorage.setItem('ec_manual_bypass', 'true');
+              safeStorage.set('ec_manual_bypass', 'true');
             } else {
-              localStorage.removeItem('ec_manual_bypass');
+              safeStorage.remove('ec_manual_bypass');
             }
             if (typeof window !== 'undefined') {
               const hash = window.location.hash.toLowerCase();
@@ -278,9 +276,9 @@ export const App: React.FC = () => {
   };
 
   const handleMentorLogout = () => {
-    localStorage.removeItem('ec_mentor_auth');
-    sessionStorage.removeItem('ec_superadmin_auth');
-    sessionStorage.removeItem('ec_superadmin_sig');
+    safeStorage.remove('ec_mentor_auth');
+    safeStorage.remove('ec_superadmin_auth', 'session');
+    safeStorage.remove('ec_superadmin_sig', 'session');
     setIsMentorLoggedIn(false);
     setIsSuperAdmin(false);
     setCurrentView('student');
@@ -289,13 +287,13 @@ export const App: React.FC = () => {
   const handleSuperAdminUnlock = (signature?: string) => {
     const sig = signature || SUPERADMIN_HASH;
     setIsSuperAdmin(true);
-    sessionStorage.setItem('ec_superadmin_sig', sig);
+    safeStorage.set('ec_superadmin_sig', sig, 'session');
   };
 
   const handleSuperAdminLock = () => {
     setIsSuperAdmin(false);
-    sessionStorage.removeItem('ec_superadmin_auth');
-    sessionStorage.removeItem('ec_superadmin_sig');
+    safeStorage.remove('ec_superadmin_auth', 'session');
+    safeStorage.remove('ec_superadmin_sig', 'session');
   };
 
   const handleToggleRegistration = async (state: boolean) => {
@@ -313,9 +311,9 @@ export const App: React.FC = () => {
   const handleToggleManualBypass = async (state: boolean) => {
     setIsManualBypass(state);
     if (state) {
-      localStorage.setItem('ec_manual_bypass', 'true');
+      safeStorage.set('ec_manual_bypass', 'true');
     } else {
-      localStorage.removeItem('ec_manual_bypass');
+      safeStorage.remove('ec_manual_bypass');
     }
     await supabase.from('app_settings').upsert({ key: 'manual_bypass', value: state });
   };

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Lock, ShieldCheck, KeyRound, AlertCircle, ArrowLeft } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
+import { safeStorage } from '../../lib/storage';
 
 interface MentorLoginProps {
   onLoginSuccess: () => void;
@@ -23,7 +24,7 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
 
     if (pin.trim() === currentPin.trim()) {
       sound.playSuccess();
-      localStorage.setItem('ec_mentor_auth', 'true');
+      safeStorage.set('ec_mentor_auth', 'true');
       onLoginSuccess();
     } else {
       sound.playError();

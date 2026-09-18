@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Member, Meeting, TalentStar, CompetitionCategory } from '../../types/database';
 import { sound } from '../../lib/audio';
+import { safeStorage } from '../../lib/storage';
 
 export const COMPETITION_CATEGORIES: { 
   id: CompetitionCategory; 
@@ -105,7 +106,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
   const [selectedCategory, setSelectedCategory] = useState<CompetitionCategory>('speech');
   const [reviewNotes, setReviewNotes] = useState('');
   const [mentorNameInput, setMentorNameInput] = useState(() => {
-    return localStorage.getItem('ec_mentor_scout_name') || '';
+    return safeStorage.get('ec_mentor_scout_name') || '';
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -188,7 +189,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
     setModalMember(m);
     setSelectedCategory('speech');
     setReviewNotes('');
-    const savedName = localStorage.getItem('ec_mentor_scout_name') || '';
+    const savedName = safeStorage.get('ec_mentor_scout_name') || '';
     if (savedName) {
       setMentorNameInput(savedName);
     }
@@ -232,7 +233,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
     }
 
     const trimmedMentorName = mentorNameInput.trim();
-    localStorage.setItem('ec_mentor_scout_name', trimmedMentorName);
+    safeStorage.set('ec_mentor_scout_name', trimmedMentorName);
 
     try {
       setIsSubmitting(true);

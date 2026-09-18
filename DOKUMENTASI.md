@@ -327,6 +327,11 @@
     - Mengisolasi pembersihan presensi hanya pada sesi tertentu tanpa memengaruhi sesi lain di masa lalu/depan.
   - **DDL Registrations Hardening (`setup_database.sql`)**: Menambahkan policy delete untuk tabel pendaftaran calon anggota baru.
 
+- [x] Hardening Safe Storage Guardrail & Global Tactile Error Boundary (Anti-White Screen Defense):
+  - **Modul Utilitas Terpusat (`src/lib/storage.ts`)**: Membungkus seluruh akses `localStorage` dan `sessionStorage` dengan `try ... catch` dan in-memory fallback. Mencegah 100% crash fatal `SecurityError` / `DOMException` saat website dibuka di browser ber-ekstensi iframe sandbox, mode privat ketat (*Strict Incognito*), atau in-app browser aplikasi (WhatsApp/Instagram).
+  - **Refactor Akses Penyimpanan**: Mengganti 100% pemanggilan mentah `localStorage` dan `sessionStorage` di `App.tsx`, `MentorDashboard.tsx`, `MentorLogin.tsx`, dan `TalentScoutA21.tsx` menjadi `safeStorage.get()`, `safeStorage.set()`, dan `safeStorage.remove()`.
+  - **Jaring Pengaman Global (`src/components/TactileErrorBoundary.tsx`)**: Membungkus root aplikasi di `main.tsx` dengan Error Boundary bertema taktil Duolingo. Jika ada runtime error tak terduga dari script eksternal atau ekstensi nakal, website tidak akan pernah menampilkan layar putih mati, melainkan menampilkan kartu taktil ramah dengan tombol *"Muat Ulang Halaman"*.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
