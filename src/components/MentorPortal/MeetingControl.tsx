@@ -7,7 +7,8 @@ import {
   Clock, 
   Zap,
   AlertCircle,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 import { Meeting } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -42,6 +43,7 @@ interface MeetingControlProps {
   onToggleRegistration: (newState: boolean) => void;
   currentPin: string;
   onPinUpdated: (newPin: string) => void;
+  onAttendanceChanged?: () => void;
 }
 
 export const MeetingControl: React.FC<MeetingControlProps> = ({
@@ -55,6 +57,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   onToggleRegistration,
   currentPin,
   onPinUpdated,
+  onAttendanceChanged,
 }) => {
   const targetWed = getTargetWednesdayDate();
 
@@ -145,6 +148,37 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
       setShowHolidayModal(true);
     } else {
       applyToggleHoliday(false);
+    }
+  };
+
+  const [showClearSessionModal, setShowClearSessionModal] = useState(false);
+  const [isClearingSession, setIsClearingSession] = useState(false);
+
+  const handleClearSessionAttendances = async () => {
+    if (!activeMeeting) return;
+    setIsClearingSession(true);
+    sound.playPop();
+
+    try {
+      const { error } = await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', activeMeeting.id);
+
+      if (error) throw error;
+
+      sound.playSuccess();
+      setShowClearSessionModal(false);
+      setSuccessMsg(`Presensi pada sesi "${activeMeeting.title}" berhasil dikosongkan!`);
+      setTimeout(() => setSuccessMsg(null), 3500);
+      onAttendanceChanged?.();
+    } catch (err: any) {
+      console.error('Error clearing session attendances:', err);
+      sound.playError();
+      setErrorMsg('Gagal mengosongkan presensi sesi: ' + (err?.message || 'Error'));
+      setTimeout(() => setErrorMsg(null), 4000);
+    } finally {
+      setIsClearingSession(false);
     }
   };
 
@@ -297,21 +331,37 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleToggleHoliday}
-            className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs border transition-all cursor-pointer shrink-0 ${
-              isHoliday
-                ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-700 shadow-[0_3px_0_0_#b45309]'
-                : 'bg-rose-950/80 hover:bg-rose-900 text-rose-200 border-rose-800 shadow-[0_3px_0_0_#4c0519]'
-            } active:translate-y-0.5`}
-          >
-            <span>
-              {isHoliday
-                ? '🏖️ Sesi Diliburkan (Klik untuk Buka Kembali)'
-                : `🌴 Liburkan Sesi: ${displaySessionDate}`}
-            </span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleToggleHoliday}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs border transition-all cursor-pointer ${
+                isHoliday
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white border-amber-700 shadow-[0_3px_0_0_#b45309]'
+                  : 'bg-rose-950/80 hover:bg-rose-900 text-rose-200 border-rose-800 shadow-[0_3px_0_0_#4c0519]'
+              } active:translate-y-0.5`}
+            >
+              <span>
+                {isHoliday
+                  ? '🏖️ Sesi Diliburkan (Klik untuk Buka Kembali)'
+                  : `🌴 Liburkan Sesi: ${displaySessionDate}`}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                setShowClearSessionModal(true);
+              }}
+              title="Kosongkan data presensi khusus sesi ini saja (Opsi B)"
+              className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl font-black text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-600 shadow-[0_2px_0_0_#334155] active:translate-y-0.5 transition-all cursor-pointer"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+              <span className="hidden sm:inline">Kosongkan Presensi Sesi</span>
+              <span className="sm:hidden">Kosongkan</span>
+            </button>
+          </div>
         </div>
 
         {/* Dual Tokens Grid */}
@@ -652,6 +702,67 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                 className="px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer"
               >
                 Ya, Liburkan Sesi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tactile Scoped Session Reset Modal (Opsi B) */}
+      {showClearSessionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-slate-300 shadow-2xl max-w-md w-full p-6 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🗑️</span>
+                <h3 className="font-black text-slate-900 text-base">
+                  Kosongkan Presensi Sesi Ini?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowClearSessionModal(false)}
+                className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+              <p className="font-bold">
+                Apakah kamu yakin ingin mengosongkan seluruh data presensi untuk sesi <span className="font-black">"{activeMeeting?.title || 'Sesi Terpilih'}"</span>?
+              </p>
+              <p className="text-[11px] text-amber-800/80">
+                Tindakan ini terisolasi hanya pada sesi pertemuan ini (Opsi B). Riwayat pertemuan lain dan Master Data 165 siswa tetap 100% aman tersimpan.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowClearSessionModal(false)}
+                disabled={isClearingSession}
+                className="px-4 py-2 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleClearSessionAttendances}
+                disabled={isClearingSession}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                {isClearingSession ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Mengosongkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Ya, Kosongkan Sesi Ini</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

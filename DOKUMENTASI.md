@@ -314,6 +314,19 @@
     - Mengonfigurasi `build.rollupOptions.output.manualChunks` untuk memisahkan `vendor-react` (4.2 kB), `vendor-confetti` (10.6 kB), `vendor-icons` (37.3 kB), `vendor-supabase` (227 kB), dan `MentorDashboard` (170 kB).
     - Menghilangkan 100% peringatan bundle size warning dari Rollup (> 500 kB), mempercepat waktu muat awal aplikasi (*First Contentful Paint*) secara signifikan di jaringan seluler sekolah.
 
+- [x] Arsitektur Pengaman "Triple-Shield Reset" (Sinergi Opsi A, B, dan C) & Eksekusi Big Reset Pra-Eskul:
+  - **Pencadangan Aman Pra-Reset (`arsip-data/`)**: Seluruh 48 data presensi uji coba dan 2 pendaftaran telah berhasil dicadangkan ke berkas JSON lokal sebelum dieksekusi, memastikan nol risiko kehilangan data historis.
+  - **Eksekusi Big Reset Database Supabase**: Mengosongkan 48 data presensi uji coba di tabel `attendances` sehingga status presensi kini kembali bersih **0%** (*fresh start* 0 rekaman) siap pakai untuk hari Rabu perdana eskul. Master data 165 siswa (104 adik kelas & 59 pengurus) tetap utuh dan aman terlindungi oleh RLS policy.
+  - **Komponen Pusat Reset Super Admin (`DataVault.tsx`)**:
+    - Eksklusif hanya terbuka untuk Ketua di Super Admin (`isSuperAdmin`).
+    - **GitHub Vault Protocol Safeguard**: Wajib mengetik frasa persis `RESET DATA UJI COBA` sebelum tombol merah destruktif terbuka dari kunci pengaman.
+    - **Auto-Download JSON Snapshot**: Secara otomatis mengunduh berkas `backup_ec_data_[timestamp].json` ke perangkat saat tombol reset ditekan, menyediakan safety net pemulihan seketika.
+    - **Granular Scope Selection**: Mendukung pilihan pembersihan Scoped Sesi (Opsi B) maupun Pembersihan Total (Opsi A).
+  - **Tombol Reset Per-Sesi di Kontrol Pertemuan (`MeetingControl.tsx` - Opsi B)**:
+    - Tombol taktil `[ 🗑️ Kosongkan Presensi Sesi ]` pada kartu sesi pertemuan aktif dengan Modal Konfirmasi Taktil 3D.
+    - Mengisolasi pembersihan presensi hanya pada sesi tertentu tanpa memengaruhi sesi lain di masa lalu/depan.
+  - **DDL Registrations Hardening (`setup_database.sql`)**: Menambahkan policy delete untuk tabel pendaftaran calon anggota baru.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.

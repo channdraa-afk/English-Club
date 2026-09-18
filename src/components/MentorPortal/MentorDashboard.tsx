@@ -17,7 +17,8 @@ import {
   Radio, 
   Layers,
   HeartHandshake,
-  Star
+  Star,
+  Database
 } from 'lucide-react';
 import { Member, Meeting, Attendance, Registration, TalentStar } from '../../types/database';
 import { MeetingControl } from './MeetingControl';
@@ -31,11 +32,13 @@ import { RegistrationApprovals } from './RegistrationApprovals';
 import { StructureView } from './StructureView';
 import { MentorDisciplineRadar } from './MentorDisciplineRadar';
 import { SuperAdminModal } from './SuperAdminModal';
+import { DataVault } from './DataVault';
 import { sound } from '../../lib/audio';
 
 export type TabId = 
   | 'session'
   | 'approvals'
+  | 'data_vault'
   | 'live_monitor'
   | 'talent_scout'
   | 'helper_a21'
@@ -165,6 +168,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     // --- 🌐 UMUM (SISTEM & PUSAT) ---
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'general', superOnly: true },
     { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
+    { id: 'data_vault', label: 'Brankas Reset & Backup', icon: Database, category: 'general', superOnly: true },
 
     // --- 🎒 OPERASIONAL A21 (ADIK KELAS) ---
     { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: false },
@@ -478,6 +482,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           onToggleRegistration={onToggleRegistration}
           currentPin={currentPin}
           onPinUpdated={onPinUpdated}
+          onAttendanceChanged={onAttendanceChanged}
         />
       )}
 
@@ -545,6 +550,17 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           registrations={registrations}
           onRefreshRegistrations={onRefreshRegistrations}
           onMemberAdded={onMemberAdded}
+        />
+      )}
+
+      {/* Brankas Reset & Keamanan Data (Strictly Super Admin Only) */}
+      {activeTab === 'data_vault' && isSuperAdmin && (
+        <DataVault
+          activeMeeting={activeMeeting}
+          attendances={attendances}
+          registrations={registrations}
+          members={members}
+          onDataChanged={onAttendanceChanged}
         />
       )}
 

@@ -128,6 +128,7 @@ CREATE POLICY "Allow public delete attendances" ON attendances FOR DELETE USING 
 CREATE POLICY "Allow public insert registrations" ON registrations FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow public read registrations" ON registrations FOR SELECT USING (true);
 CREATE POLICY "Allow public update registrations" ON registrations FOR UPDATE USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public delete registrations" ON registrations FOR DELETE USING (true);
 
 -- Allow public read & update app_settings
 CREATE POLICY "Allow public read settings" ON app_settings FOR SELECT USING (true);
