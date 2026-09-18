@@ -376,7 +376,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <span className="font-black text-xs sm:text-base text-slate-900 tracking-tight leading-none group-hover:text-blue-600 transition-colors whitespace-nowrap">
                   English Club
                 </span>
-                <span className="text-[9px] sm:text-[10px] font-black uppercase px-1 sm:px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200 shrink-0">
+                <span className="hidden sm:inline text-[9px] sm:text-[10px] font-black uppercase px-1 sm:px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200 shrink-0">
                   SMEGA
                 </span>
               </div>
@@ -429,32 +429,48 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Super Admin Status Badge (Inside Navbar - Sleek, Tactile, Non-intrusive) */}
             {isSuperAdmin && (
-              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 shadow-[0_2px_0_0_#fcd34d] animate-fade-in">
-                <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="text-[11px] font-black hidden md:inline text-amber-950">Chandra</span>
+              <>
+                {/* Mobile Super Admin Crown Quick-Access (Compact 34px) */}
                 <button
                   type="button"
                   onClick={() => {
                     sound.playPop();
                     onGoToMentorPortal?.();
                   }}
-                  className="px-1.5 sm:px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs active:translate-y-0.5 transition-all"
-                  title="Masuk ke Pusat Komando Admin"
+                  className="sm:hidden p-2 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 shadow-xs active:translate-y-0.5 transition-all cursor-pointer shrink-0"
+                  title="Pusat Komando Super Admin"
                 >
-                  Portal
+                  <Crown className="w-4 h-4 text-amber-600" />
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    sound.playPop();
-                    onSuperAdminLock?.();
-                  }}
-                  className="p-1 rounded-lg text-amber-700 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
-                  title="Kunci / Keluar Super Admin"
-                >
-                  <Lock className="w-3 h-3" />
-                </button>
-              </div>
+
+                {/* Desktop Full Super Admin Badge */}
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 shadow-[0_2px_0_0_#fcd34d] animate-fade-in">
+                  <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span className="text-[11px] font-black text-amber-950">Chandra</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playPop();
+                      onGoToMentorPortal?.();
+                    }}
+                    className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs active:translate-y-0.5 transition-all"
+                    title="Masuk ke Pusat Komando Admin"
+                  >
+                    Portal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playPop();
+                      onSuperAdminLock?.();
+                    }}
+                    className="p-1 rounded-lg text-amber-700 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
+                    title="Kunci / Keluar Super Admin"
+                  >
+                    <Lock className="w-3 h-3" />
+                  </button>
+                </div>
+              </>
             )}
 
             {/* Spotlight CTA: Presensi Eskul */}
@@ -484,7 +500,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-300 animate-ping shrink-0" />
               <p className="text-xs font-black">
-                🎙️ Sesi Pertemuan Sedang Dibuka! ({scheduleStatus.currentTimeWIB} WIB) — Token tersedia di papan tulis.
+                🎙️ Sesi Pertemuan Sedang Dibuka! ({scheduleStatus.currentTimeWIB}) — Token tersedia di papan tulis.
               </p>
             </div>
             <button
@@ -508,23 +524,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       )}
 
       {/* ================= 3. HERO SECTION ================= */}
-      <section id="beranda" className="relative pt-10 pb-16 md:pt-16 md:pb-24 overflow-hidden">
+      <section id="beranda" className="relative pt-6 pb-12 md:pt-16 md:pb-24 overflow-hidden">
         {/* Subtle Decorative Background Blobs */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-96 bg-gradient-to-b from-blue-100/60 via-indigo-50/40 to-transparent -z-10 pointer-events-none rounded-b-[4rem]" />
         
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-6">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center space-y-5 sm:space-y-6">
           {/* Badge Kebanggaan Sejak 2006 */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-blue-50 border-2 border-blue-200 text-blue-700 text-xs font-black shadow-[0_2px_0_0_#bfdbfe] animate-fade-in">
-            <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-            <span>EST. 23 MARCH 2006 • SMK NEGERI 1 PURBALINGGA</span>
+          <div className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-2xl bg-blue-50 border-2 border-blue-200 text-blue-700 text-[11px] sm:text-xs font-black shadow-[0_2px_0_0_#bfdbfe] animate-fade-in whitespace-nowrap">
+            <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
+            <span>EST. 2006 • SMKN 1 PURBALINGGA</span>
           </div>
 
           {/* Main Slogan / Yel-Yel Ikonik */}
-          <div className="space-y-2 max-w-3xl mx-auto">
-            <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight">
-              Spirit of <span className="text-blue-600 underline decoration-amber-400 decoration-wavy decoration-2 underline-offset-4 sm:underline-offset-8">English Club!</span>
+          <div className="space-y-1.5 sm:space-y-2 max-w-3xl mx-auto">
+            <h1 className="text-2xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight">
+              Spirit of{' '}
+              <span className="inline-block text-blue-600 underline decoration-amber-400 decoration-wavy decoration-2 underline-offset-4 sm:underline-offset-8">
+                English Club!
+              </span>
             </h1>
-            <p className="text-2xl sm:text-4xl md:text-5xl font-black text-emerald-600 tracking-tight pt-1">
+            <p className="text-xl sm:text-4xl md:text-5xl font-black text-emerald-600 tracking-tight pt-0.5">
               Improve Your English Skill!
             </p>
           </div>
@@ -651,18 +670,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid md:grid-cols-2 gap-6">
             {/* Speaking Division */}
-            <div className="p-6 rounded-3xl bg-white border-2 border-blue-300 shadow-[0_6px_0_0_#2563eb] space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border-2 border-blue-300 shadow-[0_6px_0_0_#2563eb] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md">
-                    <Mic className="w-6 h-6" />
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">Speaking Division</h3>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">Speaking Division</h3>
                     <p className="text-xs font-bold text-blue-600">Dipimpin: Hanan Aditya Zahid</p>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 text-[10px] font-black uppercase">
+                <span className="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 text-[10px] font-black uppercase w-fit">
                   Public Speaking & Debat
                 </span>
               </div>
@@ -687,18 +706,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Writing Division */}
-            <div className="p-6 rounded-3xl bg-white border-2 border-emerald-300 shadow-[0_6px_0_0_#059669] space-y-4">
-              <div className="flex items-center justify-between">
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border-2 border-emerald-300 shadow-[0_6px_0_0_#059669] space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
-                    <PenTool className="w-6 h-6" />
+                  <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shrink-0">
+                    <PenTool className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-black text-slate-900">Writing Division</h3>
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">Writing Division</h3>
                     <p className="text-xs font-bold text-emerald-600">Dipimpin: Amirah Nur Fairuza</p>
                   </div>
                 </div>
-                <span className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
+                <span className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase w-fit">
                   Literasi & Word Games
                 </span>
               </div>
@@ -728,14 +747,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
               Didukung Penuh Oleh 7 Sie Kerja Pengurus A20:
             </h4>
-            <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black text-slate-700">
-              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Pengajar & Pendamping</span>
-              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Kedisiplinan</span>
-              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie PDD (Publikasi & Desain)</span>
-              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Humas</span>
-              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Sarpras</span>
-              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Operasional</span>
-              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Kurikulum</span>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs font-black text-slate-700">
+              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Pengajar & Pendamping</span>
+              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Kedisiplinan</span>
+              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie PDD (Publikasi & Desain)</span>
+              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Humas</span>
+              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Sarpras</span>
+              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Operasional</span>
+              <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Kurikulum</span>
             </div>
           </div>
         </div>

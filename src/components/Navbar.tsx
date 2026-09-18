@@ -55,14 +55,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-1 sm:gap-1.5">
               <span className="font-black text-slate-900 text-xs sm:text-base md:text-lg leading-tight tracking-tight whitespace-nowrap">English Club</span>
-              <span className="bg-blue-100 text-blue-900 text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded-md border border-blue-300 shrink-0">SMEGA</span>
+              <span className="hidden sm:inline bg-blue-100 text-blue-900 text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 py-0.5 rounded-md border border-blue-300 shrink-0">SMEGA</span>
             </div>
             <p className="text-[10px] sm:text-[11px] text-slate-500 font-bold truncate hidden min-[440px]:block">SMK Negeri 1 Purbalingga</p>
           </div>
         </div>
 
         {/* Navigation & Actions */}
-        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Status Sesi Badge (Desktop, concise & clean) */}
           <div 
             className="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-xs font-bold text-slate-700 shrink-0"
@@ -85,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Globe className="w-3.5 h-3.5 text-blue-600 shrink-0" />
               <span>
-                <span className="hidden min-[420px]:inline sm:hidden">Web</span>
+                <span className="hidden min-[480px]:inline sm:hidden">Web</span>
                 <span className="hidden sm:inline">Web Utama</span>
               </span>
             </button>
@@ -102,7 +102,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="flex items-center gap-1 p-1.5 px-2 sm:px-3 sm:py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-black shadow-[0_2px_0_0_#d97706] active:translate-y-0.5 transition-all shrink-0 cursor-pointer"
             >
               <UserPlus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden min-[420px]:inline">Daftar</span>
+              <span className="hidden min-[480px]:inline">Daftar</span>
             </button>
           )}
 
@@ -113,6 +113,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 sound.playPop();
                 onSwitchView(currentView === 'mentor' ? 'student' : 'mentor');
               }}
+              title={currentView === 'mentor' ? 'Pindah ke Presensi Siswa' : 'Masuk Dashboard Mentor'}
               className={`flex items-center gap-1 p-1.5 px-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-black border transition-all shrink-0 cursor-pointer ${
                 currentView === 'mentor'
                   ? 'bg-slate-800 text-white border-slate-900 shadow-[0_2px_0_0_#0f172a]'
@@ -121,7 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <Shield className="w-3.5 h-3.5 shrink-0" />
               <span>
-                <span className="sm:hidden">{currentView === 'mentor' ? 'Presensi' : 'Mentor'}</span>
+                <span className="hidden min-[450px]:inline sm:hidden">{currentView === 'mentor' ? 'Presensi' : 'Mentor'}</span>
                 <span className="hidden sm:inline">{currentView === 'mentor' ? 'Ke Presensi' : 'Dashboard Mentor'}</span>
               </span>
             </button>

@@ -279,11 +279,13 @@
 
 
 - [x] Optimasi Layout Responsif Mobile & Eliminasi Overlapping (Zero Screen Collision):
-  - **Kompaksi Tombol Web & Presensi di Mode Mentor (`Navbar.tsx`)**: Mengoptimalkan tombol `onGoHome` menjadi icon-first taktil pada layar ponsel (`<Globe />` adaptif), serta menyesuaikan ukuran teks brand title `English Club SMEGA` agar tidak saling mendesak atau terpotong pada layar mobile sempit (< 380px).
-  - **Eliminasi Sticky Floating Action Button (`LandingPage.tsx`)**: Menghapus tombol mengambang `[ ✨ PRESENSI ]` di pojok kanan bawah yang sebelumnya menimpa tombol formulir pendaftaran dan link footer saat digulir.
-  - **Header Landing Page Adaptif Super Admin**: Menyelaraskan badge Super Admin (`[ 👑 Portal | 🔒 ]`) dan tombol Presensi Eskul di navbar landing page agar tetap muat rapi tanpa overflow pada layar mobile kecil (320px–375px).
-  - **Bebas Tabrakan Hero & Stats Bar**: Memberi `underline-offset-4` pada dekorasi bergelombang slogan yel-yel, serta melonggarkan padding 3-kolom statistik di mobile (`p-2 sm:p-4`) agar angka dan label tidak terpotong canggung.
-  - **Top Bar Mentor Dashboard Responsif**: Menambahkan `flex-wrap` dan padding responsif pada header portal mentor agar tombol kunci admin dan logout tetap rapi di semua ukuran layar.
+  - **Zero Tabrakan Navbar Presensi (`Navbar.tsx`)**: Menyembunyikan badge teks horizontal `SMEGA` di mobile (karena sudah terwakili di logo resmi) dan menerapkan icon-first taktil pada seluruh cluster aksi kanan (`<Globe />`, `<UserPlus />`, `<Shield />`), menghemat lebih dari 50px ruang sehingga tidak ada lagi tabrakan atau tombol menginjak huruf badge.
+  - **Single-Icon Super Admin Mobile (`LandingPage.tsx`)**: Mengubah klaster 3 elemen Super Admin di mobile menjadi satu tombol mahkota emas taktil ringkas `[ 👑 ]` (34px), membebaskan 70px ruang horizontal sehingga tombol `[ ✨ Presensi ]` tampil utuh 100% tanpa kepotong di tepi layar.
+  - **Intentional Line-Break Slogan & Utuh Wavy Underline (`LandingPage.tsx`)**: Mengunci frasa `English Club!` sebagai blok utuh tak terpisah dengan wavy underline kuning melengkung mulus dari ujung ke ujung, menata yel-yel dalam 3 baris proporsional, serta merampingkan badge sejarah menjadi 1 baris (`EST. 2006 • SMKN 1 PURBALINGGA`).
+  - **Subtitle Opening Bebas Kepotong (`LandingPage.tsx`)**: Merampingkan padding vertikal hero (`pt-6 pb-12`) sehingga kata-kata pengantar eskul langsung tampak nyaman dan terbaca di layar pertama tanpa terpotong di tepi layar (*above the fold*).
+  - **Eliminasi Tabrakan Kartu Divisi (`LandingPage.tsx`)**: Menyesuaikan header kartu Speaking dan Writing Division menjadi responsif vertikal di mobile agar pil kategori tidak lagi menabrak teks nama divisi.
+  - **Perbaikan Duplikasi Teks Radar**: Menghapus teks redundan `WIB WIB` pada banner radar pertemuan eskul.
+  - **Optimasi Pill Status Di Luar Jadwal (`MemberAttendance.tsx`)**: Mengatur line-height dan font size status eskul ditutup agar tidak tertekuk menjadi 3 baris yang terlalu tebal.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).

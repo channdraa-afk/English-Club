@@ -195,7 +195,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
             ⏰
           </div>
           <div className="space-y-2">
-            <span className="inline-block px-3.5 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider border border-slate-200">
+            <span className="inline-block px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-[10px] sm:text-xs font-bold sm:font-black tracking-normal sm:tracking-wider border border-slate-200 max-w-xs sm:max-w-md mx-auto leading-snug">
               {scheduleStatus.statusText}
             </span>
             <h2 className="text-xl sm:text-2xl font-black text-slate-900">
