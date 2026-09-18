@@ -600,7 +600,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md">
                 <HeartHandshake className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Bebas Bicara Tanpa Dihakimi</h3>
+              <h3 className="text-base font-black text-slate-900">Safe Space to Speak</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 Di sini tidak ada yang bakal menghakimi atau menertawakan kesalahan grammar-mu. 
                 Kami percaya keberanian bicara adalah langkah pertama menuju kefasihan!
@@ -612,7 +612,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
                 <Trophy className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Latihan & Delegasi Lomba</h3>
+              <h3 className="text-base font-black text-slate-900">Championship Spirit</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 Mempersiapkan dan melatih delegasi lomba bahasa Inggris SMK Negeri 1 Purbalingga, 
                 mulai dari Debate, Speech, hingga Storytelling di tingkat kabupaten dan provinsi.
@@ -624,7 +624,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
                 <Users className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Bimbingan Akrab Antar-Angkatan</h3>
+              <h3 className="text-base font-black text-slate-900">Solid Generation</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 Koneksi hangat antar-angkatan, dari 59 pengurus Angkatan 20 yang membimbing hingga 
                 104 adik-adik Angkatan 21 yang antusias berkarya bersama.
