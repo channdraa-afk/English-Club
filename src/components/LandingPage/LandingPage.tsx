@@ -234,6 +234,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     accentColor: 'blue',
   });
 
+  // Tactile Delete Confirmation Modal State
+  const [deleteTarget, setDeleteTarget] = useState<{
+    type: 'event' | 'gallery';
+    id: string;
+    title: string;
+  } | null>(null);
+
   // Event Handlers
   const handleOpenAddEvent = () => {
     setEditingEvent(null);
@@ -282,12 +289,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     await onUpdateBigEvents?.(updated);
   };
 
-  const handleDeleteEvent = async (id: string) => {
-    if (!confirm('Apakah kamu yakin ingin menghapus agenda ini?')) return;
-    const updated = eventsList.filter((item) => item.id !== id);
-    setEventsList(updated);
+  const handleDeleteEvent = (id: string) => {
+    const item = eventsList.find((ev) => ev.id === id);
     sound.playPop();
-    await onUpdateBigEvents?.(updated);
+    setDeleteTarget({
+      type: 'event',
+      id,
+      title: item?.title || 'Agenda ini',
+    });
   };
 
   // Gallery Handlers
@@ -338,12 +347,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     await onUpdateGalleryItems?.(updated);
   };
 
-  const handleDeleteGallery = async (id: string) => {
-    if (!confirm('Apakah kamu yakin ingin menghapus foto/momen ini?')) return;
-    const updated = galleryList.filter((item) => item.id !== id);
-    setGalleryList(updated);
+  const handleDeleteGallery = (id: string) => {
+    const item = galleryList.find((g) => g.id === id);
     sound.playPop();
-    await onUpdateGalleryItems?.(updated);
+    setDeleteTarget({
+      type: 'gallery',
+      id,
+      title: item?.title || 'Momen/foto ini',
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    const { type, id } = deleteTarget;
+    setDeleteTarget(null);
+    sound.playPop();
+
+    if (type === 'event') {
+      const updated = eventsList.filter((item) => item.id !== id);
+      setEventsList(updated);
+      await onUpdateBigEvents?.(updated);
+    } else {
+      const updated = galleryList.filter((item) => item.id !== id);
+      setGalleryList(updated);
+      await onUpdateGalleryItems?.(updated);
+    }
   };
 
   const scrollToSection = (id: string) => {
@@ -1322,6 +1350,55 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Tactile Delete Confirmation Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-slate-300 shadow-2xl max-w-sm w-full p-6 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🗑️</span>
+                <h3 className="font-black text-slate-900 text-base">
+                  {deleteTarget.type === 'event' ? 'Hapus Agenda' : 'Hapus Momen Foto'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs text-rose-900 space-y-1">
+              <p className="font-bold">
+                Apakah kamu yakin ingin menghapus <span className="font-black">"{deleteTarget.title}"</span>?
+              </p>
+              <p className="text-[11px] text-rose-800/80">
+                Tindakan ini permanen dan akan langsung diperbarui di portal publik.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setDeleteTarget(null)}
+                className="px-4 py-2 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                Ya, Hapus Sekarang
+              </button>
+            </div>
           </div>
         </div>
       )}

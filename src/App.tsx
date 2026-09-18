@@ -6,9 +6,14 @@ import { MemberAttendance } from './components/MemberAttendance';
 import { WordOfTheDayModal } from './components/WordOfTheDayModal';
 import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
-import { MentorDashboard } from './components/MentorPortal/MentorDashboard';
 import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
 import { LandingPage } from './components/LandingPage/LandingPage';
+
+const MentorDashboard = React.lazy(() =>
+  import('./components/MentorPortal/MentorDashboard').then((m) => ({
+    default: m.MentorDashboard,
+  }))
+);
 import { sound } from './lib/audio';
 import { RefreshCw, AlertCircle } from 'lucide-react';
 import { isSessionActiveNow } from './lib/schedule';
@@ -472,36 +477,47 @@ export const App: React.FC = () => {
                 onAttendanceSuccess={handleAttendanceSuccess}
               />
             ) : isMentorLoggedIn ? (
-              <MentorDashboard
-                members={members}
-                meetings={meetings}
-                attendances={attendances}
-                activeMeeting={activeMeeting}
-                registrations={registrations}
-                isRegistrationOpen={isRegistrationOpen}
-                currentPin={mentorPin}
-                mentorToken={mentorToken}
-                onMentorTokenUpdated={handleMentorTokenUpdated}
-                isManualBypass={isManualBypass}
-                onToggleManualBypass={handleToggleManualBypass}
-                isSuperAdmin={isSuperAdmin}
-                onSuperAdminUnlock={handleSuperAdminUnlock}
-                onSuperAdminLock={handleSuperAdminLock}
-                onMeetingUpdated={() => fetchData(true)}
-                onToggleRegistration={handleToggleRegistration}
-                onPinUpdated={(pin) => setMentorPin(pin)}
-                onAttendanceChanged={() => fetchData(true)}
-                onRefreshRegistrations={() => fetchData(true)}
-                onMemberAdded={() => fetchData(true)}
-                talentStars={talentStars}
-                onAddTalentStar={handleAddTalentStar}
-                onRemoveTalentStar={handleRemoveTalentStar}
-                onLogout={handleMentorLogout}
-                onBackToStudent={() => {
-                  setCurrentView('student');
-                  window.location.hash = '#absen';
-                }}
-              />
+              <React.Suspense
+                fallback={
+                  <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-8">
+                    <RefreshCw className="w-8 h-8 text-indigo-600 animate-spin" />
+                    <p className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                      Memuat Portal Mentor SMEGA...
+                    </p>
+                  </div>
+                }
+              >
+                <MentorDashboard
+                  members={members}
+                  meetings={meetings}
+                  attendances={attendances}
+                  activeMeeting={activeMeeting}
+                  registrations={registrations}
+                  isRegistrationOpen={isRegistrationOpen}
+                  currentPin={mentorPin}
+                  mentorToken={mentorToken}
+                  onMentorTokenUpdated={handleMentorTokenUpdated}
+                  isManualBypass={isManualBypass}
+                  onToggleManualBypass={handleToggleManualBypass}
+                  isSuperAdmin={isSuperAdmin}
+                  onSuperAdminUnlock={handleSuperAdminUnlock}
+                  onSuperAdminLock={handleSuperAdminLock}
+                  onMeetingUpdated={() => fetchData(true)}
+                  onToggleRegistration={handleToggleRegistration}
+                  onPinUpdated={(pin) => setMentorPin(pin)}
+                  onAttendanceChanged={() => fetchData(true)}
+                  onRefreshRegistrations={() => fetchData(true)}
+                  onMemberAdded={() => fetchData(true)}
+                  talentStars={talentStars}
+                  onAddTalentStar={handleAddTalentStar}
+                  onRemoveTalentStar={handleRemoveTalentStar}
+                  onLogout={handleMentorLogout}
+                  onBackToStudent={() => {
+                    setCurrentView('student');
+                    window.location.hash = '#absen';
+                  }}
+                />
+              </React.Suspense>
             ) : (
               <MentorLogin
                 currentPin={mentorPin}

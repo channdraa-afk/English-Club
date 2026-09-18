@@ -32,6 +32,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [copiedWA, setCopiedWA] = useState(false);
+  const [waNotice, setWaNotice] = useState<string | null>(null);
 
   // 0ms Optimistic UI State for instant responsiveness
   const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
@@ -138,7 +139,9 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   const handleCopyAbsentWA = () => {
     sound.playPop();
     if (absentStudents.length === 0) {
-      alert('Alhamdulillah, semua adik kelas pada sesi ini tercatat Hadir atau Izin resmi! 🎉');
+      sound.playSuccess();
+      setWaNotice('Alhamdulillah, semua adik kelas pada sesi ini tercatat Hadir atau Izin resmi! 🎉');
+      setTimeout(() => setWaNotice(null), 4000);
       return;
     }
 
@@ -235,6 +238,12 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
           <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
         </TactileButton>
       </div>
+
+      {waNotice && (
+        <div className="p-3.5 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 text-xs font-black text-center shadow-[0_2px_0_0_#34d399] animate-fade-in">
+          {waNotice}
+        </div>
+      )}
 
       {/* Class Breakdown Grid (Bento) */}
       <div className="bg-white p-5 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">

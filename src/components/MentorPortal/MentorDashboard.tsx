@@ -330,7 +330,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            🎒 Operasional A21 (Adik Kelas)
+            <span className="hidden sm:inline">🎒 Operasional A21 (Adik Kelas)</span>
+            <span className="sm:hidden">🎒 A21 (Adik)</span>
           </button>
 
           {/* 3. INTERNAL A20 (PENGURUS) */}
@@ -349,7 +350,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
                 : 'text-slate-600 hover:text-slate-900 hover:bg-white/60'
             }`}
           >
-            🛡️ Internal A20 (Pengurus)
+            <span className="hidden sm:inline">🛡️ Internal A20 (Pengurus)</span>
+            <span className="sm:hidden">🛡️ A20 (Pengurus)</span>
           </button>
 
           {/* 4. SEMUA */}

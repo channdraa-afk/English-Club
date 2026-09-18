@@ -5,7 +5,9 @@ import {
   RefreshCw, 
   Dices, 
   Clock, 
-  Zap
+  Zap,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { Meeting } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -67,6 +69,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   const [holidayReason, setHolidayReason] = useState(activeMeeting?.holiday_reason || '');
   const [isLoading, setIsLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [showHolidayModal, setShowHolidayModal] = useState(false);
 
   // PIN settings state
   const [newPin, setNewPin] = useState('');
@@ -112,21 +116,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     setMeaning(item.meaning);
   };
 
-  const handleToggleHoliday = async () => {
+  const applyToggleHoliday = async (nextState: boolean) => {
     if (!activeMeeting) return;
-    const nextState = !isHoliday;
-    const sessionDateIndo = activeMeeting.meeting_date
-      ? formatMeetingDateIndo(activeMeeting.meeting_date)
-      : targetWed.formattedIndo;
-    const sessionTitle = activeMeeting.title || 'Weekly English Gathering';
-
-    if (nextState) {
-      const confirmed = window.confirm(
-        `Apakah kamu yakin ingin meliburkan sesi "${sessionTitle}" untuk hari ${sessionDateIndo}?\n\nPresensi pada sesi tersebut akan ditutup, dan TIDAK AKAN dihitung alpa di Rekap Rapor Bulanan.`
-      );
-      if (!confirmed) return;
-    }
-
     sound.playPop();
     let reason = holidayReason;
     if (nextState && !reason.trim()) {
@@ -134,6 +125,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
       setHolidayReason(reason);
     }
     setIsHoliday(nextState);
+    setShowHolidayModal(false);
 
     await supabase
       .from('meetings')
@@ -146,10 +138,21 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     onMeetingUpdated();
   };
 
+  const handleToggleHoliday = () => {
+    if (!activeMeeting) return;
+    if (!isHoliday) {
+      sound.playPop();
+      setShowHolidayModal(true);
+    } else {
+      applyToggleHoliday(false);
+    }
+  };
+
   const handleSaveMeeting = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setSuccessMsg(null);
+    setErrorMsg(null);
 
     try {
       if (activeMeeting) {
@@ -199,7 +202,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     } catch (err: any) {
       console.error('Error saving meeting:', err);
       sound.playError();
-      alert('Gagal menyimpan sesi: ' + err.message);
+      setErrorMsg('Gagal menyimpan sesi: ' + (err?.message || 'Terjadi kesalahan'));
+      setTimeout(() => setErrorMsg(null), 5000);
     } finally {
       setIsLoading(false);
     }
@@ -514,6 +518,13 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
             </div>
           )}
 
+          {errorMsg && (
+            <div className="p-3.5 rounded-xl bg-rose-50 border-2 border-rose-300 text-rose-800 text-xs font-bold flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           <div className="pt-2">
             <TactileButton
               type="submit"
@@ -599,6 +610,53 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           )}
         </div>
       </div>
+
+      {/* Tactile Holiday Confirmation Modal */}
+      {showHolidayModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-slate-300 shadow-2xl max-w-md w-full p-6 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🌴</span>
+                <h3 className="font-black text-slate-900 text-base">Konfirmasi Liburkan Sesi</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowHolidayModal(false)}
+                className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+              <p className="font-bold">
+                Apakah kamu yakin ingin meliburkan sesi <span className="font-black">"{activeMeeting?.title || 'Weekly Gathering'}"</span> untuk hari <span className="font-black">{activeMeeting?.meeting_date ? formatMeetingDateIndo(activeMeeting.meeting_date) : targetWed.formattedIndo}</span>?
+              </p>
+              <p className="text-[11px] text-amber-800/80">
+                Presensi pada sesi tersebut akan ditutup, dan <strong>TIDAK AKAN</strong> dihitung alpa di Rekap Rapor Bulanan adik kelas.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowHolidayModal(false)}
+                className="px-4 py-2 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => applyToggleHoliday(true)}
+                className="px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                Ya, Liburkan Sesi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -6,6 +6,11 @@
   body {
     @apply bg-slate-50 text-slate-800 antialiased font-nunito;
     -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  button, a, input, select, textarea {
+    touch-action: manipulation;
   }
 }
 

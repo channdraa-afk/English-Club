@@ -39,6 +39,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   const [selectedStatus, setSelectedStatus] = useState<'all' | 'critical' | 'warning' | 'safe'>('all');
   const [sortBy, setSortBy] = useState<'attention' | 'highest' | 'name'>('attention');
   const [copiedWA, setCopiedWA] = useState(false);
+  const [waNotice, setWaNotice] = useState<string | null>(null);
   const [selectedMeetingIdForWA, setSelectedMeetingIdForWA] = useState<string>('');
 
   // Filter only Angkatan 20 active mentors (59 members)
@@ -289,14 +290,18 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   const handleCopyAbsentWA = () => {
     sound.playPop();
     if (!activeMeetingForWA) {
-      alert('Belum ada sesi pertemuan yang tersedia untuk dievaluasi.');
+      sound.playError();
+      setWaNotice('Belum ada sesi pertemuan yang tersedia untuk dievaluasi.');
+      setTimeout(() => setWaNotice(null), 4000);
       return;
     }
 
     const { absentList, presentCount, absentCount } = sessionAttendanceStats;
 
     if (absentCount === 0) {
-      alert(`Alhamdulillah, seluruh pengurus Angkatan 20 tercatat hadir pada agenda sesi ini! 🎉`);
+      sound.playSuccess();
+      setWaNotice('Alhamdulillah, seluruh pengurus Angkatan 20 tercatat hadir pada agenda sesi ini! 🎉');
+      setTimeout(() => setWaNotice(null), 4000);
       return;
     }
 
@@ -690,6 +695,12 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
           </TactileButton>
         </div>
       </div>
+
+      {waNotice && (
+        <div className="no-print p-3.5 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 text-xs font-black text-center shadow-[0_2px_0_0_#34d399] animate-fade-in">
+          {waNotice}
+        </div>
+      )}
 
       {/* KPI Cards Grid (Hidden in Print) */}
       <div className="no-print grid grid-cols-2 lg:grid-cols-4 gap-3">

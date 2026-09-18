@@ -48,6 +48,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [searchName, setSearchName] = useState('');
   const [manualLoadingId, setManualLoadingId] = useState<string | null>(null);
+  const [recapNotice, setRecapNotice] = useState<string | null>(null);
 
   // 0ms Optimistic UI State for instant tactile response
   const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
@@ -142,7 +143,9 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
     const absentRows = singleReportRows.filter((r) => r.isAbsent);
 
     if (absentRows.length === 0) {
-      alert('Alhamdulillah, semua adik kelas pada sesi ini tercatat Hadir atau Izin resmi! 🎉');
+      sound.playSuccess();
+      setRecapNotice('Alhamdulillah, semua adik kelas pada sesi ini tercatat Hadir atau Izin resmi! 🎉');
+      setTimeout(() => setRecapNotice(null), 4000);
       return;
     }
 
@@ -253,7 +256,8 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       // Rollback to previous state on failure
       setOptimisticAttendances(previousAttendances);
       sound.playError();
-      alert('Gagal mengubah status presensi: ' + err.message);
+      setRecapNotice('Gagal mengubah status presensi: ' + err.message);
+      setTimeout(() => setRecapNotice(null), 4000);
     } finally {
       setManualLoadingId(null);
     }
@@ -751,6 +755,12 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                 <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
               </TactileButton>
             </div>
+
+            {recapNotice && (
+              <div className="p-3.5 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 text-xs font-black text-center shadow-[0_2px_0_0_#34d399] animate-fade-in">
+                {recapNotice}
+              </div>
+            )}
 
             {/* Read-Only Notice for Non-SuperAdmin */}
             {!isSuperAdmin && (

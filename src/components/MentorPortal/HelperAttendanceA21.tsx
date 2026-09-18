@@ -29,6 +29,7 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
   const [selectedClass, setSelectedClass] = useState('all');
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [recentHelped, setRecentHelped] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 0ms Optimistic UI State
   const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
@@ -77,7 +78,8 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
   const handleQuickAssist = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
-      alert('Belum ada sesi eskul aktif saat ini!');
+      setErrorMessage('Belum ada sesi eskul aktif saat ini!');
+      setTimeout(() => setErrorMessage(null), 4000);
       return;
     }
 
@@ -128,7 +130,8 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
       // Rollback on failure
       setOptimisticAttendances(previousAttendances);
       sound.playError();
-      alert('Gagal membantu presensi: ' + err.message);
+      setErrorMessage('Gagal membantu presensi: ' + err.message);
+      setTimeout(() => setErrorMessage(null), 4000);
     } finally {
       setLoadingId(null);
     }
@@ -138,7 +141,8 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
   const handleQuickPermit = async (student: Member) => {
     if (!activeMeeting) {
       sound.playError();
-      alert('Belum ada sesi eskul aktif saat ini! Untuk pertemuan lama, atur di tab Rekap Rapor Bulanan.');
+      setErrorMessage('Belum ada sesi eskul aktif saat ini! Untuk pertemuan lama, atur di tab Rekap Rapor Bulanan.');
+      setTimeout(() => setErrorMessage(null), 4000);
       return;
     }
 
@@ -191,7 +195,8 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
       // Rollback on failure
       setOptimisticAttendances(previousAttendances);
       sound.playError();
-      alert('Gagal mencatat izin: ' + err.message);
+      setErrorMessage('Gagal mencatat izin: ' + err.message);
+      setTimeout(() => setErrorMessage(null), 4000);
     } finally {
       setLoadingId(null);
     }
@@ -224,6 +229,13 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
           <div className="p-3 rounded-2xl bg-emerald-500/30 border border-emerald-300 text-emerald-100 text-xs font-extrabold flex items-center gap-2 animate-fade-in">
             <CheckCircle2 className="w-4 h-4 text-emerald-300 shrink-0" />
             <span>Berhasil mencatat kehadiran untuk <strong>{recentHelped}</strong>!</span>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="p-3 rounded-2xl bg-rose-500/30 border border-rose-300 text-rose-100 text-xs font-extrabold flex items-center gap-2 animate-fade-in">
+            <span className="text-base shrink-0">⚠️</span>
+            <span>{errorMessage}</span>
           </div>
         )}
       </div>

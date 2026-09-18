@@ -297,6 +297,23 @@
   - **Banner Taktil Bypass Ramah di Formulir Presensi (`MemberAttendance.tsx`)**: Menampilkan pita oranye taktil bersahabat di atas form presensi saat mode bypass aktif, memberi kejelasan visual bahwa pintu presensi dibuka manual untuk simulasi/uji coba.
   - **Haptic Audio Feedback Taktil di Tombol Bypass (`MeetingControl.tsx`)**: Mengintegrasikan Web Audio API murni saat tombol bypass dinyalakan (`sound.playSuccess()`) dan dimatikan (`sound.playPop()`).
 
+- [x] Modernisasi Viewport & Aksesibilitas WCAG, Eliminasi Total Dialog Browser Native, dan Optimasi Bundle Chunks:
+  - **A11y & Viewport WCAG 1.4.4 (`index.html` & `index.css`)**: Menghapus `maximum-scale=1.0, user-scalable=no` dari meta viewport dan mengaktifkan pinch-to-zoom standar browser untuk siswa berkacamata/disabilitas visual. Menambahkan `touch-action: manipulation; -webkit-text-size-adjust: 100%;` di stylesheet dasar untuk mencegah delay double-tap zoom secara native tanpa merusak aksesibilitas.
+  - **Responsive Category Switcher (`MentorDashboard.tsx`)**: Merampingkan label tab kategori portal mentor di layar smartphone 320px–360px (`🎒 A21 (Adik)` & `🛡️ A20 (Pengurus)`) sehingga tidak memicu horizontal scrolling canggung di layar kecil.
+  - **Eliminasi 100% Dialog Browser Kuno (`window.alert` & `window.confirm`)**:
+    - `MeetingControl.tsx`: Mengganti `alert()` saat gagal simpan dengan banner taktil merah cerah beranimasi (`errorMsg`) + audio `sound.playError()`. Mengganti `window.confirm` saat meliburkan sesi dengan Modal Konfirmasi Taktil 3D Duolingo yang ramah dan aman.
+    - `LandingPage.tsx`: Mengganti `confirm()` saat hapus Agenda Besar dan Momen Galeri dengan Modal Konfirmasi Taktil 3D interaktif (`deleteTarget`).
+    - `LiveMonitorA21.tsx`: Mengganti `alert()` saat salin daftar alpa ke WhatsApp dengan banner taktil hijau zamrud + `sound.playSuccess()`.
+    - `HelperAttendanceA21.tsx`: Mengganti 4 titik `alert()` validasi/error absen manual dengan banner taktil merah mawar + `sound.playError()`.
+    - `MentorDisciplineRadar.tsx`: Mengganti 2 titik `alert()` salin WA pengurus alpa dengan banner taktil + audio.
+    - `ReportRecap.tsx`: Mengganti 2 titik `alert()` salin WA dan kegagalan status dengan banner taktil.
+    - `RegistrationApprovals.tsx`: Mengganti `alert()` kegagalan approval pendaftaran dengan banner taktil.
+  - **Lazy Loading & Code-Splitting Portal Mentor (`src/App.tsx`)**:
+    - Mengisolasi modul besar `MentorDashboard` (yang memuat tabel rekap matriks bulanan, monitor real-time, radar kedisiplinan, dll) menggunakan `React.lazy()` dan `<React.Suspense>`. Siswa biasa yang membuka presensi atau pengunjung yang membuka landing page kini tidak perlu mengunduh kode pengurus sama sekali.
+  - **Rollup Manual Chunks & Zero-Warning Production Build (`vite.config.ts`)**:
+    - Mengonfigurasi `build.rollupOptions.output.manualChunks` untuk memisahkan `vendor-react` (4.2 kB), `vendor-confetti` (10.6 kB), `vendor-icons` (37.3 kB), `vendor-supabase` (227 kB), dan `MentorDashboard` (170 kB).
+    - Menghilangkan 100% peringatan bundle size warning dari Rollup (> 500 kB), mempercepat waktu muat awal aplikasi (*First Contentful Paint*) secara signifikan di jaringan seluler sekolah.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.

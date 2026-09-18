@@ -18,6 +18,7 @@ export const RegistrationApprovals: React.FC<RegistrationApprovalsProps> = ({
 }) => {
   const [filter, setFilter] = useState<'pending' | 'approved' | 'rejected'>('pending');
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const filteredList = registrations.filter((r) => r.status === filter);
 
@@ -52,7 +53,8 @@ export const RegistrationApprovals: React.FC<RegistrationApprovalsProps> = ({
     } catch (err: any) {
       console.error('Error approving member:', err);
       sound.playError();
-      alert('Gagal menyetujui pendaftaran: ' + err.message);
+      setErrorMessage('Gagal menyetujui pendaftaran: ' + err.message);
+      setTimeout(() => setErrorMessage(null), 4000);
     } finally {
       setLoadingId(null);
     }
@@ -104,6 +106,12 @@ export const RegistrationApprovals: React.FC<RegistrationApprovalsProps> = ({
 
       {/* Cards List */}
       <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-5 space-y-4">
+        {errorMessage && (
+          <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-rose-900 text-xs font-black shadow-[0_2px_0_0_#f43f5e] animate-fade-in">
+            ⚠️ {errorMessage}
+          </div>
+        )}
+
         <h3 className="font-black text-slate-900 text-base">
           {filter === 'pending' ? 'Daftar Calon Anggota yang Menunggu ACC' : `Riwayat Pendaftaran (${filter})`}
         </h3>
