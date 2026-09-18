@@ -250,7 +250,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         <button
           type="button"
           onClick={() => {
-            sound.playPop();
+            if (!isManualBypass) sound.playSuccess();
+            else sound.playPop();
             onToggleManualBypass(!isManualBypass);
           }}
           className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs border transition-all cursor-pointer ${

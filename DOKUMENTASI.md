@@ -287,6 +287,16 @@
   - **Perbaikan Duplikasi Teks Radar**: Menghapus teks redundan `WIB WIB` pada banner radar pertemuan eskul.
   - **Optimasi Pill Status Di Luar Jadwal (`MemberAttendance.tsx`)**: Mengatur line-height dan font size status eskul ditutup agar tidak tertekuk menjadi 3 baris yang terlalu tebal.
 
+- [x] Auto-Open Presensi Cerdas & Penyempurnaan Mode Bypass (Instant Time-Aware Routing):
+  - **Auto-Open Tanpa Klik (Detik ke-0)**: Ketika siswa atau pengurus membuka website `https://englishclub.site` saat sesi eskul aktif (Rabu 15:40 – 17:30 WIB) atau saat mode Bypass dinyalakan oleh Ketua, sistem secara otomatis langsung membuka menu presensi (`#absen`) tanpa perlu klik tombol apa pun.
+  - **Local Persistence Zero-Delay Cache (`localStorage`)**: Status bypass disinkronkan ke cache lokal (`ec_manual_bypass`). Saat browser memuat halaman pertama kali, rute langsung diputuskan secara sinkron seketika tanpa menunggu jeda network Supabase, mengeliminasi flicker dan jeda loading.
+  - **Post-Fetch Smart Routing**: Begitu fetch Supabase selesai, jika status bypass aktif dan pengguna berada di root URL (bukan di `#beranda`), sistem langsung mengarahkan tampilan ke menu presensi.
+  - **Anti-Trap Guardrail untuk `#beranda`**: Pengguna yang sengaja menekan tombol "Web Utama" atau membuka link `#beranda` tidak akan dipaksa mental balik ke menu presensi; mereka tetap bebas membaca profil dan galeri eskul dengan tenang.
+  - **Supabase Realtime Synchronization**: Menambahkan listener WebSocket Supabase Realtime pada tabel `app_settings`. Begitu tombol Bypass ditekan oleh Ketua di HP atau laptop, seluruh perangkat yang sedang membuka website langsung tersinkronisasi dalam hitungan milidetik.
+  - **Live Clock Interval Ticker (15 Detik)**: Timer ringan yang memantau pergantian waktu secara berkala. Jika siswa membuka web pada jam 15:39 WIB di hari Rabu, tepat pada 15:40 WIB sistem otomatis berpindah ke formulir presensi tanpa perlu me-refresh halaman.
+  - **Banner Taktil Bypass Ramah di Formulir Presensi (`MemberAttendance.tsx`)**: Menampilkan pita oranye taktil bersahabat di atas form presensi saat mode bypass aktif, memberi kejelasan visual bahwa pintu presensi dibuka manual untuk simulasi/uji coba.
+  - **Haptic Audio Feedback Taktil di Tombol Bypass (`MeetingControl.tsx`)**: Mengintegrasikan Web Audio API murni saat tombol bypass dinyalakan (`sound.playSuccess()`) dan dimatikan (`sound.playPop()`).
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.

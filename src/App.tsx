@@ -11,6 +11,7 @@ import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
 import { LandingPage } from './components/LandingPage/LandingPage';
 import { sound } from './lib/audio';
 import { RefreshCw, AlertCircle } from 'lucide-react';
+import { isSessionActiveNow } from './lib/schedule';
 
 export const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
@@ -23,40 +24,32 @@ export const App: React.FC = () => {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
   const [mentorPin, setMentorPin] = useState('123321');
   const [mentorToken, setMentorToken] = useState('CREW20');
-  const [isManualBypass, setIsManualBypass] = useState(false);
+
+  // Instant local cache read for zero-delay bypass detection
+  const [isManualBypass, setIsManualBypass] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('ec_manual_bypass') === 'true';
+    }
+    return false;
+  });
 
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // View state: 'landing' | 'student' | 'mentor' (Smart Time-Aware System)
+  // View state: 'landing' | 'student' | 'mentor' (Smart Time-Aware Auto-Route Engine)
   const [currentView, setCurrentView] = useState<'landing' | 'student' | 'mentor'>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase();
       if (hash === '#absen' || hash === '#presensi') return 'student';
       if (hash === '#mentor') return 'mentor';
       if (hash === '#beranda') return 'landing';
-    }
-    // Check schedule: if Wednesday between 15:40 and 17:30 WIB, default to student
-    try {
-      const now = new Date();
-      const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'Asia/Jakarta',
-        weekday: 'short',
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: false,
-      });
-      const parts = formatter.formatToParts(now);
-      const weekday = parts.find((p) => p.type === 'weekday')?.value;
-      const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
-      const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
-      const totalMinutes = hour * 60 + minute;
-      // Wednesday 15:40 (940) to 17:30 (1050)
-      if (weekday === 'Wed' && totalMinutes >= 940 && totalMinutes <= 1050) {
+
+      // If opening root URL without hash, check if extracurricular session or bypass is active!
+      const cachedBypass = localStorage.getItem('ec_manual_bypass') === 'true';
+      if (isSessionActiveNow(cachedBypass, 'student')) {
+        window.location.hash = '#absen';
         return 'student';
       }
-    } catch {
-      // fallback
     }
     return 'landing';
   });
@@ -93,13 +86,75 @@ export const App: React.FC = () => {
         setCurrentView('student');
       } else if (hash === '#mentor') {
         setCurrentView('mentor');
-      } else if (hash === '#beranda' || hash === '') {
+      } else if (hash === '#beranda') {
         setCurrentView('landing');
+      } else if (hash === '' || hash === '#') {
+        if (isSessionActiveNow(isManualBypass, 'student')) {
+          setCurrentView('student');
+          window.location.hash = '#absen';
+        } else {
+          setCurrentView('landing');
+        }
       }
     };
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
+  }, [isManualBypass]);
+
+  // Realtime subscription: sync bypass & settings instantly across all devices
+  useEffect(() => {
+    const channel = supabase
+      .channel('realtime_app_settings')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'app_settings' },
+        (payload: any) => {
+          const row = payload.new;
+          if (!row || !row.key) return;
+
+          if (row.key === 'manual_bypass') {
+            const isBypass = Boolean(row.value);
+            setIsManualBypass(isBypass);
+            if (isBypass) {
+              localStorage.setItem('ec_manual_bypass', 'true');
+              // If user is on root (empty hash), auto-open attendance
+              const hash = window.location.hash.toLowerCase();
+              if (hash === '' || hash === '#') {
+                setCurrentView('student');
+                window.location.hash = '#absen';
+              }
+            } else {
+              localStorage.removeItem('ec_manual_bypass');
+            }
+          } else if (row.key === 'registration_open') {
+            setIsRegistrationOpen(Boolean(row.value));
+          } else if (row.key === 'mentor_token') {
+            setMentorToken(typeof row.value === 'string' ? row.value : String(row.value));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  // Live Clock Ticker: checks every 15 seconds for Wednesday 15:40 WIB arrival
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const hash = window.location.hash.toLowerCase();
+      // If user is visiting root (empty hash), check if session just started
+      if (hash === '' || hash === '#') {
+        if (isSessionActiveNow(isManualBypass, 'student')) {
+          setCurrentView('student');
+          window.location.hash = '#absen';
+        }
+      }
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [isManualBypass]);
 
   // Fetch all data from Supabase
   const fetchData = useCallback(async (isSilent = false) => {
@@ -154,7 +209,22 @@ export const App: React.FC = () => {
           } else if (s.key === 'mentor_token') {
             setMentorToken(typeof s.value === 'string' ? s.value : String(s.value));
           } else if (s.key === 'manual_bypass') {
-            setIsManualBypass(Boolean(s.value));
+            const bypassVal = Boolean(s.value);
+            setIsManualBypass(bypassVal);
+            if (bypassVal) {
+              localStorage.setItem('ec_manual_bypass', 'true');
+            } else {
+              localStorage.removeItem('ec_manual_bypass');
+            }
+            if (typeof window !== 'undefined') {
+              const hash = window.location.hash.toLowerCase();
+              if (hash === '' || hash === '#') {
+                if (isSessionActiveNow(bypassVal, 'student')) {
+                  setCurrentView('student');
+                  window.location.hash = '#absen';
+                }
+              }
+            }
           } else if (s.key === 'talent_stars' && Array.isArray(s.value)) {
             setTalentStars(s.value);
           } else if (s.key === 'big_events' && Array.isArray(s.value)) {
@@ -237,6 +307,11 @@ export const App: React.FC = () => {
 
   const handleToggleManualBypass = async (state: boolean) => {
     setIsManualBypass(state);
+    if (state) {
+      localStorage.setItem('ec_manual_bypass', 'true');
+    } else {
+      localStorage.removeItem('ec_manual_bypass');
+    }
     await supabase.from('app_settings').upsert({ key: 'manual_bypass', value: state });
   };
 

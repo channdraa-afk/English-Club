@@ -228,3 +228,14 @@ function getCurrentWIBString(): string {
     return 'WIB';
   }
 }
+
+/**
+ * Lightweight helper to check if attendance session is currently active.
+ * Handles Wednesday window (15:40 - 17:30/18:00 WIB) and manual bypass.
+ */
+export function isSessionActiveNow(
+  isManualBypass: boolean = false,
+  role: 'student' | 'mentor' = 'student'
+): boolean {
+  return getScheduleStatus(null, isManualBypass, role).isActive;
+}

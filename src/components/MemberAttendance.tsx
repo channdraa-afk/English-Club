@@ -217,8 +217,20 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
           </div>
         </div>
       ) : (
-        /* Main Attendance Card */
-        <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-5 sm:p-7">
+        <div className="space-y-4">
+          {/* Bypass Active Tactile Banner */}
+          {isManualBypass && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 flex items-center gap-3 shadow-[0_3px_0_0_#fcd34d] animate-fade-in">
+              <span className="text-xl shrink-0">⚡</span>
+              <div className="text-xs font-bold leading-tight">
+                <span className="font-black text-amber-950 block sm:inline">Mode Uji Coba / Bypass Manual Aktif: </span>
+                Pintu presensi dibuka oleh Ketua. Kamu dapat mengisi presensi dan mencoba simulasi eskul di luar jadwal resmi.
+              </div>
+            </div>
+          )}
+
+          {/* Main Attendance Card */}
+          <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-5 sm:p-7">
           <form onSubmit={handleSubmit} className="space-y-6">
           {/* STEP 1: Pilih Nama Kamu */}
           <div>
@@ -421,6 +433,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
             )}
           </TactileButton>
         </form>
+      </div>
       </div>
       )}
     </div>
