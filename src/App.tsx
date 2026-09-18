@@ -7,7 +7,7 @@ import { WordOfTheDayModal } from './components/WordOfTheDayModal';
 import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
 import { MentorDashboard } from './components/MentorPortal/MentorDashboard';
-import { SuperAdminModal, SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
+import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
 import { LandingPage } from './components/LandingPage/LandingPage';
 import { sound } from './lib/audio';
 import { RefreshCw, AlertCircle } from 'lucide-react';
@@ -24,7 +24,6 @@ export const App: React.FC = () => {
   const [mentorPin, setMentorPin] = useState('123321');
   const [mentorToken, setMentorToken] = useState('CREW20');
   const [isManualBypass, setIsManualBypass] = useState(false);
-  const [isSuperAdminModalOpen, setIsSuperAdminModalOpen] = useState(false);
 
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -328,7 +327,6 @@ export const App: React.FC = () => {
           }}
           isRegistrationOpen={isRegistrationOpen}
           isSuperAdmin={isSuperAdmin}
-          onOpenSuperAdminModal={() => setIsSuperAdminModalOpen(true)}
           onGoToMentorPortal={() => {
             setCurrentView('mentor');
             window.location.hash = '#mentor';
@@ -467,16 +465,6 @@ export const App: React.FC = () => {
           </footer>
         </>
       )}
-
-      {/* Global Super Admin Modal */}
-      <SuperAdminModal
-        isOpen={isSuperAdminModalOpen}
-        onClose={() => setIsSuperAdminModalOpen(false)}
-        onSuccess={(sig) => {
-          handleSuperAdminUnlock(sig);
-          setIsSuperAdminModalOpen(false);
-        }}
-      />
     </div>
   );
 };

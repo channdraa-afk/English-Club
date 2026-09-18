@@ -67,28 +67,28 @@ export const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
     id: 'gal-1',
     title: 'Speaking & Speech',
     subtitle: 'Agenda Rutin Rabu',
-    imageUrl: '',
+    imageUrl: '/logo.png',
     accentColor: 'blue',
   },
   {
     id: 'gal-2',
     title: 'English Adventure',
     subtitle: 'Outdoor Camp & Games',
-    imageUrl: '',
+    imageUrl: '/logo.png',
     accentColor: 'emerald',
   },
   {
     id: 'gal-3',
     title: 'English Expression',
     subtitle: 'Panggung Seni Bakat',
-    imageUrl: '',
+    imageUrl: '/logo.png',
     accentColor: 'amber',
   },
   {
     id: 'gal-4',
     title: 'Dies Natalis 2006',
     subtitle: 'Ulang Tahun 23 Maret',
-    imageUrl: '',
+    imageUrl: '/logo.png',
     accentColor: 'rose',
   },
 ];
@@ -101,7 +101,6 @@ interface LandingPageProps {
   membersCount?: { a21: number; a20: number };
   isRegistrationOpen?: boolean;
   isSuperAdmin?: boolean;
-  onOpenSuperAdminModal?: () => void;
   onGoToMentorPortal?: () => void;
   onSuperAdminLock?: () => void;
   bigEvents?: BigEvent[];
@@ -118,7 +117,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   membersCount = { a21: 104, a20: 59 },
   isRegistrationOpen = true,
   isSuperAdmin = false,
-  onOpenSuperAdminModal,
   onGoToMentorPortal,
   onSuperAdminLock,
   bigEvents,
@@ -346,53 +344,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-blue-200 selection:text-blue-900 font-sans">
-      {/* ================= FLOATING SUPER ADMIN BAR ================= */}
-      {isSuperAdmin && (
-        <aside 
-          aria-label="Super Admin Floating Bar"
-          className="sticky top-0 z-50 bg-slate-900/95 backdrop-blur text-white px-4 py-2 border-b-2 border-amber-500 shadow-md flex flex-wrap items-center justify-between gap-3 animate-fade-in"
-        >
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-amber-400 text-slate-950 flex items-center justify-center font-black shadow-sm">
-              <Crown className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-xs font-black text-amber-300 flex items-center gap-1.5">
-                Mode Super Admin Aktif (Chandra)
-              </p>
-              <p className="text-[10px] font-bold text-slate-400">
-                Kamu memiliki akses edit Agenda, Galeri, dan kontrol database langsung di halaman ini.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                sound.playPop();
-                onGoToMentorPortal?.();
-              }}
-              className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              <Award className="w-3.5 h-3.5" />
-              <span>Pusat Komando Admin</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                sound.playPop();
-                onSuperAdminLock?.();
-              }}
-              className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-900/80 text-rose-300 border border-slate-700 hover:border-rose-500 text-xs font-bold active:translate-y-0.5 transition-all cursor-pointer flex items-center gap-1.5"
-              title="Kunci / Keluar Super Admin"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Kunci</span>
-            </button>
-          </div>
-        </aside>
-      )}
-
       {/* ================= 1. TOP NAVBAR ================= */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-2 border-slate-200 shadow-sm transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
@@ -464,6 +415,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2">
+            {/* Super Admin Status Badge (Inside Navbar - Sleek, Tactile, Non-intrusive) */}
+            {isSuperAdmin && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 shadow-[0_2px_0_0_#fcd34d] animate-fade-in">
+                <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                <span className="text-[11px] font-black hidden sm:inline text-amber-950">Chandra</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    onGoToMentorPortal?.();
+                  }}
+                  className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs active:translate-y-0.5 transition-all"
+                  title="Masuk ke Pusat Komando Admin"
+                >
+                  Portal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    onSuperAdminLock?.();
+                  }}
+                  className="p-1 rounded-lg text-amber-700 hover:text-rose-600 hover:bg-rose-50 cursor-pointer transition-colors"
+                  title="Kunci / Keluar Super Admin"
+                >
+                  <Lock className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+
             {/* Spotlight CTA: Presensi Eskul */}
             <button
               type="button"
@@ -948,23 +929,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
                 )}
 
-                <div className="aspect-square rounded-xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center relative shadow-inner">
-                  {item.imageUrl ? (
-                    <img
-                      src={item.imageUrl}
-                      alt={item.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        // Fallback jika link gambar bermasalah
-                        (e.target as HTMLElement).style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex flex-col items-center justify-center font-black text-2xl shadow-inner gap-1">
-                      <span>📸</span>
-                      <span className="text-[10px] font-bold text-white/80">Dokumentasi</span>
-                    </div>
-                  )}
+                <div className="aspect-square rounded-xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center relative shadow-inner p-4">
+                  <img
+                    src={item.imageUrl || '/logo.png'}
+                    alt={item.title}
+                    className={`w-full h-full ${(!item.imageUrl || item.imageUrl === '/logo.png') ? 'object-contain' : 'object-cover'} transition-transform duration-300 group-hover:scale-105`}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.src = '/logo.png';
+                      img.className = 'w-full h-full object-contain transition-transform duration-300 group-hover:scale-105';
+                    }}
+                  />
                 </div>
                 <p className="text-xs font-black text-slate-800 line-clamp-1">{item.title}</p>
                 <span className="text-[10px] font-bold text-slate-400 block line-clamp-1">{item.subtitle}</span>
@@ -1038,7 +1013,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Contoh: Alvian Yusuf Herlangga"
+                    placeholder="Contoh: Chandra Darmawan Jhon"
                     className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none transition-colors"
                   />
                 </div>
@@ -1053,7 +1028,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       required
                       value={className}
                       onChange={(e) => setClassName(e.target.value)}
-                      placeholder="Contoh: X PPLG 1"
+                      placeholder="Contoh: XI RPL 2"
                       className="w-full px-4 py-2.5 bg-white border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:border-blue-600 focus:outline-none transition-colors"
                     />
                   </div>
@@ -1150,33 +1125,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] font-bold text-slate-500">
+          <div className="pt-6 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] font-bold text-slate-500">
             <p>© 2006 – 2026 English Club SMEGA. All Rights Reserved.</p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  sound.playPop();
-                  onOpenSuperAdminModal?.();
-                }}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700 text-[11px] font-black transition-all cursor-pointer"
+            <p>
+              Dikembangkan oleh{' '}
+              <a 
+                href="https://github.com/channdraa-afk" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="text-blue-400 hover:underline font-extrabold"
               >
-                <Crown className="w-3.5 h-3.5" />
-                <span>{isSuperAdmin ? '👑 Super Admin Aktif' : 'Portal Super Admin'}</span>
-              </button>
-              <p>
-                Dikembangkan oleh{' '}
-                <a 
-                  href="https://github.com/channdraa-afk" 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="text-blue-400 hover:underline font-extrabold"
-                >
-                  Chandra (@channdraa-afk)
-                </a>{' '}
-                — Ketua EC SMEGA.
-              </p>
-            </div>
+                Chandra (@channdraa-afk)
+              </a>{' '}
+              — Ketua EC SMEGA.
+            </p>
           </div>
         </div>
       </footer>
@@ -1224,7 +1186,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   required
                   value={eventForm.title}
                   onChange={(e) => setEventForm({ ...eventForm, title: e.target.value })}
-                  placeholder="Contoh: English Expression"
+                  placeholder="Contoh: English Camp & Outbond"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
                 />
               </div>
@@ -1236,7 +1198,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   required
                   value={eventForm.tag}
                   onChange={(e) => setEventForm({ ...eventForm, tag: e.target.value })}
-                  placeholder="Contoh: Pentas Seni & Ekspresi"
+                  placeholder="Contoh: Outbond & Keakraban Alam"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
                 />
               </div>
@@ -1248,7 +1210,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   rows={3}
                   value={eventForm.description}
                   onChange={(e) => setEventForm({ ...eventForm, description: e.target.value })}
-                  placeholder="Jelaskan secara ringkas esensi dan kegiatan agenda ini..."
+                  placeholder="Contoh: Kemah seru di alam terbuka untuk melatih kepemimpinan, team building, dan praktik percakapan bahasa Inggris dalam suasana santai."
                   className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all resize-none"
                 />
               </div>

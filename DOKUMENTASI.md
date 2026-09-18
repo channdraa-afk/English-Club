@@ -260,6 +260,14 @@
     - CRUD Agenda Besar langsung di website: tombol `[ ➕ Tambah Agenda Baru ]`, modal taktil edit judul, tag, deskripsi, dan warna aksen, serta tombol hapus.
     - Galeri Dokumentasi Dinamis: tombol `[ ➕ Tambah Foto / Momen ]`, modal taktil edit judul, keterangan/subteks, dan link URL foto nyata (Google Drive, Imgur, Supabase, dll) dengan pratinjau langsung, serta tombol hapus.
     - Tersimpan realtime ke database Supabase `app_settings` (key: `'big_events'` dan `'gallery_items'`).
+- [x] Streamline UX Super Admin Navbar, Eliminasi Sticky Bar, & Branding Galeri EC SMEGA:
+  - **Single-Source Authentication (Pintu Tunggal Anti-Duplikasi)**: Menghapus total celah login ganda di landing page dan footer. Satu-satunya gerbang login Super Admin adalah 3-tap rahasia pada kartu Ketua di Struktur Pengurus Portal Mentor (`StructureView.tsx`).
+  - **Privilege Persistence Lintas Halaman**: Begitu login di portal mentor, saat Ketua kembali ke landing page web utama, status Super Admin tetap aktif otomatis via verifikasi hash kriptografis `sessionStorage`.
+  - **Eliminasi Sticky Bar Mengganggu**: Menghapus bilah hitam tebal di atas website yang sebelumnya menutupi hero section.
+  - **Badge Taktil Emas di Navbar (`[ 👑 Chandra | Portal | 🔒 ]`)**: Indikator status Super Admin disatukan ke dalam navbar putih yang sudah ada (mengonsumsi 0 piksel tambahan viewport), lengkap dengan tombol pintas ke Portal Komando dan tombol kunci.
+  - **Eliminasi Tombol Footer (Penyembunyian Sempurna)**: Tombol akses Super Admin di footer dihapus 100% dari mata publik; footer kembali bersih dan berwibawa.
+  - **Personalisasi Form Pendaftaran**: Placeholder nama dan kelas diisi detail resmi pengembang (`Contoh: Chandra Darmawan Jhon` dan `Contoh: XI RPL 2`).
+  - **Branding Galeri Default Logo Resmi EC SMEGA**: Kartu galeri dokumentasi default menggunakan Logo Resmi EC SMEGA (`/logo.png`) berlatar putih bersih dengan fallback `object-contain`.
 
 
 ### 3.2. Roadmap Selanjutnya
