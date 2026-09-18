@@ -268,6 +268,7 @@
   - **Eliminasi Tombol Footer (Penyembunyian Sempurna)**: Tombol akses Super Admin di footer dihapus 100% dari mata publik; footer kembali bersih dan berwibawa.
   - **Personalisasi Form Pendaftaran**: Placeholder nama dan kelas diisi detail resmi pengembang (`Contoh: Chandra Darmawan Jhon` dan `Contoh: XI RPL 2`).
   - **Branding Galeri Default Logo Resmi EC SMEGA**: Kartu galeri dokumentasi default menggunakan Logo Resmi EC SMEGA (`/logo.png`) berlatar putih bersih dengan fallback `object-contain`.
+  - **Penyempurnaan Keamanan Navbar & Eliminasi Tombol Perisai (`ShieldCheck`)**: Menghapus total tombol perisai mencurigakan dari navbar publik landing page. Akses ke Portal Mentor kini 100% konsisten menggunakan **Secret 5x Tap pada Logo EC SMEGA** (atau direct URL `#mentor`), menjaga navbar publik tetap bersih dan berwibawa.
 
 
 ### 3.2. Roadmap Selanjutnya

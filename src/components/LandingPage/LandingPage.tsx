@@ -7,7 +7,6 @@ import {
   Mic, 
   PenTool, 
   HeartHandshake, 
-  ShieldCheck, 
   Flame, 
   Instagram, 
   Clock, 
@@ -125,6 +124,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onUpdateGalleryItems,
 }) => {
   const scheduleStatus = getScheduleStatus(activeMeeting, isManualBypass, 'student');
+
+  // Secret 5-tap on the logo to open Mentor Portal (Matching Navbar.tsx)
+  const [logoTapCount, setLogoTapCount] = useState(0);
+
+  const handleLogoTap = () => {
+    sound.playPop();
+    const nextTap = logoTapCount + 1;
+    if (nextTap >= 5) {
+      setLogoTapCount(0);
+      onOpenMentor();
+    } else {
+      setLogoTapCount(nextTap);
+      setTimeout(() => setLogoTapCount(0), 3000);
+    }
+  };
 
   // Form Registration State
   const [fullName, setFullName] = useState('');
@@ -347,14 +361,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* ================= 1. TOP NAVBAR ================= */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-2 border-slate-200 shadow-sm transition-all">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
-          {/* Logo & Brand */}
-          <a 
-            href="#beranda"
-            onClick={(e) => {
-              e.preventDefault();
+          {/* Logo & Brand (Secret 5-Tap to Mentor Portal) */}
+          <div 
+            onClick={() => {
               scrollToSection('beranda');
+              handleLogoTap();
             }}
-            className="flex items-center gap-3 group shrink-0"
+            className="flex items-center gap-3 group shrink-0 cursor-pointer select-none"
+            title="English Club SMEGA"
           >
             <div className="w-10 h-10 rounded-2xl bg-white border-2 border-blue-600 shadow-[0_2px_0_0_#1d4ed8] p-1 flex items-center justify-center transition-transform group-hover:scale-105 active:translate-y-0.5">
               <img src="/logo.png" alt="EC SMEGA Logo" className="w-full h-full object-contain" />
@@ -372,7 +386,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Est. 23 March 2006
               </span>
             </div>
-          </a>
+          </div>
 
           {/* Desktop Nav Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-black text-slate-600">
@@ -457,19 +471,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300 animate-pulse" />
               <span>Presensi Eskul</span>
-            </button>
-
-            {/* Subtle Mentor Portal */}
-            <button
-              type="button"
-              onClick={() => {
-                sound.playPop();
-                onOpenMentor();
-              }}
-              className="p-2 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 border-2 border-slate-200 shadow-[0_2px_0_0_#cbd5e1] active:translate-y-0.5 transition-all cursor-pointer"
-              title="Portal Pengurus & Mentor (PIN)"
-            >
-              <ShieldCheck className="w-4 h-4 text-slate-600" />
             </button>
           </div>
         </div>
