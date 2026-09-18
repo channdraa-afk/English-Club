@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   Sparkles, 
   Calendar, 
-  Award, 
   Users, 
   Mic, 
   PenTool, 
@@ -11,7 +10,6 @@ import {
   Instagram, 
   Clock, 
   ExternalLink,
-  BookOpen,
   Send,
   Loader2,
   Trophy,
@@ -560,30 +558,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          {/* Live Stats Tactile Bar */}
-          <div className="pt-8 grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-3xl mx-auto">
-            <div className="p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
+          {/* Live Stats Tactile Bar (3 Kolom Mantap & Proporsional) */}
+          <div className="pt-8 grid grid-cols-3 gap-3 max-w-2xl mx-auto">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
               <span className="text-2xl sm:text-3xl font-black text-blue-600">{membersCount.a21}</span>
-              <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
-                Adik Kelas A21
+              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
+                Anggota A21
               </p>
             </div>
-            <div className="p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
               <span className="text-2xl sm:text-3xl font-black text-emerald-600">{membersCount.a20}</span>
-              <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
+              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
                 Pengurus A20
               </p>
             </div>
-            <div className="p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
-              <span className="text-2xl sm:text-3xl font-black text-amber-500">2</span>
-              <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
-                Divisi Utama
-              </p>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
-              <span className="text-2xl sm:text-3xl font-black text-rose-500">20+</span>
-              <p className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
-                Tahun Berdiri
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
+              <span className="text-2xl sm:text-3xl font-black text-amber-500">20+</span>
+              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
+                Tahun Sejarah
               </p>
             </div>
           </div>
@@ -594,15 +586,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="tentang" className="py-14 bg-white border-y-2 border-slate-200">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-black uppercase tracking-wider border border-slate-200">
-              <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-              <span>Mengenal Lebih Dekat</span>
-            </div>
             <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
               Tentang English Club SMEGA
             </h2>
             <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xl mx-auto">
-              Bukan sekadar eskul biasa, EC SMEGA adalah keluarga tempat kamu berani bertumbuh dan percaya diri.
+              Tempat belajar bahasa Inggris santai di SMKN 1 Purbalingga. Nggak ada senioritas, nggak usah takut salah grammar.
             </p>
           </div>
 
@@ -612,7 +600,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md">
                 <HeartHandshake className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Safe Space to Speak</h3>
+              <h3 className="text-base font-black text-slate-900">Bebas Bicara Tanpa Dihakimi</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 Di sini tidak ada yang bakal menghakimi atau menertawakan kesalahan grammar-mu. 
                 Kami percaya keberanian bicara adalah langkah pertama menuju kefasihan!
@@ -624,7 +612,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md">
                 <Trophy className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Championship Spirit</h3>
+              <h3 className="text-base font-black text-slate-900">Latihan & Delegasi Lomba</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 Mempersiapkan dan melatih delegasi lomba bahasa Inggris SMK Negeri 1 Purbalingga, 
                 mulai dari Debate, Speech, hingga Storytelling di tingkat kabupaten dan provinsi.
@@ -636,7 +624,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <div className="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md">
                 <Users className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-black text-slate-900">Solid Generation</h3>
+              <h3 className="text-base font-black text-slate-900">Bimbingan Akrab Antar-Angkatan</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 Koneksi hangat antar-angkatan, dari 59 pengurus Angkatan 20 yang membimbing hingga 
                 104 adik-adik Angkatan 21 yang antusias berkarya bersama.
@@ -650,15 +638,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="divisi" className="py-14 bg-slate-50">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider border border-blue-200">
-              <Award className="w-3.5 h-3.5 text-blue-600" />
-              <span>Dua Sayap Keunggulan</span>
-            </div>
             <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
-              Divisi Spesialisasi EC SMEGA
+              Divisi di English Club SMEGA
             </h2>
             <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xl mx-auto">
-              Pilih panggung bakat yang sesuai dengan passion dan keunikan potensimu!
+              Pilih bidang yang paling kamu minati: vokal panggung atau karya tulis.
             </p>
           </div>
 
@@ -676,7 +660,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
                 </div>
                 <span className="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 text-[10px] font-black uppercase">
-                  Vokal & Panggung
+                  Public Speaking & Debat
                 </span>
               </div>
 
@@ -690,7 +674,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   Cabang Pelatihan:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {['🎙️ Speech Contest', '⚔️ English Debate', '📖 Storytelling', '📺 Newscasting', '🗣️ Daily Conversation', '🎉 Ice Breaking'].map((tag) => (
+                  {['Speech Contest', 'English Debate', 'Storytelling', 'Newscasting', 'Daily Conversation', 'Ice Breaking'].map((tag) => (
                     <span key={tag} className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
                       {tag}
                     </span>
@@ -712,7 +696,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   </div>
                 </div>
                 <span className="px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase">
-                  Literasi & Taktis
+                  Literasi & Word Games
                 </span>
               </div>
 
@@ -726,7 +710,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   Cabang Pelatihan:
                 </span>
                 <div className="flex flex-wrap gap-1.5">
-                  {['✍️ Creative Writing', '📝 Essay Writing', '🔠 Scrabble Tactics', '🐝 Spelling Bee', '📖 Pop Culture Article', '📚 English Literacy'].map((tag) => (
+                  {['Creative Writing', 'Essay Writing', 'Scrabble Tactics', 'Spelling Bee', 'Pop Culture Article', 'English Literacy'].map((tag) => (
                     <span key={tag} className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
                       {tag}
                     </span>
@@ -736,19 +720,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
-          {/* 7 Sie Kerja Pendukung */}
-          <div className="p-5 rounded-3xl bg-slate-100/80 border-2 border-slate-200 text-center space-y-2">
-            <h4 className="text-xs font-black uppercase tracking-wider text-slate-500">
+          {/* 7 Sie Kerja Pendukung (Frameless Tactile Strip) */}
+          <div className="pt-2 text-center space-y-3">
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">
               Didukung Penuh Oleh 7 Sie Kerja Pengurus A20:
             </h4>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-black text-slate-700">
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">👩‍🏫 Sie Pengajar & Pendamping</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">⚖️ Sie Kedisiplinan</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">📸 Sie PDD (Publikasi & Desain)</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">📢 Sie Humas</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">🏢 Sie Sarpras</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">⚙️ Sie Operasional</span>
-              <span className="px-3 py-1 rounded-xl bg-white border border-slate-200 shadow-sm">📚 Sie Kurikulum</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Pengajar & Pendamping</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Kedisiplinan</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie PDD (Publikasi & Desain)</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Humas</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Sarpras</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Operasional</span>
+              <span className="px-3.5 py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Kurikulum</span>
             </div>
           </div>
         </div>
@@ -759,15 +743,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-50 text-amber-800 text-xs font-black uppercase tracking-wider border border-amber-200">
-                <Calendar className="w-3.5 h-3.5 text-amber-600" />
-                <span>Agenda Besar Tahunan</span>
-              </div>
               <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
                 Program Kerja Ikonik EC SMEGA
               </h2>
               <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xl">
-                Milestone dan program kerja tahunan yang selalu dinanti-nantikan oleh seluruh anggota dan pengurus.
+                Kegiatan rutin tahunan English Club SMEGA di dalam dan luar sekolah.
               </p>
             </div>
 
@@ -857,10 +837,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
             <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-50 text-rose-700 text-xs font-black uppercase tracking-wider border border-rose-200">
-                <Instagram className="w-3.5 h-3.5 text-rose-600" />
-                <span>Dokumentasi Resmi</span>
-              </div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
                 Momen Seru @englishclubsvhs1pbg
               </h2>
@@ -954,15 +930,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       <section id="daftar" className="py-16 bg-white border-t-2 border-slate-200">
         <div className="max-w-xl mx-auto px-4 sm:px-6 space-y-6">
           <div className="text-center space-y-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider border border-blue-200">
-              <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-              <span>Pendaftaran Online</span>
-            </div>
             <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              Gabung Bersama Keluarga EC SMEGA!
+              Pendaftaran Anggota Baru
             </h2>
             <p className="text-xs sm:text-sm font-bold text-slate-500">
-              Buka potensi terbaikmu. Isi formulir singkat di bawah ini dan jadilah bagian dari petualangan seru kami!
+              Isi formulir singkat di bawah ini untuk bergabung dengan English Club SMEGA!
             </p>
           </div>
 

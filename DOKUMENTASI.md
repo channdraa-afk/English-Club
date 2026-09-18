@@ -269,6 +269,12 @@
   - **Personalisasi Form Pendaftaran**: Placeholder nama dan kelas diisi detail resmi pengembang (`Contoh: Chandra Darmawan Jhon` dan `Contoh: XI RPL 2`).
   - **Branding Galeri Default Logo Resmi EC SMEGA**: Kartu galeri dokumentasi default menggunakan Logo Resmi EC SMEGA (`/logo.png`) berlatar putih bersih dengan fallback `object-contain`.
   - **Penyempurnaan Keamanan Navbar & Eliminasi Tombol Perisai (`ShieldCheck`)**: Menghapus total tombol perisai mencurigakan dari navbar publik landing page. Akses ke Portal Mentor kini 100% konsisten menggunakan **Secret 5x Tap pada Logo EC SMEGA** (atau direct URL `#mentor`), menjaga navbar publik tetap bersih dan berwibawa.
+- [x] Human-Centric UI Polish, Eliminasi Bom Pill, & Pembersihan Copywriting Lebay:
+  - **Eliminasi Bom Pill (Eyebrow Capsule Overdose)**: Menghapus seluruh kapsul pill repetitif di atas heading section (`Mengenal Lebih Dekat`, `Dua Sayap Keunggulan`, `Agenda Besar Tahunan`, `Dokumentasi Resmi`, `Pendaftaran Online`), memberikan ruang bernafas lega bagi tipografi Nunito yang gagah.
+  - **Pembersihan Copywriting AI Lebay**: Mengganti frasa puitis klise ("Dua Sayap Keunggulan", "Literasi & Taktis", "Bukan sekadar eskul biasa", "Safe Space to Speak", "Solid Generation", "petualangan seru") menjadi kalimat manusia yang to-the-point, membumi, dan ramah anak sekolah.
+  - **Eliminasi Emoji Soup**: Menghapus emotikon berulang di setiap biji pill cabang latihan divisi dan 7 Sie Kerja, menyisakan teks badge taktil yang bersih dan tidak melelahkan mata.
+  - **Unboxing 7 Sie Kerja (Anti-Nested Card)**: Melepaskan 7 Sie dari kurungan kotak abu-abu tebal; kini tampil mengalir sebagai strip badge taktil horizontal yang rapi di bawah kartu divisi.
+  - **Hero Stats 3-Kolom Mantap & Proporsional**: Menghapus kartu stat "2 Divisi Utama" yang dipaksakan; mengunci 3 metrik inti berbobot (`104 Anggota A21`, `59 Pengurus A20`, `20+ Tahun Sejarah`) dalam grid 3 kolom yang lega di desktop dan mobile.
 
 
 ### 3.2. Roadmap Selanjutnya
