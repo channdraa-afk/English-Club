@@ -358,29 +358,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-blue-200 selection:text-blue-900 font-sans">
       {/* ================= 1. TOP NAVBAR ================= */}
       <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b-2 border-slate-200 shadow-sm transition-all">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+        <div className="max-w-6xl mx-auto px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-3">
           {/* Logo & Brand (Secret 5-Tap to Mentor Portal) */}
           <div 
             onClick={() => {
               scrollToSection('beranda');
               handleLogoTap();
             }}
-            className="flex items-center gap-3 group shrink-0 cursor-pointer select-none"
+            className="flex items-center gap-2 sm:gap-3 group shrink-0 cursor-pointer select-none min-w-0"
             title="English Club SMEGA"
           >
-            <div className="w-10 h-10 rounded-2xl bg-white border-2 border-blue-600 shadow-[0_2px_0_0_#1d4ed8] p-1 flex items-center justify-center transition-transform group-hover:scale-105 active:translate-y-0.5">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white border-2 border-blue-600 shadow-[0_2px_0_0_#1d4ed8] p-1 flex items-center justify-center transition-transform group-hover:scale-105 active:translate-y-0.5 shrink-0">
               <img src="/logo.png" alt="EC SMEGA Logo" className="w-full h-full object-contain" />
             </div>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-black text-sm sm:text-base text-slate-900 tracking-tight leading-none group-hover:text-blue-600 transition-colors">
+            <div className="flex flex-col min-w-0">
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                <span className="font-black text-xs sm:text-base text-slate-900 tracking-tight leading-none group-hover:text-blue-600 transition-colors whitespace-nowrap">
                   English Club
                 </span>
-                <span className="text-[10px] font-black uppercase px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200">
+                <span className="text-[9px] sm:text-[10px] font-black uppercase px-1 sm:px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800 border border-blue-200 shrink-0">
                   SMEGA
                 </span>
               </div>
-              <span className="text-[10px] font-extrabold text-slate-400 leading-tight">
+              <span className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 leading-tight hidden min-[380px]:inline">
                 Est. 23 March 2006
               </span>
             </div>
@@ -426,19 +426,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </nav>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             {/* Super Admin Status Badge (Inside Navbar - Sleek, Tactile, Non-intrusive) */}
             {isSuperAdmin && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 shadow-[0_2px_0_0_#fcd34d] animate-fade-in">
+              <div className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-900 shadow-[0_2px_0_0_#fcd34d] animate-fade-in">
                 <Crown className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                <span className="text-[11px] font-black hidden sm:inline text-amber-950">Chandra</span>
+                <span className="text-[11px] font-black hidden md:inline text-amber-950">Chandra</span>
                 <button
                   type="button"
                   onClick={() => {
                     sound.playPop();
                     onGoToMentorPortal?.();
                   }}
-                  className="px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs active:translate-y-0.5 transition-all"
+                  className="px-1.5 sm:px-2 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-[10px] font-black cursor-pointer shadow-xs active:translate-y-0.5 transition-all"
                   title="Masuk ke Pusat Komando Admin"
                 >
                   Portal
@@ -464,11 +464,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 sound.playPop();
                 onOpenAttendance();
               }}
-              className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black border-2 border-emerald-800 shadow-[0_3px_0_0_#065f46] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-4 py-2 rounded-xl sm:rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black border-2 border-emerald-800 shadow-[0_3px_0_0_#065f46] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer shrink-0"
               title="Buka Form Presensi Eskul"
             >
-              <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300 animate-pulse" />
-              <span>Presensi Eskul</span>
+              <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300 animate-pulse shrink-0" />
+              <span>
+                <span className="min-[400px]:hidden">Presensi</span>
+                <span className="hidden min-[400px]:inline">Presensi Eskul</span>
+              </span>
             </button>
           </div>
         </div>
@@ -519,9 +522,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Main Slogan / Yel-Yel Ikonik */}
           <div className="space-y-2 max-w-3xl mx-auto">
             <h1 className="text-3xl sm:text-5xl md:text-6xl font-black text-slate-900 tracking-tight leading-tight">
-              Spirit of <span className="text-blue-600 underline decoration-amber-400 decoration-wavy decoration-2">English Club!</span>
+              Spirit of <span className="text-blue-600 underline decoration-amber-400 decoration-wavy decoration-2 underline-offset-4 sm:underline-offset-8">English Club!</span>
             </h1>
-            <p className="text-2xl sm:text-4xl md:text-5xl font-black text-emerald-600 tracking-tight">
+            <p className="text-2xl sm:text-4xl md:text-5xl font-black text-emerald-600 tracking-tight pt-1">
               Improve Your English Skill!
             </p>
           </div>
@@ -559,22 +562,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Live Stats Tactile Bar (3 Kolom Mantap & Proporsional) */}
-          <div className="pt-8 grid grid-cols-3 gap-3 max-w-2xl mx-auto">
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
-              <span className="text-2xl sm:text-3xl font-black text-blue-600">{membersCount.a21}</span>
-              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
+          <div className="pt-8 grid grid-cols-3 gap-2 sm:gap-3 max-w-2xl mx-auto">
+            <div className="p-2 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
+              <span className="text-xl sm:text-3xl font-black text-blue-600">{membersCount.a21}</span>
+              <p className="text-[9px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
                 Anggota A21
               </p>
             </div>
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
-              <span className="text-2xl sm:text-3xl font-black text-emerald-600">{membersCount.a20}</span>
-              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
+            <div className="p-2 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
+              <span className="text-xl sm:text-3xl font-black text-emerald-600">{membersCount.a20}</span>
+              <p className="text-[9px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
                 Pengurus A20
               </p>
             </div>
-            <div className="p-3.5 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
-              <span className="text-2xl sm:text-3xl font-black text-amber-500">20+</span>
-              <p className="text-[10px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
+            <div className="p-2 sm:p-4 rounded-2xl bg-white border-2 border-slate-200 shadow-[0_3px_0_0_#e2e8f0] text-center">
+              <span className="text-xl sm:text-3xl font-black text-amber-500">20+</span>
+              <p className="text-[9px] sm:text-[11px] font-extrabold text-slate-500 uppercase tracking-wider mt-0.5">
                 Tahun Sejarah
               </p>
             </div>
@@ -1115,21 +1118,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </div>
       </footer>
-
-      {/* ================= 10. STICKY MOBILE QUICK-ACTION BUTTON ================= */}
-      <div className="fixed bottom-5 right-5 z-30 sm:hidden">
-        <button
-          type="button"
-          onClick={() => {
-            sound.playPop();
-            onOpenAttendance();
-          }}
-          className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black border-2 border-emerald-800 shadow-[0_4px_0_0_#065f46] active:translate-y-1 transition-all cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300 animate-pulse" />
-          <span>PRESENSI</span>
-        </button>
-      </div>
 
       {/* ================= MODAL EDIT/TAMBAH AGENDA BESAR ================= */}
       {isEventModalOpen && (

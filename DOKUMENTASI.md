@@ -278,6 +278,13 @@
   - **Hero Stats 3-Kolom Mantap & Proporsional**: Menghapus kartu stat "2 Divisi Utama" yang dipaksakan; mengunci 3 metrik inti berbobot (`104 Anggota A21`, `59 Pengurus A20`, `20+ Tahun Sejarah`) dalam grid 3 kolom yang lega di desktop dan mobile.
 
 
+- [x] Optimasi Layout Responsif Mobile & Eliminasi Overlapping (Zero Screen Collision):
+  - **Kompaksi Tombol Web & Presensi di Mode Mentor (`Navbar.tsx`)**: Mengoptimalkan tombol `onGoHome` menjadi icon-first taktil pada layar ponsel (`<Globe />` adaptif), serta menyesuaikan ukuran teks brand title `English Club SMEGA` agar tidak saling mendesak atau terpotong pada layar mobile sempit (< 380px).
+  - **Eliminasi Sticky Floating Action Button (`LandingPage.tsx`)**: Menghapus tombol mengambang `[ ✨ PRESENSI ]` di pojok kanan bawah yang sebelumnya menimpa tombol formulir pendaftaran dan link footer saat digulir.
+  - **Header Landing Page Adaptif Super Admin**: Menyelaraskan badge Super Admin (`[ 👑 Portal | 🔒 ]`) dan tombol Presensi Eskul di navbar landing page agar tetap muat rapi tanpa overflow pada layar mobile kecil (320px–375px).
+  - **Bebas Tabrakan Hero & Stats Bar**: Memberi `underline-offset-4` pada dekorasi bergelombang slogan yel-yel, serta melonggarkan padding 3-kolom statistik di mobile (`p-2 sm:p-4`) agar angka dan label tidak terpotong canggung.
+  - **Top Bar Mentor Dashboard Responsif**: Menambahkan `flex-wrap` dan padding responsif pada header portal mentor agar tombol kunci admin dan logout tetap rapi di semua ukuran layar.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.

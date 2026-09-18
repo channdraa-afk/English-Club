@@ -232,38 +232,38 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-6 space-y-5 animate-fade-in">
       {/* Top Bar with Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-3xl border-2 border-slate-200 shadow-sm">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3.5 sm:p-4 rounded-3xl border-2 border-slate-200 shadow-sm">
+        <div className="flex items-center gap-2 min-w-0">
           <button
             onClick={() => {
               sound.playPop();
               onBackToStudent();
             }}
-            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+            className="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors shrink-0 cursor-pointer"
             title="Kembali ke Presensi Siswa"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="font-black text-slate-900 text-base leading-tight">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+              <h2 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
                 {isSuperAdmin ? 'Pusat Komando Super Admin' : 'Portal Pengurus EC SMEGA'}
               </h2>
               {isSuperAdmin && (
-                <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black">
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black shrink-0">
                   <Crown className="w-3 h-3 text-amber-600" />
                   <span>Chandra</span>
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-bold text-slate-400">
+            <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 truncate">
               {isSuperAdmin ? 'Kendali Penuh Seluruh Angkatan & Sistem' : 'Menu Khusus Angkatan 20 (Presensi & Struktur)'}
             </p>
           </div>
         </div>
 
         {/* Action Controls - Note: Akses Ketua button completely hidden for regular mentors */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           {isSuperAdmin && (
             <button
               onClick={() => {
