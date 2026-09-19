@@ -43,13 +43,30 @@ export const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<'landing' | 'student' | 'mentor'>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase();
-      if (hash === '#absen' || hash === '#presensi') return 'student';
+      const cachedBypass = safeStorage.get('ec_manual_bypass') === 'true';
+      const isSessionActive = isSessionActiveNow(cachedBypass, 'student');
+
       if (hash === '#mentor') return 'mentor';
       if (hash === '#beranda') return 'landing';
 
-      // If opening root URL without hash, check if extracurricular session or bypass is active!
-      const cachedBypass = safeStorage.get('ec_manual_bypass') === 'true';
-      if (isSessionActiveNow(cachedBypass, 'student')) {
+      // If URL contains #absen or #presensi:
+      if (hash === '#absen' || hash === '#presensi') {
+        // If session is active (Wednesday 15:40-17:30 WIB or bypass is ON), open attendance
+        if (isSessionActive) {
+          return 'student';
+        }
+        // Outside extracurricular hours and bypass is OFF:
+        // Strip stale #absen from browser autocomplete history and default to Landing Page!
+        try {
+          window.history.replaceState(null, '', window.location.pathname);
+        } catch {
+          window.location.hash = '';
+        }
+        return 'landing';
+      }
+
+      // If opening root URL without hash:
+      if (isSessionActive) {
         window.location.hash = '#absen';
         return 'student';
       }
@@ -128,6 +145,19 @@ export const App: React.FC = () => {
               }
             } else {
               safeStorage.remove('ec_manual_bypass');
+              // If bypass is turned OFF and outside Wednesday hours:
+              // If user is currently on #absen, auto-clean URL and return to landing!
+              if (!isSessionActiveNow(false, 'student')) {
+                const hash = window.location.hash.toLowerCase();
+                if (hash === '#absen' || hash === '#presensi') {
+                  try {
+                    window.history.replaceState(null, '', window.location.pathname);
+                  } catch {
+                    window.location.hash = '';
+                  }
+                  setCurrentView('landing');
+                }
+              }
             }
           } else if (row.key === 'registration_open') {
             setIsRegistrationOpen(Boolean(row.value));
@@ -143,15 +173,27 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  // Live Clock Ticker: checks every 15 seconds for Wednesday 15:40 WIB arrival
+  // Live Clock Ticker: checks every 15 seconds for Wednesday 15:40 WIB arrival or expiration
   useEffect(() => {
     const interval = setInterval(() => {
       const hash = window.location.hash.toLowerCase();
+      const isActive = isSessionActiveNow(isManualBypass, 'student');
+
       // If user is visiting root (empty hash), check if session just started
       if (hash === '' || hash === '#') {
-        if (isSessionActiveNow(isManualBypass, 'student')) {
+        if (isActive) {
           setCurrentView('student');
           window.location.hash = '#absen';
+        }
+      } else if (hash === '#absen' || hash === '#presensi') {
+        // If session expired (e.g. clock hit 17:30) and bypass is false:
+        if (!isActive) {
+          try {
+            window.history.replaceState(null, '', window.location.pathname);
+          } catch {
+            window.location.hash = '';
+          }
+          setCurrentView('landing');
         }
       }
     }, 15000);
@@ -221,10 +263,21 @@ export const App: React.FC = () => {
             }
             if (typeof window !== 'undefined') {
               const hash = window.location.hash.toLowerCase();
+              const isSessionActive = isSessionActiveNow(bypassVal, 'student');
               if (hash === '' || hash === '#') {
-                if (isSessionActiveNow(bypassVal, 'student')) {
+                if (isSessionActive) {
                   setCurrentView('student');
                   window.location.hash = '#absen';
+                }
+              } else if (hash === '#absen' || hash === '#presensi') {
+                // If bypass is off and session is not active, clean up stale hash and return to landing!
+                if (!isSessionActive) {
+                  try {
+                    window.history.replaceState(null, '', window.location.pathname);
+                  } catch {
+                    window.location.hash = '';
+                  }
+                  setCurrentView('landing');
                 }
               }
             }
