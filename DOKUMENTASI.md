@@ -363,6 +363,9 @@
   - **Podium Juara & Integrasi Talent Scout (`QuizManager.tsx`)**:
     - Podium 3D peraih Juara 1, 2, dan 3 dengan fanfare audio Web Audio API dan konfeti.
     - Tombol 1-klik "Simpan ke Radar Bakat": Otomatis memasukkan peraih juara kuis ke rekam jejak `talent_stars` (kategori `general_active`) untuk penilaian rapor.
+  - **Akses Publik Permanen & Tanpa Syarat (Unhidden Experience)**:
+    - Tombol **`🎮 Arena`** selalu tampil di Navbar publik, Header Landing Page, dan Hero Section (3D CTA) tanpa tersembunyi.
+    - Halaman presensi siswa selalu menampilkan kartu akses cepat ke EC Arena dengan transisi status: `🟢 LIVE` (saat ada kuis aktif) vs shortcut ramah saat sesi santai.
   - **Starter Pack Seed**: Paket kuis awal terpasang *"EC Practice Week #1: Slang & Daily Idioms"* (5 soal seru siap uji coba).
 
 ### 3.2. Roadmap Selanjutnya

@@ -95,19 +95,34 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Active Quiz Arena CTA */}
-          {hasActiveQuiz && currentView !== 'arena' && onOpenArena && (
+          {/* Quiz Arena Button (Always Visible & Accessible for Students) */}
+          {onOpenArena && (
             <button
               type="button"
               onClick={() => {
                 sound.playPop();
-                onOpenArena();
+                if (currentView === 'arena') {
+                  onSwitchView('student');
+                } else {
+                  onOpenArena();
+                }
               }}
-              title="Masuk Kuis Live EC Arena"
-              className="flex items-center gap-1 p-1.5 px-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-blue-800 text-xs font-black shadow-[0_2px_0_0_#1e3a8a] active:translate-y-0.5 transition-all shrink-0 cursor-pointer animate-pulse"
+              title={currentView === 'arena' ? 'Kembali ke Presensi' : 'Masuk Kuis EC Arena'}
+              className={`flex items-center gap-1.5 p-1.5 px-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-black border transition-all shrink-0 cursor-pointer ${
+                currentView === 'arena'
+                  ? 'bg-blue-600 text-white border-blue-800 shadow-[0_2px_0_0_#1e3a8a]'
+                  : hasActiveQuiz
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-800 shadow-[0_2px_0_0_#1e3a8a] active:translate-y-0.5 animate-pulse'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-[0_2px_0_0_#cbd5e1] active:translate-y-0.5'
+              }`}
             >
               <span className="text-xs">🎮</span>
-              <span className="hidden min-[440px]:inline">Arena</span>
+              <span className="hidden min-[400px]:inline">
+                {currentView === 'arena' ? 'Presensi' : 'Arena'}
+              </span>
+              {hasActiveQuiz && currentView !== 'arena' && (
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              )}
             </button>
           )}
 

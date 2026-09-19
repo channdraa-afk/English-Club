@@ -513,6 +513,12 @@ export const App: React.FC = () => {
             setCurrentView('mentor');
             window.location.hash = '#mentor';
           }}
+          hasActiveQuiz={Boolean(activeQuizSession)}
+          onOpenArena={() => {
+            sound.playPop();
+            setCurrentView('arena');
+            window.location.hash = '#arena';
+          }}
           membersCount={{
             a21: members.filter((m) => m.generation === 21).length || 104,
             a20: members.filter((m) => m.generation === 20).length || 59,
@@ -597,8 +603,8 @@ export const App: React.FC = () => {
               />
             ) : currentView === 'student' ? (
               <div className="space-y-6">
-                {activeQuizSession && (
-                  <div className="max-w-md mx-auto px-4 pt-4">
+                <div className="max-w-md mx-auto px-4 pt-4">
+                  {activeQuizSession ? (
                     <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 sm:p-5 rounded-3xl border-2 border-blue-800 shadow-[0_6px_0_0_#1e3a8a] text-white flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in">
                       <div className="flex items-center gap-3">
                         <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center font-black text-2xl shrink-0 shadow-inner">
@@ -628,8 +634,35 @@ export const App: React.FC = () => {
                         Masuk Kuis Arena ➔
                       </button>
                     </div>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex items-center justify-between p-3.5 px-4 rounded-3xl bg-white border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200 flex items-center justify-center text-xl shrink-0">
+                          🎮
+                        </div>
+                        <div>
+                          <p className="text-xs font-black text-slate-900 leading-tight">
+                            EC Arena (Kuis Interaktif)
+                          </p>
+                          <p className="text-[10px] font-bold text-slate-400">
+                            Pekan praktek materi & kuis seru
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playPop();
+                          setCurrentView('arena');
+                          window.location.hash = '#arena';
+                        }}
+                        className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black border border-blue-800 shadow-[0_2px_0_0_#1e3a8a] active:translate-y-0.5 transition-all cursor-pointer shrink-0"
+                      >
+                        Buka Arena ➔
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 <MemberAttendance
                   members={members}

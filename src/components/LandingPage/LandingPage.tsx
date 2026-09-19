@@ -20,6 +20,7 @@ import {
   Trash2,
   Lock,
   X,
+  Gamepad2,
   Image as ImageIcon
 } from 'lucide-react';
 import { Meeting, BigEvent, GalleryItem } from '../../types/database';
@@ -95,6 +96,8 @@ interface LandingPageProps {
   isManualBypass?: boolean;
   onOpenAttendance: () => void;
   onOpenMentor: () => void;
+  onOpenArena?: () => void;
+  hasActiveQuiz?: boolean;
   membersCount?: { a21: number; a20: number };
   isRegistrationOpen?: boolean;
   isSuperAdmin?: boolean;
@@ -111,6 +114,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   isManualBypass = false,
   onOpenAttendance,
   onOpenMentor,
+  onOpenArena,
+  hasActiveQuiz = false,
   membersCount = { a21: 104, a20: 59 },
   isRegistrationOpen = true,
   isSuperAdmin = false,
@@ -513,10 +518,36 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 fill-yellow-300 animate-pulse shrink-0" />
               <span>
-                <span className="min-[400px]:hidden">Presensi</span>
-                <span className="hidden min-[400px]:inline">Presensi Eskul</span>
+                <span className="min-[440px]:hidden">Presensi</span>
+                <span className="hidden min-[440px]:inline">Presensi Eskul</span>
               </span>
             </button>
+
+            {/* EC Arena Live Quiz Button */}
+            {onOpenArena && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  onOpenArena();
+                }}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-xl sm:rounded-2xl text-xs font-black border-2 transition-all cursor-pointer shrink-0 ${
+                  hasActiveQuiz
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-blue-800 shadow-[0_3px_0_0_#1e3a8a] animate-pulse active:translate-y-0.5'
+                    : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-[0_3px_0_0_#cbd5e1] active:translate-y-0.5'
+                }`}
+                title="Buka Kuis Live EC Arena"
+              >
+                <Gamepad2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <span>
+                  <span className="min-[440px]:hidden">Arena</span>
+                  <span className="hidden min-[440px]:inline">EC Arena</span>
+                </span>
+                {hasActiveQuiz && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                )}
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -582,8 +613,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             dan literasi kreatif. Lebih dari 20 tahun tradisi prestasi dan kebersamaan.
           </p>
 
-          {/* Dual 3D Tactile CTA Buttons */}
-          <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-md mx-auto">
+          {/* 3D Tactile CTA Buttons */}
+          <div className="pt-3 flex flex-col sm:flex-row items-center justify-center gap-3 max-w-xl mx-auto">
             {/* Primary Spotlight: Mulai Presensi */}
             <button
               type="button"
@@ -591,20 +622,39 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 sound.playPop();
                 onOpenAttendance();
               }}
-              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-black border-2 border-emerald-800 shadow-[0_4px_0_0_#065f46] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
+              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-black border-2 border-emerald-800 shadow-[0_4px_0_0_#065f46] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
             >
-              <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300" />
-              <span>MULAI PRESENSI HARI INI</span>
+              <Sparkles className="w-4 h-4 text-yellow-300 fill-yellow-300 shrink-0" />
+              <span>PRESENSI ESKUL</span>
             </button>
+
+            {/* EC Arena Live Quiz */}
+            {onOpenArena && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  onOpenArena();
+                }}
+                className={`w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-xs sm:text-sm font-black border-2 transition-all cursor-pointer ${
+                  hasActiveQuiz
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-blue-800 shadow-[0_4px_0_0_#1e3a8a] active:translate-y-1 animate-pulse'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-800 shadow-[0_4px_0_0_#1e3a8a] active:translate-y-1 active:shadow-none'
+                }`}
+              >
+                <Gamepad2 className="w-4 h-4 shrink-0" />
+                <span>KUIS EC ARENA</span>
+              </button>
+            )}
 
             {/* Secondary: Pendaftaran */}
             <button
               type="button"
               onClick={() => scrollToSection('daftar')}
-              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-black border-2 border-blue-800 shadow-[0_4px_0_0_#1e3a8a] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
+              className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs sm:text-sm font-black border-2 border-slate-300 shadow-[0_4px_0_0_#cbd5e1] active:translate-y-1 active:shadow-none transition-all cursor-pointer"
             >
-              <Users className="w-4 h-4" />
-              <span>DAFTAR ANGGOTA BARU</span>
+              <Users className="w-4 h-4 shrink-0 text-slate-600" />
+              <span>GABUNG EC</span>
             </button>
           </div>
 
