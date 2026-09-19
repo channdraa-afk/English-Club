@@ -27,7 +27,7 @@ export const App: React.FC = () => {
   const [bigEvents, setBigEvents] = useState<BigEvent[]>([]);
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
-  const [mentorPin, setMentorPin] = useState('123321');
+  const [mentorPin, setMentorPin] = useState('');
   const [mentorToken, setMentorToken] = useState('CREW20');
 
   // Instant local cache read for zero-delay bypass detection
@@ -174,6 +174,8 @@ export const App: React.FC = () => {
             }
           } else if (row.key === 'registration_open') {
             setIsRegistrationOpen(Boolean(row.value));
+          } else if (row.key === 'mentor_pin') {
+            setMentorPin(typeof row.value === 'string' ? row.value : String(row.value));
           } else if (row.key === 'mentor_token') {
             setMentorToken(typeof row.value === 'string' ? row.value : String(row.value));
           }

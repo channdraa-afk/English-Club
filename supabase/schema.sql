@@ -135,7 +135,7 @@ CREATE POLICY "Allow public manage settings" ON app_settings FOR ALL USING (true
 -- INITIAL DEFAULT SETTINGS
 -- ==============================================================================
 INSERT INTO app_settings (key, value) VALUES 
-('mentor_pin', '"123321"'::jsonb),
+('mentor_pin', '""'::jsonb),
 ('registration_open', 'true'::jsonb),
 ('club_info', '{
   "name": "English Club SMK Negeri 1 Purbalingga",

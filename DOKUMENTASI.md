@@ -68,7 +68,7 @@
   - Checkbox *"Kirim Anonim"*.
   - Kartu selebrasi *Word of the Day* siap screenshot.
 - [x] Portal Rahasia Pengurus (Mentor Dashboard):
-  - Autentikasi PIN (`123321`) + auto-save login di `localStorage`.
+  - Autentikasi PIN Resmi Pengurus + auto-save login di `localStorage`.
   - Pintu masuk rahasia mentor via spam-click 5x pada logo EC (ikon perisai dihapus dari navbar publik).
   - Kontrol sesi pertemuan, token generator, dan tombol set pertemuan libur + banner pengumuman otomatis.
   - Rekap harian dengan tombol "Tandai Hadir Manual" untuk siswa yang izin pindah ekskul.
@@ -114,7 +114,7 @@
   - 🔴 **Crimson Red Merah-Putih** (`#dc2626`, `#b91c1c`): Varian `crimson` tombol taktil dan aksen status kritis.
   - ⭐ **Golden Star Yellow** (`#f59e0b`, `#fbbf24`): Aksen bintang keemasan dan sorotan rating / KPI.
   - 🟢 **Globe Green** (`#10b981`, `#059669`): Varian `emerald` tombol taktil dan status presensi "✓ Hadir".
-- [x] Ekspansi Akses Menu Dashboard untuk Seluruh 59 Pengurus A20 (PIN `123321`):
+- [x] Ekspansi Akses Menu Dashboard untuk Seluruh 59 Pengurus A20 (PIN Resmi Pengurus):
   - **Presensi Mandiri A20**: Presensi kehadiran kakak kelas + selebrasi konfeti warna logo EC SMEGA.
   - **Monitor Live A21**: Seluruh pengurus kini dapat memantau adik kelas yang sudah maupun belum hadir secara real-time.
   - **Bantu Absen A21**: Membantu adik kelas yang tidak bawa HP / kehabisan kuota tanpa perlu token.
@@ -146,7 +146,7 @@
   - Rich OpenGraph & Twitter Card previews dengan logo resmi SMEGA dan `theme-color` Royal Blue (`#2563eb`).
   - Permintaan pengindeksan prioritas bot Google (*Googlebot crawl priority*) tuntas dilakukan via URL Inspection Tool.
 - [x] Fitur Status "Izin (Surat Fisik)" A21 Bebas Waktu & Pembukaan Akses Rekap Rapor untuk Seluruh Pengurus A20:
-  - **Akses Terbuka untuk 59 Pengurus**: Tab Rekap Rapor Bulanan (Cetak PDF & Ekspor CSV) kini dapat diakses oleh semua kakak kelas via PIN `123321` tanpa memerlukan akun Super Admin.
+  - **Akses Terbuka untuk 59 Pengurus**: Tab Rekap Rapor Bulanan (Cetak PDF & Ekspor CSV) kini dapat diakses oleh semua kakak kelas via PIN Pengurus tanpa memerlukan akun Super Admin.
   - **Manajemen Bebas Waktu (Tanpa Cutoff 17:30 WIB)**: Pengurus dapat menandai adik kelas berstatus "Izin (Surat Fisik)" kapan pun saat surat fisik diterima (sore, malam di rumah, atau hari berikutnya).
   - **Integrasi 3-Modul**:
     - `HelperAttendanceA21`: Tombol taktil cepat `[ 📄 Izin (Surat) ]` berdampingan dengan `[ ⚡ Hadir ]`.
