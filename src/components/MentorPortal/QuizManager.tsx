@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   Gamepad2, Plus, Trash2, Edit3, Play, Square, Trophy, Users, 
   CheckCircle2, XCircle, Clock, 
-  Flame, ArrowLeft, RefreshCw, AlertTriangle, Check
+  Flame, ArrowLeft, RefreshCw, AlertTriangle, Check, Sparkles, RotateCcw
 } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
@@ -13,9 +13,11 @@ import confetti from 'canvas-confetti';
 interface QuizManagerProps {
   activeMeetingId?: string;
   onAwardTalentStar?: (star: Omit<TalentStar, 'id' | 'created_at'>) => Promise<void>;
+  totalA21Count?: number;
 }
 
-export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwardTalentStar }) => {
+export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwardTalentStar, totalA21Count = 104 }) => {
+  const liveMonitorRef = useRef<HTMLDivElement>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [activeSession, setActiveSession] = useState<QuizSession | null>(null);
   const [submissions, setSubmissions] = useState<QuizSubmission[]>([]);
@@ -303,6 +305,27 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
       alert('Gagal menutup sesi kuis: ' + (err.message || err));
     } finally {
       setIsClosing(false);
+    }
+  };
+
+  // Reset student submission so they can retake the quiz
+  const handleResetSubmission = async (sub: QuizSubmission) => {
+    sound.playPop();
+    if (!confirm(`Izinkan ${sub.member_name} mengulang pengerjaan kuis? Jawaban dan skor saat ini akan dihapus dari leaderboard.`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('quiz_submissions')
+        .delete()
+        .eq('id', sub.id);
+
+      if (error) throw error;
+
+      sound.playSuccess();
+      setSubmissions((prev) => prev.filter((s) => s.id !== sub.id));
+    } catch (err: any) {
+      sound.playError();
+      alert('Gagal mereset pengerjaan: ' + (err.message || err));
     }
   };
 
@@ -694,7 +717,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
 
       {/* Active Session Card (If Any) */}
       {activeSession && (
-        <div className="bg-white rounded-3xl border-2 border-emerald-500 shadow-[0_6px_0_0_#059669] p-6 space-y-6 animate-fade-in">
+        <div ref={liveMonitorRef} className="bg-white rounded-3xl border-2 border-emerald-500 shadow-[0_6px_0_0_#059669] p-6 space-y-6 animate-fade-in">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b-2 border-slate-100 pb-4">
             <div className="flex items-center gap-3">
               <span className="relative flex h-3.5 w-3.5">
@@ -758,7 +781,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                 Peserta Selesai
               </span>
               <span className="text-2xl font-black text-slate-900">
-                {submissions.length} <span className="text-xs text-slate-400 font-bold">/ 70 Siswa</span>
+                {submissions.length} <span className="text-xs text-slate-400 font-bold">/ {totalA21Count || 104} Siswa</span>
               </span>
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 text-center">
@@ -816,6 +839,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                       <th className="py-2.5 px-3 text-center">Benar</th>
                       <th className="py-2.5 px-3 text-center">Waktu</th>
                       <th className="py-2.5 px-3 text-right font-black">Skor</th>
+                      <th className="py-2.5 px-3 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 font-bold text-slate-800">
@@ -865,6 +889,17 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                         <td className="py-2.5 px-3 text-right font-black text-sm text-blue-600">
                           {sub.score}
                         </td>
+                        <td className="py-2.5 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleResetSubmission(sub)}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black text-rose-600 hover:text-rose-800 hover:bg-rose-50 border border-rose-200 transition-colors"
+                            title="Hapus riwayat & izinkan siswa mengulang kuis"
+                          >
+                            <RotateCcw className="w-2.5 h-2.5" />
+                            <span>Reset</span>
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -907,56 +942,85 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {quizzes.map((q) => (
-              <div
-                key={q.id}
-                className="p-5 rounded-2xl border-2 border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300 transition-all space-y-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <h5 className="text-sm font-black text-slate-900 leading-snug">{q.title}</h5>
-                    {q.description && (
-                      <p className="text-xs font-medium text-slate-500 mt-0.5">{q.description}</p>
+            {quizzes.map((q) => {
+              const isCurrentlyActive = activeSession?.quiz_id === q.id;
+              return (
+                <div
+                  key={q.id}
+                  className={`p-5 rounded-2xl border-2 transition-all space-y-3 ${
+                    isCurrentlyActive
+                      ? 'border-emerald-500 bg-emerald-50/40 ring-2 ring-emerald-500/20 shadow-sm'
+                      : 'border-slate-200 bg-slate-50/50 hover:bg-white hover:border-slate-300'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h5 className="text-sm font-black text-slate-900 leading-snug">{q.title}</h5>
+                        {isCurrentlyActive && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-300 shrink-0">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                            Sedang Aktif
+                          </span>
+                        )}
+                      </div>
+                      {q.description && (
+                        <p className="text-xs font-medium text-slate-500 mt-0.5">{q.description}</p>
+                      )}
+                    </div>
+                    <span className="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 text-[11px] font-black shrink-0">
+                      {q.questions?.length || 0} Soal
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => handleEditQuiz(q)}
+                        className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-xl transition-colors"
+                        title="Edit soal"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteQuiz(q.id)}
+                        className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
+                        title="Hapus paket kuis"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {isCurrentlyActive ? (
+                      <TactileButton
+                        variant="emerald"
+                        size="sm"
+                        onClick={() => {
+                          sound.playPop();
+                          liveMonitorRef.current?.scrollIntoView({ behavior: 'smooth' });
+                        }}
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        <span>Sesi Berlangsung</span>
+                      </TactileButton>
+                    ) : (
+                      <TactileButton
+                        variant="emerald"
+                        size="sm"
+                        onClick={() => {
+                          sound.playPop();
+                          setStartConfirmQuiz(q);
+                          setTokenInput('SMEGA');
+                        }}
+                      >
+                        <Play className="w-3.5 h-3.5" />
+                        <span>Luncurkan Kuis</span>
+                      </TactileButton>
                     )}
                   </div>
-                  <span className="px-2.5 py-1 rounded-xl bg-blue-100 text-blue-800 text-[11px] font-black shrink-0">
-                    {q.questions?.length || 0} Soal
-                  </span>
                 </div>
-
-                <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-200/60">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => handleEditQuiz(q)}
-                      className="p-2 text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-xl transition-colors"
-                      title="Edit soal"
-                    >
-                      <Edit3 className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteQuiz(q.id)}
-                      className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
-                      title="Hapus paket kuis"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <TactileButton
-                    variant="emerald"
-                    size="sm"
-                    onClick={() => {
-                      sound.playPop();
-                      setStartConfirmQuiz(q);
-                      setTokenInput('SMEGA');
-                    }}
-                  >
-                    <Play className="w-3.5 h-3.5" />
-                    <span>Luncurkan Kuis</span>
-                  </TactileButton>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

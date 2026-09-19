@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search 
+  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search, Sparkles, RotateCcw, Play 
 } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
+import { safeStorage } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
 import { Quiz, QuizSession, QuizSubmission, Member } from '../../types/database';
 import confetti from 'canvas-confetti';
@@ -13,6 +14,16 @@ interface ArenaPlayerProps {
   onBackToHome: () => void;
 }
 
+interface SavePointData {
+  sessionData: QuizSession;
+  quizData: Quiz;
+  currentIdx: number;
+  score: number;
+  streak: number;
+  correctCount: number;
+  savedAt: number;
+}
+
 export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome }) => {
   // Join Form State
   const [tokenInput, setTokenInput] = useState('');
@@ -20,6 +31,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   const [searchQuery, setSearchQuery] = useState('');
   const [joinError, setJoinError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
+  const [pendingSavePoint, setPendingSavePoint] = useState<SavePointData | null>(null);
 
   // Active Game State
   const [session, setSession] = useState<QuizSession | null>(null);
@@ -33,6 +45,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   // Zero Stale Closure Refs
   const scoreRef = useRef(0);
   const correctCountRef = useRef(0);
+  const streakRef = useRef(0);
 
   // Per-Question Timer & Interaction State
   const [timeLeft, setTimeLeft] = useState(20);
@@ -107,20 +120,33 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     sound.playWrong();
     setAnswerState('timeout');
     setStreak(0);
+    streakRef.current = 0;
 
     setTimeout(() => {
-      advanceToNextQuestion(scoreRef.current, correctCountRef.current);
+      advanceToNextQuestion(scoreRef.current, correctCountRef.current, 0);
     }, 1500);
   };
 
   // Advance to next question or complete
-  const advanceToNextQuestion = (latestScore?: number, latestCorrect?: number) => {
+  const advanceToNextQuestion = (latestScore?: number, latestCorrect?: number, latestStreak?: number) => {
     if (!quiz) return;
     const finalScore = typeof latestScore === 'number' ? latestScore : scoreRef.current;
     const finalCorrect = typeof latestCorrect === 'number' ? latestCorrect : correctCountRef.current;
+    const finalStreak = typeof latestStreak === 'number' ? latestStreak : streakRef.current;
 
-    if (currentIdx + 1 < quiz.questions.length) {
-      setCurrentIdx((prev) => prev + 1);
+    const nextIdx = currentIdx + 1;
+    if (nextIdx < quiz.questions.length) {
+      setCurrentIdx(nextIdx);
+      // Auto-save save point to local safeStorage
+      if (session && selectedMember) {
+        safeStorage.set(`ec_arena_save_${session.id}_${selectedMember.id}`, JSON.stringify({
+          currentIdx: nextIdx,
+          score: finalScore,
+          streak: finalStreak,
+          correctCount: finalCorrect,
+          savedAt: Date.now()
+        }));
+      }
     } else {
       handleFinishQuiz(finalScore, finalCorrect);
     }
@@ -140,6 +166,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
 
     let newScore = scoreRef.current;
     let newCorrect = correctCountRef.current;
+    let newStreak = streakRef.current;
 
     if (isCorrect) {
       sound.playCorrect();
@@ -147,28 +174,69 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
       // Kahoot Formula: 1000 * (1 - (elapsed / (limit * 2))) + streak bonus
       const speedFraction = Math.min(1, Math.max(0, elapsedSec / (timeLimit * 2)));
       const basePoints = Math.round(1000 * (1 - speedFraction));
-      const streakBonus = streak * 100;
+      const streakBonus = streakRef.current * 100;
       const totalForThisQ = basePoints + streakBonus;
 
       newScore = scoreRef.current + totalForThisQ;
       newCorrect = correctCountRef.current + 1;
+      newStreak = streakRef.current + 1;
 
       scoreRef.current = newScore;
       correctCountRef.current = newCorrect;
+      streakRef.current = newStreak;
 
       setEarnedPoints(totalForThisQ);
       setScore(newScore);
-      setStreak((prev) => prev + 1);
+      setStreak(newStreak);
       setCorrectCount(newCorrect);
     } else {
       sound.playWrong();
       setAnswerState('wrong');
+      newStreak = 0;
+      streakRef.current = 0;
       setStreak(0);
     }
 
     setTimeout(() => {
-      advanceToNextQuestion(newScore, newCorrect);
+      advanceToNextQuestion(newScore, newCorrect, newStreak);
     }, 1300);
+  };
+
+  // Resume from existing save point
+  const handleResumeFromSavePoint = (save: SavePointData) => {
+    sound.playSuccess();
+    setSession(save.sessionData);
+    setQuiz(save.quizData);
+    setCurrentIdx(save.currentIdx);
+    setScore(save.score);
+    scoreRef.current = save.score;
+    setStreak(save.streak);
+    streakRef.current = save.streak;
+    setCorrectCount(save.correctCount);
+    correctCountRef.current = save.correctCount;
+    setStartTime(Date.now() - (save.currentIdx * 20000));
+    setIsCompleted(false);
+    setPendingSavePoint(null);
+  };
+
+  // Discard save point and start from Q1
+  const handleRestartFresh = (sessionData: QuizSession, quizData: Quiz) => {
+    sound.playPop();
+    if (selectedMember) {
+      safeStorage.remove(`ec_arena_save_${sessionData.id}_${selectedMember.id}`);
+    }
+    setSession(sessionData);
+    setQuiz(quizData);
+    setCurrentIdx(0);
+    setScore(0);
+    scoreRef.current = 0;
+    setStreak(0);
+    streakRef.current = 0;
+    setCorrectCount(0);
+    correctCountRef.current = 0;
+    setStartTime(Date.now());
+    setIsCompleted(false);
+    setPendingSavePoint(null);
   };
 
   // Handle finish quiz & save to Supabase
@@ -177,6 +245,9 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
 
     const resolvedScore = typeof finalScore === 'number' ? finalScore : scoreRef.current;
     const resolvedCorrect = typeof finalCorrect === 'number' ? finalCorrect : correctCountRef.current;
+
+    // Clear save point when quiz is completed
+    safeStorage.remove(`ec_arena_save_${session.id}_${selectedMember.id}`);
 
     setIsCompleted(true);
     sound.playFanfare();
@@ -303,6 +374,36 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
         return;
       }
 
+      // 4. Check for existing Save Point recovery
+      const saveKey = `ec_arena_save_${sessionData.id}_${selectedMember.id}`;
+      const rawSave = safeStorage.get(saveKey);
+      if (rawSave) {
+        try {
+          const parsed = JSON.parse(rawSave);
+          if (
+            parsed &&
+            typeof parsed.currentIdx === 'number' &&
+            parsed.currentIdx > 0 &&
+            parsed.currentIdx < quizData.questions.length &&
+            Date.now() - (parsed.savedAt || 0) < 3 * 3600 * 1000
+          ) {
+            sound.playPop();
+            setPendingSavePoint({
+              sessionData,
+              quizData,
+              currentIdx: parsed.currentIdx,
+              score: parsed.score || 0,
+              streak: parsed.streak || 0,
+              correctCount: parsed.correctCount || 0,
+              savedAt: parsed.savedAt
+            });
+            return;
+          }
+        } catch {
+          safeStorage.remove(saveKey);
+        }
+      }
+
       sound.playSuccess();
       setSession(sessionData);
       setQuiz(quizData);
@@ -310,6 +411,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
       setScore(0);
       scoreRef.current = 0;
       setStreak(0);
+      streakRef.current = 0;
       setCorrectCount(0);
       correctCountRef.current = 0;
       setStartTime(Date.now());
@@ -325,7 +427,65 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   // VIEW 1: JOIN FORM (LOBBY ENTRANCE)
   if (!session || !quiz) {
     return (
-      <div className="w-full max-w-md mx-auto px-4 py-8 animate-fade-in">
+      <div className="w-full max-w-md mx-auto px-4 py-8 animate-fade-in relative">
+        {/* MODAL PEMULIHAN SAVE POINT */}
+        {pendingSavePoint && selectedMember && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-3xl border-2 border-emerald-500 shadow-[0_8px_0_0_#059669] max-w-sm w-full p-6 space-y-4">
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200">
+                  <Sparkles className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-black text-slate-900">
+                  Save Point Kuis Ditemukan! 💾
+                </h4>
+                <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                  Hai <strong className="text-slate-900 font-black">{selectedMember.name}</strong>, kuis kamu sebelumnya terhenti di 
+                  <strong className="text-blue-600 font-black"> Soal ke-{pendingSavePoint.currentIdx + 1}</strong> dengan perolehan 
+                  <strong className="text-emerald-700 font-black"> {pendingSavePoint.score} Poin</strong>.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-xs space-y-1.5">
+                <div className="flex justify-between text-slate-600 font-bold">
+                  <span>Progres Soal:</span>
+                  <span className="font-black text-slate-900">Nomor {pendingSavePoint.currentIdx + 1} dari {pendingSavePoint.quizData.questions.length}</span>
+                </div>
+                <div className="flex justify-between text-slate-600 font-bold">
+                  <span>Skor Sementara:</span>
+                  <span className="font-black text-blue-600">{pendingSavePoint.score} Poin</span>
+                </div>
+                <div className="flex justify-between text-slate-600 font-bold">
+                  <span>Jawaban Benar:</span>
+                  <span className="font-black text-emerald-700">{pendingSavePoint.correctCount} Soal</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-1">
+                <TactileButton
+                  variant="emerald"
+                  size="md"
+                  className="w-full"
+                  onClick={() => handleResumeFromSavePoint(pendingSavePoint)}
+                >
+                  <Play className="w-4 h-4" />
+                  <span>Lanjutkan Soal ke-{pendingSavePoint.currentIdx + 1}</span>
+                </TactileButton>
+
+                <TactileButton
+                  variant="white"
+                  size="sm"
+                  className="w-full text-slate-500"
+                  onClick={() => handleRestartFresh(pendingSavePoint.sessionData, pendingSavePoint.quizData)}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Ulangi dari Awal (Soal 1)</span>
+                </TactileButton>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="text-center mb-6 space-y-2">
           <div className="w-16 h-16 mx-auto rounded-3xl bg-blue-600 text-white flex items-center justify-center border-2 border-blue-800 shadow-[0_6px_0_0_#1e3a8a]">

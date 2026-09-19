@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Shield, UserPlus, Globe } from 'lucide-react';
+import { Shield, UserPlus, Home } from 'lucide-react';
 import { sound } from '../lib/audio';
 
 interface NavbarProps {
@@ -84,14 +84,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 sound.playPop();
                 onGoHome();
               }}
-              title="Kembali ke Website Resmi EC SMEGA"
-              className="flex items-center gap-1 p-1.5 px-2 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-black shadow-[0_2px_0_0_#cbd5e1] active:translate-y-0.5 transition-all shrink-0 cursor-pointer"
+              title="Kembali ke Beranda Website Resmi EC SMEGA"
+              className="flex items-center gap-1.5 p-1.5 px-2.5 sm:px-3 sm:py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 text-xs font-black shadow-[0_2px_0_0_#cbd5e1] active:translate-y-0.5 transition-all shrink-0 cursor-pointer"
             >
-              <Globe className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>
-                <span className="hidden min-[480px]:inline sm:hidden">Web</span>
-                <span className="hidden sm:inline">Web Utama</span>
-              </span>
+              <Home className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+              <span>Beranda</span>
             </button>
           )}
 

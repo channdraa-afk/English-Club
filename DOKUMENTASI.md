@@ -372,6 +372,25 @@
     - Pencarian nama kini sama persis seperti form absensi: hanya aktif saat siswa mengetik minimal 2 huruf dengan ikon `Search` dan feedback ramah.
   - **Starter Pack Seed**: Paket kuis awal terpasang *"EC Practice Week #1: Slang & Daily Idioms"* (5 soal seru siap uji coba).
 
+- [x] Hardening EC Arena: Kuota Dinamis A21, Tombol Home Beranda Mobile, Save Point Pemulihan Kuis, Reset Retake Mentor, & Visual Feedback Kartu Kuis Aktif:
+  - **Kuota Peserta Kuis Dinamis (`QuizManager.tsx` & `MentorDashboard.tsx`)**:
+    - Mengeliminasi angka statis `/ 70 Siswa`.
+    - Menghubungkan penyebut ke data riil master anggota aktif Angkatan 21 (`totalA21Count = 104 siswa`). Tampilan menjadi `{submissions.length} / {totalA21Count || 104} Siswa` sehingga rasio tetap akurat dan tidak akan jebol meskipun seluruh 104 adik kelas hadir dan mengumpulkan kuis.
+  - **Poles Tombol Mobile Beranda Lebih Jelas (`Navbar.tsx`)**:
+    - Mengganti ikon bola dunia (`Globe`) menjadi ikon rumah (`Home`) yang universal.
+    - Menampilkan label teks eksplisit **`[ 🏠 Beranda ]`** di mobile maupun desktop berdampingan dengan `[ 🎮 Arena ]`. Siswa langsung paham fungsinya untuk kembali ke website utama.
+  - **Visual Feedback & Status Kartu Kuis Aktif (`QuizManager.tsx`)**:
+    - Memberikan deteksi cerdas `activeSession?.quiz_id === q.id` pada kartu paket kuis di daftar bank kuis.
+    - Menambahkan badge berkedip `[ 🟢 SEDANG AKTIF ]` dan aksen border hijau zamrud taktil (`border-emerald-500 bg-emerald-50/40 ring-2`).
+    - Tombol `[ ▷ Luncurkan Kuis ]` otomatis berubah menjadi `[ ⚡ Sesi Berlangsung ]` yang saat diklik langsung melakukan *smooth scroll* ke panel kontrol live di atas, mencegah klik ganda yang membingungkan.
+  - **Sistem Save Point Pemulihan Kuis Siswa (`ArenaPlayer.tsx`)**:
+    - Setiap kali siswa menjawab atau melangkah ke soal berikutnya, progres soal (`currentIdx`), perolehan skor, streak, dan jumlah benar otomatis disimpan ke `safeStorage` lokal.
+    - Jika smartphone siswa tiba-tiba mati, kehabisan kuota, atau halaman tidak sengaja ter-refresh, sistem mendeteksi save point yang belum tuntas dan menampilkan Modal Pemulihan Kuis Taktil: *"Save Point Ditemukan! Lanjutkan kuis dari Soal ke-X?"*.
+    - Siswa memiliki kendali penuh untuk melanjutkan dari titik terakhir atau mengulang dari soal pertama. Cache otomatis dihapus saat kuis selesai disubmit.
+  - **Akses Reset / Retake untuk Mentor & Super Admin (`QuizManager.tsx`)**:
+    - Menambahkan tombol aksi taktil `[ 🔄 Reset ]` di setiap baris nama siswa pada tabel leaderboard live.
+    - Jika seorang siswa kehabisan waktu akibat kendala sinyal atau HP drop dan mentor memberi izin retake, klik tombol ini akan menghapus riwayat kuis siswa tersebut dari tabel Supabase `quiz_submissions` secara realtime, mengizinkan siswa masuk dan mengerjakan kuis kembali dari awal.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Uji coba EC Arena Live Quiz pada pekan praktek eskul bersama adik-adik kelas A21 di 2–3 ruangan.
