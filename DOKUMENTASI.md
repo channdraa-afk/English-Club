@@ -391,16 +391,19 @@
     - Menambahkan tombol aksi taktil `[ 🔄 Reset ]` di setiap baris nama siswa pada tabel leaderboard live.
     - Jika seorang siswa kehabisan waktu akibat kendala sinyal atau HP drop dan mentor memberi izin retake, klik tombol ini akan menghapus riwayat kuis siswa tersebut dari tabel Supabase `quiz_submissions` secara realtime, mengizinkan siswa masuk dan mengerjakan kuis kembali dari awal.
 
-- [x] Papan Peringkat Kuis Terbuka & Realtime untuk Siswa (`ArenaPlayer.tsx`):
-  - **Tab Switcher Lobby Taktil (`[ 🎮 Ikuti Kuis ]` & `[ 🏆 Papan Skor Live ]`)**:
-    - Memberikan akses bebas bagi adik-adik kelas untuk melihat klasemen live kapan pun dari lobby depan tanpa harus mengisi token & nama ulang.
-    - Menampilkan total siswa yang telah menyelesaikan kuis pada badge tab.
-  - **Supabase WebSocket Realtime Sinkronisasi**:
-    - Menghubungkan tampilan klasemen siswa langsung ke channel WebSocket Supabase (`postgres_changes` tabel `quiz_submissions`).
-    - Papan skor di smartphone siswa bergerak dan ter-update seketika secara otomatis saat ada siswa lain yang baru submit dari ruangan kelas mana pun tanpa perlu reload browser.
-  - **Poles Klasemen Siswa & Tombol Refresh**:
-    - Dilengkapi tombol taktil `[ 🔄 Segarkan ]` manual dengan animasi berputar dan feedback audio Web Audio API.
-    - Menampilkan medali emas (🥇), perak (🥈), dan perunggu (🥉) untuk 3 besar, detail kelas siswa, dan penanda personal tebal `[ Kamu ]` pada baris si siswa.
+- [x] Autentikasi Siswa Terpadu (Token + Nama sebagai "Login") & Perbaikan Akses Arena (`ArenaPlayer.tsx`):
+  - **Perbaikan Bug Masuk Arena (State `quiz` Hydration)**:
+    - Mengatasi bug kritis di mana tombol `[ 🎮 MASUK ARENA ]` tidak berpindah layar bagi siswa yang datanya sudah ada (`existingSub`).
+    - Akar masalah: `quizData` sebelumnya diambil setelah pengecekan `existingSub`, sehingga `quiz` tetap bernilai `null` dan kondisi `!session || !quiz` terus merender ulang form lobi. Kini `quizData` di-fetch dan di-set lebih awal (`setQuiz(quizData)`), memastikan routing React langsung masuk ke layar hasil & leaderboard.
+  - **Model Akses Terautentikasi (Token + Nama sebagai Kunci Masuk)**:
+    - Mengeliminasi tab penonton publik tanpa login di beranda lobi arena sesuai arahan Chandra, menjaga ketertiban data dan privasi kelas.
+    - Siswa wajib memasukkan Token Ruangan (misal: `SMEGA`) dan memilih nama mereka (A21) sebagai kredensial login.
+  - **Dual Action Button Taktil**:
+    - **`[ 🎮 MASUK ARENA ]`**: Jika siswa sudah pernah submit, langsung membuka Kartu Skor & Leaderboard. Jika belum, langsung memulai soal kuis pertama (atau memulihkan save point).
+    - **`[ 🏆 Lihat Papan Skor Live Saja ]`**: Mengizinkan siswa yang belum mengerjakan kuis untuk login dan mengamati papan peringkat sementara sebagai penonton (*spectator*), lengkap dengan kartu mode penonton dan tombol taktil `[ 🎮 Mulai Kerjakan Kuis Sekarang ]`.
+  - **Realtime WebSocket Sinkronisasi & Opsi Ganti Siswa**:
+    - Langsung mendengarkan event perubahan tabel `quiz_submissions` secara realtime dengan highlight personal tebal `[ Kamu ]`.
+    - Tombol `[ 🚪 Ganti Siswa / Keluar Arena ]` untuk mereset sesi dan memudahkan pergantian pengguna di smartphone yang sama tanpa harus menutup browser.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
