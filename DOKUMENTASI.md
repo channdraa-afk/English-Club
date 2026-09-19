@@ -332,10 +332,12 @@
   - **Refactor Akses Penyimpanan**: Mengganti 100% pemanggilan mentah `localStorage` dan `sessionStorage` di `App.tsx`, `MentorDashboard.tsx`, `MentorLogin.tsx`, dan `TalentScoutA21.tsx` menjadi `safeStorage.get()`, `safeStorage.set()`, dan `safeStorage.remove()`.
   - **Jaring Pengaman Global (`src/components/TactileErrorBoundary.tsx`)**: Membungkus root aplikasi di `main.tsx` dengan Error Boundary bertema taktil Duolingo. Jika ada runtime error tak terduga dari script eksternal atau ekstensi nakal, website tidak akan pernah menampilkan layar putih mati, melainkan menampilkan kartu taktil ramah dengan tombol *"Muat Ulang Halaman"*.
 
+- [x] Smart Time-Aware Auto-Route Engine & Pembersih Hash Riwayat Autocomplete Browser (`src/App.tsx`):
+  - **Pencegah Terjebak Hash Autocomplete (`#absen`)**: Memperbaiki logika inisialisasi route di mana browser modern sering menambahkan fragment `#absen` secara otomatis dari riwayat kunjungan terdahulu. Pada hari selain Rabu dan saat `manual_bypass` nonaktif, sistem secara proaktif mendeteksi ketidakaktifan sesi, membersihkan address bar dengan `window.history.replaceState()`, dan langsung menyajikan Beranda (Landing Page) resmi.
+  - **Auto-Direct Instan Sesi Rabu & Bypass Aktif**: Ketika hari Rabu pukul 15:40 – 17:30 WIB tiba ATAU saat ketua/mentor mengaktifkan mode Bypass di panel kontrol, pengunjung yang membuka alamat `englishclub.site` polos otomatis langsung diantarkan masuk ke Menu Presensi (`#absen`) tanpa perlu mengeklik tautan apa pun.
+  - **Sinkronisasi Realtime & Live Clock Ticker Auto-Eject**: Jika mode bypass dinonaktifkan di tengah jalan atau jam dinding melewati batas 17:30 WIB di luar jadwal, sistem via Supabase Realtime channel dan timer 15 detik akan otomatis membersihkan URL dan mengembalikan pengunjung ke Beranda tanpa reload paksa.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
-
-
-
