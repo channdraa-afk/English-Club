@@ -6,7 +6,7 @@ import { safeStorage } from '../../lib/storage';
 
 // Cryptographic Private Salt & SHA-256 hash of Super Admin master key (Rainbow-Table Proof)
 export const SUPERADMIN_SALT = 'ec_smega_vault_2026_';
-export const SUPERADMIN_HASH = '53d66f9ebea8c3a0b1ee703aaf6503d34908773a2a5756c82b52fc4c4dc4643e';
+export const SUPERADMIN_HASH = '053f97e4abd78437a5ede0393ac0e47411463d4943a127527c59d49eda3b85ba';
 
 export async function hashString(str: string): Promise<string> {
   const encoder = new TextEncoder();
