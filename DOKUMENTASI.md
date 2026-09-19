@@ -403,7 +403,22 @@
     - **`[ 🏆 Lihat Papan Skor Live Saja ]`**: Mengizinkan siswa yang belum mengerjakan kuis untuk login dan mengamati papan peringkat sementara sebagai penonton (*spectator*), lengkap dengan kartu mode penonton dan tombol taktil `[ 🎮 Mulai Kerjakan Kuis Sekarang ]`.
   - **Realtime WebSocket Sinkronisasi & Opsi Ganti Siswa**:
     - Langsung mendengarkan event perubahan tabel `quiz_submissions` secara realtime dengan highlight personal tebal `[ Kamu ]`.
-    - Tombol `[ 🚪 Ganti Siswa / Keluar Arena ]` untuk mereset sesi dan memudahkan pergantian pengguna di smartphone yang sama tanpa harus menutup browser.
+- [x] Mode Uji Coba & Sandbox Online Terisolasi (Maintenance & Safe Simulation Mode):
+  - **Arsitektur Sandbox Terisolasi Online Multi-Perangkat (`src/lib/sandbox.ts`)**:
+    - Memungkinkan Super Admin (Chandra) melakukan pengujian penuh (presensi siswa A21, kuis EC Arena, penilaian bintang bakat) langsung di domain produksi `englishclub.site` tanpa mencemari atau merusak data riil.
+    - Sinkronisasi realtime multi-perangkat via Supabase `app_settings` (key `sandbox_mode`) dan sesi pertemuan simulasi ber-token kustom `COBA` (`🧪 [UJI COBA] Simulasi Eskul`).
+    - Laptop sebagai Super Admin/Mentor dan smartphone sebagai siswa A21 dapat saling terhubung dan menguji fitur live secara bersamaan.
+  - **Banner Pengumuman Publik & Notifikasi Global (`src/components/SandboxBanner.tsx`)**:
+    - Banner taktil mengambang di puncak aplikasi yang memberitahukan seluruh pengunjung bahwa sistem sedang berada dalam Mode Pemeliharaan / Uji Coba.
+    - Tampilan khusus Super Admin dilengkapi Live Data Counter (jumlah presensi, kuis, dan bintang simulasi yang sedang tertampung) serta tombol cepat `[ 🧪 Selesaikan & Hapus Data Simulasi ]`.
+  - **Auto-Bypass Jadwal Eskul**:
+    - Ketika Mode Uji Coba aktif, form presensi dan arena kuis otomatis terbuka (bypass jadwal hari Rabu 15:40 - 17:30 WIB) sehingga Chandra dapat menguji sistem kapan saja (termasuk akhir pekan/malam hari) tanpa perlu menekan bypass manual berulang kali.
+  - **Auto-Purge 100% Zero-Residue (`stopSandboxModeAndPurge`)**:
+    - Saat Mode Uji Coba dinonaktifkan, sistem secara otomatis menghapus seluruh rekaman data simulasi dari Supabase (kehadiran uji coba, pengumpulan kuis uji coba, sesi kuis uji coba, bintang bakat uji coba, dan pertemuan uji coba) dalam satu siklus bersih tanpa menyisakan sampah data.
+  - **Perisai Laporan Resmi (`MentorDashboard.tsx`)**:
+    - Seluruh tab laporan resmi (`ReportRecap`, `MentorDisciplineRadar`, `TalentScoutA21`) secara otomatis menyaring (`officialMeetings`) dan mengecualikan sesi uji coba, menjamin kalkulasi nilai rapor dan radar disiplin tetap 100% steril dan akurat.
+  - **Pusat Kendali di Brankas Data (`DataVault.tsx`)**:
+    - Menghadirkan Sandbox Control Card di dalam menu Brankas Data & Master Reset dengan indikator status aktif/nonaktif, penjelasan alur uji coba, dan tombol taktil `[ 🧪 Masuk Mode Uji Coba ]` / `[ 🛑 Matikan & Bersihkan ]`.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).

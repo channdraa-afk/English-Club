@@ -10,18 +10,21 @@ import {
   FileJson, 
   Info,
   Layers,
-  Sparkles
+  Sparkles,
+  FlaskConical
 } from 'lucide-react';
 import { Member, Meeting, Attendance, Registration } from '../../types/database';
 import { supabase } from '../../lib/supabase';
 import { sound } from '../../lib/audio';
 import { TactileButton } from '../TactileButton';
+import { startSandboxMode, stopSandboxModeAndPurge } from '../../lib/sandbox';
 
 interface DataVaultProps {
   activeMeeting: Meeting | null;
   attendances: Attendance[];
   registrations: Registration[];
   members: Member[];
+  isSandboxActive?: boolean;
   onDataChanged: () => void;
 }
 
@@ -30,11 +33,13 @@ export const DataVault: React.FC<DataVaultProps> = ({
   attendances,
   registrations,
   members,
+  isSandboxActive = false,
   onDataChanged,
 }) => {
   const [resetScope, setResetScope] = useState<'session' | 'all'>('session');
   const [confirmPhrase, setConfirmPhrase] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isSandboxLoading, setIsSandboxLoading] = useState(false);
   const [statusNotice, setStatusNotice] = useState<{
     type: 'success' | 'error';
     text: string;
@@ -42,6 +47,50 @@ export const DataVault: React.FC<DataVaultProps> = ({
 
   const TARGET_PHRASE = 'RESET DATA UJI COBA';
   const isPhraseValid = confirmPhrase.trim() === TARGET_PHRASE;
+
+  const handleStartSandbox = async () => {
+    setIsSandboxLoading(true);
+    setStatusNotice(null);
+    try {
+      await startSandboxMode();
+      setStatusNotice({
+        type: 'success',
+        text: 'Mode Uji Coba berhasil diaktifkan! Sesi "COBA" siap digunakan untuk simulasi online multi-perangkat.',
+      });
+      onDataChanged();
+    } catch (err: any) {
+      setStatusNotice({
+        type: 'error',
+        text: 'Gagal mengaktifkan mode uji coba: ' + (err?.message || err),
+      });
+    } finally {
+      setIsSandboxLoading(false);
+    }
+  };
+
+  const handleStopSandbox = async () => {
+    if (!confirm('Yakin ingin mematikan Mode Uji Coba? Seluruh data presensi, hasil kuis, dan bintang uji coba akan dihapus bersih 100% dari Supabase.')) {
+      return;
+    }
+
+    setIsSandboxLoading(true);
+    setStatusNotice(null);
+    try {
+      await stopSandboxModeAndPurge();
+      setStatusNotice({
+        type: 'success',
+        text: 'Mode Uji Coba dinonaktifkan. Seluruh data simulasi berhasil dibersihkan tanpa menyisakan jejak.',
+      });
+      onDataChanged();
+    } catch (err: any) {
+      setStatusNotice({
+        type: 'error',
+        text: 'Gagal membersihkan data uji coba: ' + (err?.message || err),
+      });
+    } finally {
+      setIsSandboxLoading(false);
+    }
+  };
 
   // Active meeting stats
   const activeSessionAttCount = activeMeeting
@@ -240,6 +289,75 @@ export const DataVault: React.FC<DataVaultProps> = ({
           <span>{statusNotice.text}</span>
         </div>
       )}
+
+      {/* Sandbox / Mode Uji Coba Control Card */}
+      <div className="bg-white rounded-3xl border-2 border-amber-300 shadow-[0_4px_0_0_#fcd34d] p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b-2 border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-10 h-10 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-300 shrink-0">
+              <FlaskConical className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-black text-base text-slate-900 flex items-center gap-2 flex-wrap">
+                <span>Mode Uji Coba & Pemeliharaan (Sandbox)</span>
+                {isSandboxActive && (
+                  <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-100 px-2 py-0.5 rounded-full border border-amber-300">
+                    Aktif
+                  </span>
+                )}
+              </h3>
+              <p className="text-xs font-bold text-slate-500">
+                Uji coba fitur baru secara terisolasi tanpa mencemari database absensi & kuis asli.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {isSandboxActive ? (
+              <TactileButton
+                variant="crimson"
+                size="sm"
+                disabled={isSandboxLoading}
+                onClick={handleStopSandbox}
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isSandboxLoading ? 'Membersihkan...' : 'Matikan & Bersihkan Uji Coba'}</span>
+              </TactileButton>
+            ) : (
+              <TactileButton
+                variant="brand"
+                size="sm"
+                disabled={isSandboxLoading}
+                onClick={handleStartSandbox}
+              >
+                <FlaskConical className="w-4 h-4" />
+                <span>{isSandboxLoading ? 'Mengaktifkan...' : 'Aktifkan Mode Uji Coba'}</span>
+              </TactileButton>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+            <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Status Lingkungan</span>
+            <span className={`font-black ${isSandboxActive ? 'text-amber-600' : 'text-emerald-600'}`}>
+              {isSandboxActive ? '🧪 Simulasi Terisolasi' : '🛡️ Produksi (Data Riil)'}
+            </span>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+            <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Token Simulasi</span>
+            <span className="font-mono font-black text-blue-600">
+              {isSandboxActive ? 'COBA' : '-'}
+            </span>
+          </div>
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200">
+            <span className="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Pembersihan Otomatis</span>
+            <span className="font-bold text-slate-600">
+              100% Zero-Residue saat Off
+            </span>
+          </div>
+        </div>
+      </div>
 
       {/* Vault Reset Control Form */}
       <div className="bg-white rounded-3xl border-2 border-rose-200 shadow-[0_4px_0_0_#fecdd3] p-6 space-y-5">

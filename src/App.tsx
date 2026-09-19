@@ -8,6 +8,8 @@ import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
 import { LandingPage } from './components/LandingPage/LandingPage';
 import { ArenaPlayer } from './components/Arena/ArenaPlayer';
+import { SandboxBanner } from './components/SandboxBanner';
+import { SandboxState } from './lib/sandbox';
 
 const MentorDashboard = React.lazy(() =>
   import('./components/MentorPortal/MentorDashboard').then((m) => ({
@@ -31,6 +33,7 @@ export const App: React.FC = () => {
   const [mentorPin, setMentorPin] = useState('');
   const [mentorToken, setMentorToken] = useState('CREW20');
   const [activeQuizSession, setActiveQuizSession] = useState<QuizSession | null>(null);
+  const [sandboxState, setSandboxState] = useState<SandboxState | null>(null);
 
   // Instant local cache read for zero-delay bypass detection
   const [isManualBypass, setIsManualBypass] = useState<boolean>(() => {
@@ -213,8 +216,31 @@ export const App: React.FC = () => {
       )
       .subscribe();
 
+    const settingsChannel = supabase
+      .channel('realtime_app_settings_watcher')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'app_settings' },
+        () => {
+          supabase
+            .from('app_settings')
+            .select('*')
+            .eq('key', 'sandbox_mode')
+            .maybeSingle()
+            .then(({ data }) => {
+              if (data && data.value) {
+                setSandboxState(data.value as SandboxState);
+              } else {
+                setSandboxState(null);
+              }
+            });
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(quizChannel);
+      supabase.removeChannel(settingsChannel);
     };
   }, []);
 
@@ -332,6 +358,8 @@ export const App: React.FC = () => {
             setBigEvents(s.value);
           } else if (s.key === 'gallery_items' && Array.isArray(s.value)) {
             setGalleryItems(s.value);
+          } else if (s.key === 'sandbox_mode' && s.value) {
+            setSandboxState(s.value as SandboxState);
           }
         });
       }
@@ -372,8 +400,13 @@ export const App: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  // Current active meeting
-  const activeMeeting = meetings.find((m) => m.is_active) || meetings[0] || null;
+  // Current active meeting (routed to Sandbox Meeting if Sandbox is ON)
+  const isSandboxModeActive = Boolean(sandboxState?.is_active);
+  const activeMeeting = isSandboxModeActive
+    ? (meetings.find((m) => m.token === 'COBA' || m.id === sandboxState?.meeting_id) || meetings.find((m) => m.is_active) || null)
+    : (meetings.find((m) => m.is_active && m.token !== 'COBA' && !m.title.includes('[UJI COBA]')) || meetings.find((m) => m.token !== 'COBA' && !m.title.includes('[UJI COBA]')) || null);
+
+  const isEffectiveBypass = isManualBypass || isSandboxModeActive;
 
   // Handlers
   const handleAttendanceSuccess = (member: Member, meeting: Meeting) => {
@@ -500,11 +533,22 @@ export const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 selection:bg-blue-200 selection:text-blue-900">
+      {/* Broadcast Sandbox & Maintenance Banner for everyone when active */}
+      {isSandboxModeActive && (
+        <SandboxBanner
+          isSuperAdmin={isSuperAdmin}
+          onSandboxDeactivated={() => {
+            setSandboxState({ is_active: false });
+            fetchData(true);
+          }}
+        />
+      )}
+
       {/* If Landing View: Tampilkan Official Flagship Website EC SMEGA */}
       {currentView === 'landing' ? (
         <LandingPage
           activeMeeting={activeMeeting}
-          isManualBypass={isManualBypass}
+          isManualBypass={isEffectiveBypass}
           onOpenAttendance={() => {
             setCurrentView('student');
             window.location.hash = '#absen';
@@ -667,7 +711,7 @@ export const App: React.FC = () => {
                 <MemberAttendance
                   members={members}
                   activeMeeting={activeMeeting}
-                  isManualBypass={isManualBypass}
+                  isManualBypass={isEffectiveBypass}
                   onAttendanceSuccess={handleAttendanceSuccess}
                 />
               </div>
@@ -692,7 +736,7 @@ export const App: React.FC = () => {
                   currentPin={mentorPin}
                   mentorToken={mentorToken}
                   onMentorTokenUpdated={handleMentorTokenUpdated}
-                  isManualBypass={isManualBypass}
+                  isManualBypass={isEffectiveBypass}
                   onToggleManualBypass={handleToggleManualBypass}
                   isSuperAdmin={isSuperAdmin}
                   onSuperAdminUnlock={handleSuperAdminUnlock}
@@ -706,6 +750,7 @@ export const App: React.FC = () => {
                   talentStars={talentStars}
                   onAddTalentStar={handleAddTalentStar}
                   onRemoveTalentStar={handleRemoveTalentStar}
+                  isSandboxActive={isSandboxModeActive}
                   onLogout={handleMentorLogout}
                   onBackToStudent={() => {
                     setCurrentView('student');

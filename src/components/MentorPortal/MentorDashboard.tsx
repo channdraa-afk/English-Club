@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Sliders, 
   FileSpreadsheet, 
@@ -80,6 +80,7 @@ interface MentorDashboardProps {
   talentStars?: TalentStar[];
   onAddTalentStar?: (star: Omit<TalentStar, 'id' | 'created_at'>) => Promise<void>;
   onRemoveTalentStar?: (starId: string) => Promise<void>;
+  isSandboxActive?: boolean;
   onLogout: () => void;
   onBackToStudent: () => void;
 }
@@ -105,9 +106,10 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   onAttendanceChanged,
   onRefreshRegistrations,
   onMemberAdded,
-  talentStars = [],
+  talentStars,
   onAddTalentStar,
   onRemoveTalentStar,
+  isSandboxActive = false,
   onLogout,
   onBackToStudent,
 }) => {
@@ -163,6 +165,12 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   }, [isSuperAdmin, activeTab]);
 
   const pendingRegsCount = registrations.filter((r) => r.status === 'pending').length;
+
+  const officialMeetings = useMemo(() => {
+    return meetings.filter(
+      (m) => m.token !== 'COBA' && !m.title?.includes('[UJI COBA]')
+    );
+  }, [meetings]);
 
   interface TabItem {
     id: TabId;
@@ -462,8 +470,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       {activeTab === 'talent_scout' && onAddTalentStar && onRemoveTalentStar && (
         <TalentScoutA21
           members={members}
-          meetings={meetings}
-          talentStars={talentStars}
+          meetings={officialMeetings}
+          talentStars={talentStars || []}
           onAddStar={onAddTalentStar}
           onRemoveStar={onRemoveTalentStar}
           activeMeeting={activeMeeting}
@@ -510,7 +518,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       {activeTab === 'recap' && (
         <ReportRecap
           members={members}
-          meetings={meetings}
+          meetings={officialMeetings}
           attendances={attendances}
           activeMeeting={activeMeeting}
           isSuperAdmin={isSuperAdmin}
@@ -523,7 +531,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       {activeTab === 'radar' && (
         <MentorDisciplineRadar
           members={members}
-          meetings={meetings}
+          meetings={officialMeetings}
           attendances={attendances}
         />
       )}
@@ -592,6 +600,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           attendances={attendances}
           registrations={registrations}
           members={members}
+          isSandboxActive={isSandboxActive}
           onDataChanged={onAttendanceChanged}
         />
       )}
