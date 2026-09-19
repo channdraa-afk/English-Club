@@ -19,7 +19,8 @@ import {
   HeartHandshake,
   Star,
   Database,
-  UserCog
+  UserCog,
+  Gamepad2
 } from 'lucide-react';
 import { Member, Meeting, Attendance, Registration, TalentStar } from '../../types/database';
 import { MeetingControl } from './MeetingControl';
@@ -35,11 +36,13 @@ import { MentorDisciplineRadar } from './MentorDisciplineRadar';
 import { SuperAdminModal } from './SuperAdminModal';
 import { DataVault } from './DataVault';
 import { MemberRosterManager } from './MemberRosterManager';
+import { QuizManager } from './QuizManager';
 import { sound } from '../../lib/audio';
 import { safeStorage } from '../../lib/storage';
 
 export type TabId = 
   | 'session'
+  | 'quiz'
   | 'roster_manager'
   | 'approvals'
   | 'data_vault'
@@ -112,6 +115,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     const saved = safeStorage.get('ec_active_tab', 'session') as TabId | null;
     const allowedRegular: TabId[] = [
       'mentor_attendance',
+      'quiz',
       'radar',
       'live_monitor',
       'talent_scout',
@@ -144,6 +148,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   useEffect(() => {
     const allowedRegular: TabId[] = [
       'mentor_attendance',
+      'quiz',
       'radar',
       'live_monitor',
       'talent_scout',
@@ -171,6 +176,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   const allTabs: TabItem[] = [
     // --- 🌐 UMUM (SISTEM & PUSAT) ---
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'general', superOnly: true },
+    { id: 'quiz', label: 'EC Arena (Kuis Live)', icon: Gamepad2, category: 'general', superOnly: false },
     { id: 'roster_manager', label: 'Kelola Master Anggota', icon: UserCog, category: 'general', superOnly: true },
     { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
     { id: 'data_vault', label: 'Brankas Reset & Backup', icon: Database, category: 'general', superOnly: true },
@@ -488,6 +494,14 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           currentPin={currentPin}
           onPinUpdated={onPinUpdated}
           onAttendanceChanged={onAttendanceChanged}
+        />
+      )}
+
+      {/* EC Arena Kuis Live Multi-Ruangan (Accessible by ALL Mentors) */}
+      {activeTab === 'quiz' && (
+        <QuizManager
+          activeMeetingId={activeMeeting?.id}
+          onAwardTalentStar={onAddTalentStar}
         />
       )}
 

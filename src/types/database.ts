@@ -88,3 +88,47 @@ export interface GalleryItem {
   imageUrl?: string;
   accentColor?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'indigo';
 }
+
+export interface QuizQuestion {
+  id: string;
+  question: string;
+  option_a: string;
+  option_b: string;
+  option_c: string;
+  option_d: string;
+  correct_option: 0 | 1 | 2 | 3; // 0: A (Red), 1: B (Blue), 2: C (Yellow), 3: D (Green)
+  time_limit: number; // in seconds (e.g. 20)
+}
+
+export interface Quiz {
+  id: string;
+  title: string;
+  description?: string;
+  questions: QuizQuestion[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface QuizSession {
+  id: string;
+  quiz_id: string;
+  room_code: string;
+  status: 'active' | 'closed';
+  created_by: string;
+  created_at?: string;
+  closed_at?: string;
+  quiz?: Quiz;
+}
+
+export interface QuizSubmission {
+  id: string;
+  session_id: string;
+  member_id: string;
+  member_name: string;
+  class_name: string;
+  score: number;
+  correct_answers: number;
+  total_questions: number;
+  time_spent_seconds: number;
+  completed_at?: string;
+}

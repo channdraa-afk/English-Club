@@ -342,13 +342,31 @@
     - **GitHub Vault Safeguard Hapus Permanen (Hard Delete)**: Opsi khusus pembersihan salah ketik dobel dengan kewajiban mengetik frasa persis `HAPUS SISWA`.
   - **Sanitasi Data Uji Coba**: Melakukan pencadangan JSON dan pengosongan 2 data presensi uji coba sehingga tabel `attendances` kembali bersih 0% siap pakai untuk hari Rabu perdana.
 
-- [x] Operasi Pertahankan 50K: Fortress Shield V2 (In-Memory Isolation, Honeypot Anti-Console Cheat, & Salted Signature Baru):
-  - **Eliminasi Total Replay Attack Console Browser (`src/App.tsx`)**: Menghapus seluruh pembacaan hash statis dari `sessionStorage`. Status Super Admin kini murni diisolasi di dalam memori runtime React (`useState(false)`). Trik console browser seperti `sessionStorage.setItem(...)` yang disarankan AI otomatis mati kutu dan 0% mempan!
-  - **Jebakan Honeypot Anti-Tampering**: Jika ada upaya penyuntikan kunci `ec_superadmin_sig` / `ec_superadmin_auth` palsu via console, sistem langsung mendeteksi tampering, menghapus seluruh storage, membunyikan sirene audio error, dan memblokir perangkat selama 5 menit.
-  - **Eskalasi Lockout Bertingkat (`SuperAdminModal.tsx`)**: 3x salah tebak = kunci 60 detik; 5x salah tebak = kunci 300 detik (5 menit).
-  - **Tanda Tangan Kriptografis Baru**: Memperbarui salt-hash ke kata sandi baru berkekuatan tinggi 20 karakter dengan Zero Plaintext Leak.
+- [x] EC Arena: In-House Interactive Live Quiz Engine Multi-Ruangan (Pekan Praktek Eskul):
+  - **Arsitektur Self-Paced Multi-Ruangan (Quizizz/Blooket Style)**:
+    - Memecahkan kendala logistik eskul yang terbagi di **2–3 ruangan kelas terpisah** tanpa proyektor tersinkronisasi.
+    - Pertanyaan dan 4 tombol taktil 3D Duolingo muncul langsung di layar smartphone masing-masing adik kelas. Siswa menjawab sesuai kecepatan masing-masing dengan timer per-soal.
+    - Seluruh skor dan klasemen dari ke-3 ruangan teragregasi secara real-time via Supabase Realtime WebSocket ke dalam satu papan peringkat gabungan.
+  - **Skema Database Supabase Baru (`supabase/create_quiz_tables.sql`)**:
+    - `quizzes`: Bank paket kuis (judul, deskripsi, array soal JSONB berisikan teks soal, 4 opsi warna, kunci jawaban, dan durasi detik per-soal).
+    - `quiz_sessions`: Sesi kuis aktif dengan token ruangan kustom (misal: `SMEGA`) dan status (`active` / `closed`).
+    - `quiz_submissions`: Rekam jejak hasil pengerjaan siswa (skor, jumlah benar, durasi pengerjaan, timestamp).
+    - RLS aktif dengan policy publik aman.
+  - **Keamanan Operasional 59 Mentor (Anti-Troll & Anti-Accidental Play)**:
+    - Fitur EC Arena terbuka di portal untuk seluruh 59 mentor Angkatan 20 (kategori `🌐 UMUM`), sehingga mentor di kelas mana pun dapat memantau dan meluncurkan sesi.
+    - Dilengkapi **Modal Verifikasi 2-Langkah**: Tombol "Mulai Sesi Live" terkunci hingga mentor mengetik token konfirmasi `SMEGA`, mencegah sesi terputar tidak sengaja.
+  - **Client Pemain Siswa (`ArenaPlayer.tsx`)**:
+    - Alur masuk mudah: Masukkan token ruangan + cari nama (autocomplete anggota A21).
+    - Perhitungan skor Kahoot Formula ($1000 \times (1 - \text{elapsed}/(\text{limit} \times 2)) + \text{streakBonus}$).
+    - 4 Tombol Taktil 3D Khas Duolingo: 🔺 Merah (A), 🔷 Biru (B), 🟡 Kuning (C), 🟩 Hijau (D) dengan haptik audio Web Audio API (`playTick`, `playCorrect`, `playWrong`).
+    - Layar Akhir Selebrasi: Konfeti, skor akhir, jumlah benar, dan klasemen live seluruh ruangan.
+  - **Podium Juara & Integrasi Talent Scout (`QuizManager.tsx`)**:
+    - Podium 3D peraih Juara 1, 2, dan 3 dengan fanfare audio Web Audio API dan konfeti.
+    - Tombol 1-klik "Simpan ke Radar Bakat": Otomatis memasukkan peraih juara kuis ke rekam jejak `talent_stars` (kategori `general_active`) untuk penilaian rapor.
+  - **Starter Pack Seed**: Paket kuis awal terpasang *"EC Practice Week #1: Slang & Daily Idioms"* (5 soal seru siap uji coba).
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
+- [ ] Uji coba EC Arena Live Quiz pada pekan praktek eskul bersama adik-adik kelas A21 di 2–3 ruangan.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.

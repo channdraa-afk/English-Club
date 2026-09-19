@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from './lib/supabase';
-import { Member, Meeting, Attendance, Registration, TalentStar, BigEvent, GalleryItem } from './types/database';
+import { Member, Meeting, Attendance, Registration, TalentStar, BigEvent, GalleryItem, QuizSession } from './types/database';
 import { Navbar } from './components/Navbar';
 import { MemberAttendance } from './components/MemberAttendance';
 import { WordOfTheDayModal } from './components/WordOfTheDayModal';
 import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
 import { LandingPage } from './components/LandingPage/LandingPage';
+import { ArenaPlayer } from './components/Arena/ArenaPlayer';
 
 const MentorDashboard = React.lazy(() =>
   import('./components/MentorPortal/MentorDashboard').then((m) => ({
@@ -29,6 +30,7 @@ export const App: React.FC = () => {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
   const [mentorPin, setMentorPin] = useState('');
   const [mentorToken, setMentorToken] = useState('CREW20');
+  const [activeQuizSession, setActiveQuizSession] = useState<QuizSession | null>(null);
 
   // Instant local cache read for zero-delay bypass detection
   const [isManualBypass, setIsManualBypass] = useState<boolean>(() => {
@@ -38,8 +40,8 @@ export const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
 
-  // View state: 'landing' | 'student' | 'mentor' (Smart Time-Aware Auto-Route Engine)
-  const [currentView, setCurrentView] = useState<'landing' | 'student' | 'mentor'>(() => {
+  // View state: 'landing' | 'student' | 'mentor' | 'arena' (Smart Time-Aware Auto-Route Engine)
+  const [currentView, setCurrentView] = useState<'landing' | 'student' | 'mentor' | 'arena'>(() => {
     if (typeof window !== 'undefined') {
       const hash = window.location.hash.toLowerCase();
       const cachedBypass = safeStorage.get('ec_manual_bypass') === 'true';
@@ -47,6 +49,7 @@ export const App: React.FC = () => {
 
       if (hash === '#mentor') return 'mentor';
       if (hash === '#beranda') return 'landing';
+      if (hash === '#arena' || hash === '#kuis') return 'arena';
 
       // If URL contains #absen or #presensi:
       if (hash === '#absen' || hash === '#presensi') {
@@ -119,6 +122,8 @@ export const App: React.FC = () => {
         setCurrentView('student');
       } else if (hash === '#mentor') {
         setCurrentView('mentor');
+      } else if (hash === '#arena' || hash === '#kuis') {
+        setCurrentView('arena');
       } else if (hash === '#beranda') {
         setCurrentView('landing');
       } else if (hash === '' || hash === '#') {
@@ -185,6 +190,31 @@ export const App: React.FC = () => {
 
     return () => {
       supabase.removeChannel(channel);
+    };
+  }, []);
+
+  // Realtime subscription: sync active quiz session instantly
+  useEffect(() => {
+    const quizChannel = supabase
+      .channel('realtime_quiz_session_watcher')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'quiz_sessions' },
+        () => {
+          supabase
+            .from('quiz_sessions')
+            .select('*')
+            .eq('status', 'active')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(({ data }) => setActiveQuizSession(data || null));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(quizChannel);
     };
   }, []);
 
@@ -314,6 +344,21 @@ export const App: React.FC = () => {
         }
       } catch {
         // Handled via app_settings fallback
+      }
+
+      // 7. Fetch active quiz session if available
+      try {
+        const { data: qSession } = await supabase
+          .from('quiz_sessions')
+          .select('*')
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        setActiveQuizSession(qSession || null);
+      } catch {
+        // Fallback null
       }
     } catch (err: any) {
       console.error('Error fetching Supabase data:', err);
@@ -502,9 +547,15 @@ export const App: React.FC = () => {
             isRegistrationOpen={isRegistrationOpen}
             isMentorLoggedIn={isMentorLoggedIn}
             currentView={currentView}
+            hasActiveQuiz={Boolean(activeQuizSession)}
+            onOpenArena={() => {
+              sound.playPop();
+              setCurrentView('arena');
+              window.location.hash = '#arena';
+            }}
             onSwitchView={(v) => {
               setCurrentView(v);
-              window.location.hash = v === 'mentor' ? '#mentor' : v === 'student' ? '#absen' : '#beranda';
+              window.location.hash = v === 'mentor' ? '#mentor' : v === 'student' ? '#absen' : v === 'arena' ? '#arena' : '#beranda';
             }}
             onGoHome={() => {
               setCurrentView('landing');
@@ -536,13 +587,57 @@ export const App: React.FC = () => {
                   </button>
                 </div>
               </div>
-            ) : currentView === 'student' ? (
-              <MemberAttendance
+            ) : currentView === 'arena' ? (
+              <ArenaPlayer
                 members={members}
-                activeMeeting={activeMeeting}
-                isManualBypass={isManualBypass}
-                onAttendanceSuccess={handleAttendanceSuccess}
+                onBackToHome={() => {
+                  setCurrentView('student');
+                  window.location.hash = '#absen';
+                }}
               />
+            ) : currentView === 'student' ? (
+              <div className="space-y-6">
+                {activeQuizSession && (
+                  <div className="max-w-md mx-auto px-4 pt-4">
+                    <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-4 sm:p-5 rounded-3xl border-2 border-blue-800 shadow-[0_6px_0_0_#1e3a8a] text-white flex flex-col sm:flex-row items-center justify-between gap-3 animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="w-11 h-11 rounded-2xl bg-white/20 flex items-center justify-center font-black text-2xl shrink-0 shadow-inner">
+                          🎮
+                        </div>
+                        <div>
+                          <span className="text-[10px] font-black uppercase tracking-wider bg-white/20 px-2 py-0.5 rounded-full text-blue-100 inline-block mb-0.5">
+                            Kuis Live Sedang Dibuka!
+                          </span>
+                          <h4 className="text-sm font-black tracking-tight leading-tight">
+                            EC Arena — Pekan Praktek
+                          </h4>
+                          <p className="text-xs font-medium text-blue-100">
+                            Token: <span className="font-mono font-black bg-white/25 px-2 py-0.5 rounded-lg text-white">{activeQuizSession.room_code}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playPop();
+                          setCurrentView('arena');
+                          window.location.hash = '#arena';
+                        }}
+                        className="w-full sm:w-auto px-4 py-2.5 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs border-2 border-amber-600 shadow-[0_3px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer text-center"
+                      >
+                        Masuk Kuis Arena ➔
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <MemberAttendance
+                  members={members}
+                  activeMeeting={activeMeeting}
+                  isManualBypass={isManualBypass}
+                  onAttendanceSuccess={handleAttendanceSuccess}
+                />
+              </div>
             ) : isMentorLoggedIn ? (
               <React.Suspense
                 fallback={

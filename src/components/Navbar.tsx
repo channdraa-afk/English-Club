@@ -9,9 +9,11 @@ interface NavbarProps {
   onOpenRegister: () => void;
   isRegistrationOpen: boolean;
   isMentorLoggedIn: boolean;
-  currentView: 'student' | 'mentor' | 'landing';
-  onSwitchView: (view: 'student' | 'mentor' | 'landing') => void;
+  currentView: 'student' | 'mentor' | 'landing' | 'arena';
+  onSwitchView: (view: 'student' | 'mentor' | 'landing' | 'arena') => void;
   onGoHome?: () => void;
+  hasActiveQuiz?: boolean;
+  onOpenArena?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -24,6 +26,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   onSwitchView,
   onGoHome,
+  hasActiveQuiz,
+  onOpenArena,
 }) => {
   const [tapCount, setTapCount] = useState(0);
 
@@ -88,6 +92,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="hidden min-[480px]:inline sm:hidden">Web</span>
                 <span className="hidden sm:inline">Web Utama</span>
               </span>
+            </button>
+          )}
+
+          {/* Active Quiz Arena CTA */}
+          {hasActiveQuiz && currentView !== 'arena' && onOpenArena && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                onOpenArena();
+              }}
+              title="Masuk Kuis Live EC Arena"
+              className="flex items-center gap-1 p-1.5 px-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white border border-blue-800 text-xs font-black shadow-[0_2px_0_0_#1e3a8a] active:translate-y-0.5 transition-all shrink-0 cursor-pointer animate-pulse"
+            >
+              <span className="text-xs">🎮</span>
+              <span className="hidden min-[440px]:inline">Arena</span>
             </button>
           )}
 
