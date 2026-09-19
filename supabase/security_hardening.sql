@@ -31,13 +31,27 @@ DROP POLICY IF EXISTS "Allow public delete talent_stars" ON talent_stars;
 CREATE POLICY "Allow public delete talent_stars" ON talent_stars FOR DELETE USING (true);
 
 -- ==============================================================================
--- 2. PENGUATAN TABEL MASTER: members (Read-Only Protection)
--- Mencegah manipulasi/penghapusan master data 165 siswa lewat REST API publik
+-- 2. PENGELOLAAN TABEL MASTER: members (Managed Policies)
+-- Mengizinkan pembacaan publik dan pengelolaan mutasi siswa via Super Admin & Registrasi
 -- ==============================================================================
 
--- Hapus policy permissive insert/update lama jika ada
-DROP POLICY IF EXISTS "Allow public insert/update members" ON members;
-
--- Kunci tabel members murni SELECT (baca saja) untuk public client
+-- Kunci tabel members SELECT untuk public client
 DROP POLICY IF EXISTS "Allow public read members" ON members;
 CREATE POLICY "Allow public read members" ON members FOR SELECT USING (true);
+
+-- Izinkan penambahan anggota baru (ACC Registrasi & Form Super Admin)
+DROP POLICY IF EXISTS "Allow public insert members" ON members;
+CREATE POLICY "Allow public insert members" ON members FOR INSERT WITH CHECK (true);
+
+-- Izinkan pembaruan status aktif/nonaktif anggota
+DROP POLICY IF EXISTS "Allow public update members" ON members;
+CREATE POLICY "Allow public update members" ON members FOR UPDATE USING (true) WITH CHECK (true);
+
+-- Izinkan penghapusan permanen siswa (GitHub Vault Safeguard)
+DROP POLICY IF EXISTS "Allow public delete members" ON members;
+CREATE POLICY "Allow public delete members" ON members FOR DELETE USING (true);
+
+-- 3. Izinkan penghapusan data uji coba registrasi (Data Vault Reset)
+DROP POLICY IF EXISTS "Allow public delete registrations" ON registrations;
+CREATE POLICY "Allow public delete registrations" ON registrations FOR DELETE USING (true);
+

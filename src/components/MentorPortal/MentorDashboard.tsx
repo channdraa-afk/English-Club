@@ -18,7 +18,8 @@ import {
   Layers,
   HeartHandshake,
   Star,
-  Database
+  Database,
+  UserCog
 } from 'lucide-react';
 import { Member, Meeting, Attendance, Registration, TalentStar } from '../../types/database';
 import { MeetingControl } from './MeetingControl';
@@ -33,11 +34,13 @@ import { StructureView } from './StructureView';
 import { MentorDisciplineRadar } from './MentorDisciplineRadar';
 import { SuperAdminModal } from './SuperAdminModal';
 import { DataVault } from './DataVault';
+import { MemberRosterManager } from './MemberRosterManager';
 import { sound } from '../../lib/audio';
 import { safeStorage } from '../../lib/storage';
 
 export type TabId = 
   | 'session'
+  | 'roster_manager'
   | 'approvals'
   | 'data_vault'
   | 'live_monitor'
@@ -168,6 +171,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   const allTabs: TabItem[] = [
     // --- 🌐 UMUM (SISTEM & PUSAT) ---
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'general', superOnly: true },
+    { id: 'roster_manager', label: 'Kelola Master Anggota', icon: UserCog, category: 'general', superOnly: true },
     { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
     { id: 'data_vault', label: 'Brankas Reset & Backup', icon: Database, category: 'general', superOnly: true },
 
@@ -542,6 +546,18 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           isSuperAdmin={isSuperAdmin}
           initialGroup="a20"
           lockGroup={true}
+        />
+      )}
+
+      {/* Kelola Master Anggota & Mutasi Siswa (Strictly Super Admin Only) */}
+      {activeTab === 'roster_manager' && isSuperAdmin && (
+        <MemberRosterManager
+          members={members}
+          attendances={attendances}
+          onMemberMutated={() => {
+            onMemberAdded();
+            onAttendanceChanged();
+          }}
         />
       )}
 

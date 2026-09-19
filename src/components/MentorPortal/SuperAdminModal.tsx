@@ -1,14 +1,16 @@
-import React, { useState } from 'react';
-import { Crown, KeyRound, Lock, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Crown, KeyRound, Lock, X, AlertCircle, Eye, EyeOff, ShieldAlert, Timer } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
+import { safeStorage } from '../../lib/storage';
 
-// Cryptographic SHA-256 hash of Super Admin master key (One-Way Hashing - Anti-F12)
-export const SUPERADMIN_HASH = 'bfa576d3ec278ee8d0098179b0c17c44245c78b480fedd78106271303a3a4a34';
+// Cryptographic Private Salt & SHA-256 hash of Super Admin master key (Rainbow-Table Proof)
+export const SUPERADMIN_SALT = 'ec_smega_vault_2026_';
+export const SUPERADMIN_HASH = '53d66f9ebea8c3a0b1ee703aaf6503d34908773a2a5756c82b52fc4c4dc4643e';
 
 export async function hashString(str: string): Promise<string> {
   const encoder = new TextEncoder();
-  const data = encoder.encode(str);
+  const data = encoder.encode(SUPERADMIN_SALT + str);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   return Array.from(new Uint8Array(hashBuffer))
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -30,11 +32,34 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Check lockout state on mount or open
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const checkLockout = () => {
+      const until = Number(safeStorage.get('ec_super_lockout_until') || 0);
+      const now = Date.now();
+      if (until > now) {
+        setLockoutSeconds(Math.ceil((until - now) / 1000));
+      } else {
+        setLockoutSeconds(0);
+        safeStorage.remove('ec_super_lockout_until');
+      }
+    };
+
+    checkLockout();
+    const interval = setInterval(checkLockout, 1000);
+    return () => clearInterval(interval);
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (lockoutSeconds > 0) return;
+
     setError(null);
     setIsVerifying(true);
 
@@ -42,12 +67,25 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
       const inputHash = await hashString(password.trim());
       if (inputHash === SUPERADMIN_HASH) {
         sound.playSuccess();
+        // Reset failed attempt counter on success
+        safeStorage.remove('ec_super_fail_count');
+        safeStorage.remove('ec_super_lockout_until');
         onSuccess(inputHash);
         setPassword('');
         onClose();
       } else {
         sound.playError();
-        setError('Kata sandi salah! Akses ini dikhususkan untuk Ketua.');
+        const failCount = Number(safeStorage.get('ec_super_fail_count') || 0) + 1;
+        safeStorage.set('ec_super_fail_count', String(failCount));
+
+        if (failCount >= 3) {
+          const until = Date.now() + 60000; // 60 seconds lockout
+          safeStorage.set('ec_super_lockout_until', String(until));
+          setLockoutSeconds(60);
+          setError('Terlalu banyak percobaan gagal! Akses dibekukan selama 60 detik.');
+        } else {
+          setError(`Kata sandi salah! Sisa kesempatan: ${3 - failCount}x.`);
+        }
         setPassword('');
       }
     } catch {
@@ -95,45 +133,75 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1.5">
-              Kata Sandi Super Admin
-            </label>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600">
+                Kata Sandi Super Admin
+              </label>
+              {lockoutSeconds > 0 && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200 animate-pulse">
+                  <Timer className="w-3 h-3" />
+                  <span>Kunci: {lockoutSeconds}s</span>
+                </span>
+              )}
+            </div>
             <div className="relative flex items-center">
               <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Masukkan sandi ketua..."
-                className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none transition-colors"
-                autoFocus
+                placeholder={lockoutSeconds > 0 ? `Terkunci (${lockoutSeconds} detik)...` : "Masukkan sandi ketua..."}
+                disabled={lockoutSeconds > 0}
+                className={`w-full pl-10 pr-10 py-2.5 rounded-2xl text-xs font-bold transition-colors ${
+                  lockoutSeconds > 0
+                    ? 'bg-slate-100 border-2 border-slate-300 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-50 border-2 border-slate-200 text-slate-900 focus:bg-white focus:border-amber-500 focus:outline-none'
+                }`}
+                autoFocus={lockoutSeconds === 0}
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 p-1 text-slate-400 hover:text-slate-600"
+                disabled={lockoutSeconds > 0}
+                className="absolute right-3 p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30"
               >
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
-          {error && (
+          {lockoutSeconds > 0 ? (
+            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-rose-50 to-orange-50 border-2 border-rose-300 text-rose-900 text-xs font-bold flex items-center gap-2.5 shadow-sm">
+              <ShieldAlert className="w-5 h-5 text-rose-600 shrink-0 animate-bounce" />
+              <div className="text-[11px] leading-relaxed">
+                <p className="font-black text-rose-700">Benteng Keamanan Aktif</p>
+                <p className="text-slate-600 font-medium">
+                  Terlalu banyak percobaan salah. Silakan tunggu <span className="font-black text-rose-600">{lockoutSeconds} detik</span> sebelum mencoba kembali.
+                </p>
+              </div>
+            </div>
+          ) : error ? (
             <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
               <span>{error}</span>
             </div>
-          )}
+          ) : null}
 
           <TactileButton
             type="submit"
             variant="amber"
             size="md"
             className="w-full py-3 text-xs"
-            disabled={!password.trim() || isVerifying}
+            disabled={!password.trim() || isVerifying || lockoutSeconds > 0}
           >
             <Lock className="w-4 h-4" />
-            <span>{isVerifying ? 'MEMVERIFIKASI...' : 'BUKA AKSES PENUH'}</span>
+            <span>
+              {lockoutSeconds > 0
+                ? `TERKUNCI (${lockoutSeconds}s)`
+                : isVerifying
+                ? 'MEMVERIFIKASI...'
+                : 'BUKA AKSES PENUH'}
+            </span>
           </TactileButton>
         </form>
       </div>
