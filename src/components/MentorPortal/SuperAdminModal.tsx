@@ -6,7 +6,7 @@ import { safeStorage } from '../../lib/storage';
 
 // Cryptographic Private Salt & SHA-256 hash of Super Admin master key (Rainbow-Table Proof)
 export const SUPERADMIN_SALT = 'ec_smega_vault_2026_';
-export const SUPERADMIN_HASH = '053f97e4abd78437a5ede0393ac0e47411463d4943a127527c59d49eda3b85ba';
+export const SUPERADMIN_HASH = '51a5d205fb81330ab7df5d6c27046720fe7d9911ed719dda2afb3e4a6299b419';
 
 export async function hashString(str: string): Promise<string> {
   const encoder = new TextEncoder();
@@ -78,7 +78,12 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
         const failCount = Number(safeStorage.get('ec_super_fail_count') || 0) + 1;
         safeStorage.set('ec_super_fail_count', String(failCount));
 
-        if (failCount >= 3) {
+        if (failCount >= 5) {
+          const until = Date.now() + 300000; // 5 minutes lockout
+          safeStorage.set('ec_super_lockout_until', String(until));
+          setLockoutSeconds(300);
+          setError('Akses dibekukan total selama 5 menit karena percobaan mencurigakan!');
+        } else if (failCount >= 3) {
           const until = Date.now() + 60000; // 60 seconds lockout
           safeStorage.set('ec_super_lockout_until', String(until));
           setLockoutSeconds(60);

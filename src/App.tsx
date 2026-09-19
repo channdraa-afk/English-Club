@@ -6,7 +6,6 @@ import { MemberAttendance } from './components/MemberAttendance';
 import { WordOfTheDayModal } from './components/WordOfTheDayModal';
 import { RegistrationModal } from './components/RegistrationModal';
 import { MentorLogin } from './components/MentorPortal/MentorLogin';
-import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
 import { LandingPage } from './components/LandingPage/LandingPage';
 
 const MentorDashboard = React.lazy(() =>
@@ -82,19 +81,33 @@ export const App: React.FC = () => {
   const [successMeeting, setSuccessMeeting] = useState<Meeting | null>(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // Check saved mentor login & superadmin cryptographic signature in storage
+  // Check saved mentor login & Honeypot guard against console replay injection
   useEffect(() => {
     const savedAuth = safeStorage.get('ec_mentor_auth');
     if (savedAuth === 'true') {
       setIsMentorLoggedIn(true);
     }
-    const savedSuperSig = safeStorage.get('ec_superadmin_sig', 'session');
-    if (savedSuperSig === SUPERADMIN_HASH) {
-      setIsSuperAdmin(true);
-    } else {
-      // Purge any fake console injection / legacy value
+
+    // HONEYPOT & ANTI-CONSOLE INJECTION:
+    // SuperAdmin status is strictly held IN-MEMORY (React runtime state).
+    // If any attacker injects fake keys into sessionStorage or localStorage,
+    // detect tampering, trigger lockout penalty, and purge all credentials!
+    const fakeSig = 
+      safeStorage.get('ec_superadmin_sig', 'session') || 
+      safeStorage.get('ec_superadmin_auth', 'session') || 
+      safeStorage.get('ec_superadmin_sig') || 
+      safeStorage.get('ec_superadmin_auth');
+
+    if (fakeSig) {
+      console.warn('🛡️ Honeypot Alert: Unauthorized console injection detected. Purging credentials and locking access.');
       safeStorage.remove('ec_superadmin_auth', 'session');
       safeStorage.remove('ec_superadmin_sig', 'session');
+      safeStorage.remove('ec_superadmin_auth');
+      safeStorage.remove('ec_superadmin_sig');
+      // Enforce 5-minute lockout penalty
+      safeStorage.set('ec_super_lockout_until', String(Date.now() + 300000));
+      safeStorage.set('ec_super_fail_count', '5');
+      sound.playError();
     }
   }, []);
 
@@ -337,10 +350,11 @@ export const App: React.FC = () => {
     setCurrentView('student');
   };
 
-  const handleSuperAdminUnlock = (signature?: string) => {
-    const sig = signature || SUPERADMIN_HASH;
+  const handleSuperAdminUnlock = (_signature?: string) => {
     setIsSuperAdmin(true);
-    safeStorage.set('ec_superadmin_sig', sig, 'session');
+    // Purge any storage keys - SuperAdmin is purely in-memory!
+    safeStorage.remove('ec_superadmin_auth', 'session');
+    safeStorage.remove('ec_superadmin_sig', 'session');
   };
 
   const handleSuperAdminLock = () => {
