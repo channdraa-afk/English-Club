@@ -10,6 +10,7 @@ import { LandingPage } from './components/LandingPage/LandingPage';
 import { ArenaPlayer } from './components/Arena/ArenaPlayer';
 import { SandboxBanner } from './components/SandboxBanner';
 import { SandboxState } from './lib/sandbox';
+import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
 
 const MentorDashboard = React.lazy(() =>
   import('./components/MentorPortal/MentorDashboard').then((m) => ({
@@ -79,7 +80,9 @@ export const App: React.FC = () => {
     return 'landing';
   });
   const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
+    return safeStorage.get('ec_superadmin_sig') === SUPERADMIN_HASH;
+  });
 
   // Modals state
   const [isWordModalOpen, setIsWordModalOpen] = useState(false);
@@ -87,35 +90,23 @@ export const App: React.FC = () => {
   const [successMeeting, setSuccessMeeting] = useState<Meeting | null>(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // Check saved mentor login & Honeypot guard against console replay injection
+  // Check saved mentor login & enforce session validity (kicking legacy sessions!)
   useEffect(() => {
-    const savedAuth = safeStorage.get('ec_mentor_auth');
-    if (savedAuth === 'true') {
+    // 1. Kick legacy logins from all devices
+    if (safeStorage.get('ec_mentor_auth')) {
+      safeStorage.remove('ec_mentor_auth');
+      setIsMentorLoggedIn(false);
+    }
+
+    // 2. Validate current session against active mentor PIN
+    const savedSession = safeStorage.get('ec_mentor_session_v2');
+    if (savedSession && mentorPin && savedSession === mentorPin.trim()) {
       setIsMentorLoggedIn(true);
+    } else if (savedSession && mentorPin && savedSession !== mentorPin.trim()) {
+      safeStorage.remove('ec_mentor_session_v2');
+      setIsMentorLoggedIn(false);
     }
-
-    // HONEYPOT & ANTI-CONSOLE INJECTION:
-    // SuperAdmin status is strictly held IN-MEMORY (React runtime state).
-    // If any attacker injects fake keys into sessionStorage or localStorage,
-    // detect tampering, trigger lockout penalty, and purge all credentials!
-    const fakeSig = 
-      safeStorage.get('ec_superadmin_sig', 'session') || 
-      safeStorage.get('ec_superadmin_auth', 'session') || 
-      safeStorage.get('ec_superadmin_sig') || 
-      safeStorage.get('ec_superadmin_auth');
-
-    if (fakeSig) {
-      console.warn('🛡️ Honeypot Alert: Unauthorized console injection detected. Purging credentials and locking access.');
-      safeStorage.remove('ec_superadmin_auth', 'session');
-      safeStorage.remove('ec_superadmin_sig', 'session');
-      safeStorage.remove('ec_superadmin_auth');
-      safeStorage.remove('ec_superadmin_sig');
-      // Enforce 5-minute lockout penalty
-      safeStorage.set('ec_super_lockout_until', String(Date.now() + 300000));
-      safeStorage.set('ec_super_fail_count', '5');
-      sound.playError();
-    }
-  }, []);
+  }, [mentorPin]);
 
   // Listen for browser back/forward or hash change (#absen, #mentor, #beranda)
   useEffect(() => {
@@ -423,24 +414,25 @@ export const App: React.FC = () => {
 
   const handleMentorLogout = () => {
     safeStorage.remove('ec_mentor_auth');
-    safeStorage.remove('ec_superadmin_auth', 'session');
-    safeStorage.remove('ec_superadmin_sig', 'session');
+    safeStorage.remove('ec_mentor_session_v2');
+    safeStorage.remove('ec_superadmin_sig');
+    safeStorage.remove('ec_superadmin_auth');
     setIsMentorLoggedIn(false);
     setIsSuperAdmin(false);
     setCurrentView('student');
   };
 
-  const handleSuperAdminUnlock = (_signature?: string) => {
+  const handleSuperAdminUnlock = (signature?: string) => {
     setIsSuperAdmin(true);
-    // Purge any storage keys - SuperAdmin is purely in-memory!
-    safeStorage.remove('ec_superadmin_auth', 'session');
-    safeStorage.remove('ec_superadmin_sig', 'session');
+    if (signature === SUPERADMIN_HASH) {
+      safeStorage.set('ec_superadmin_sig', signature);
+    }
   };
 
   const handleSuperAdminLock = () => {
     setIsSuperAdmin(false);
-    safeStorage.remove('ec_superadmin_auth', 'session');
-    safeStorage.remove('ec_superadmin_sig', 'session');
+    safeStorage.remove('ec_superadmin_sig');
+    safeStorage.remove('ec_superadmin_auth');
   };
 
   const handleToggleRegistration = async (state: boolean) => {

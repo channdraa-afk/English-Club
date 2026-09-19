@@ -420,6 +420,20 @@
   - **Pusat Kendali di Brankas Data (`DataVault.tsx`)**:
     - Menghadirkan Sandbox Control Card di dalam menu Brankas Data & Master Reset dengan indikator status aktif/nonaktif, penjelasan alur uji coba, dan tombol taktil `[ 🧪 Masuk Mode Uji Coba ]` / `[ 🛑 Matikan & Bersihkan ]`.
 
+- [x] Persistensi Super Admin (Anti-Logout F5), Global Kick All Mentor, & Pembersihan Total Pendaftaran & Kuis:
+  - **Persistensi Super Admin via SHA-256 Signature (`App.tsx`)**:
+    - Status Super Admin kini tersimpan aman di `localStorage` (`ec_superadmin_sig`) yang divalidasi dengan `SUPERADMIN_HASH`.
+    - Chandra bebas me-refresh halaman (F5), membuka tab baru, atau berpindah menu tanpa terlempar keluar dari Super Admin.
+    - Tetap dapat dikunci seketika kapan saja lewat tombol `[ 🔒 Kunci Super Admin ]`.
+  - **Global Session Kick All Mentors (`App.tsx` & `MentorLogin.tsx`)**:
+    - Memigrasikan sesi otentikasi mentor ke `ec_mentor_session_v2` yang divalidasi langsung ke PIN mentor aktif (`mentorPin`).
+    - Seluruh sesi lama di perangkat mana pun (termasuk teman-teman yang pernah login sebelumnya) otomatis **ter-kick seketika**, mengembalikan portal seperti baru.
+    - Jika PIN mentor diubah di kemudian hari, seluruh perangkat lain otomatis ter-kick keluar.
+  - **Pembersihan Total Pendaftaran & Kuis (Zero Residue di `DataVault.tsx`)**:
+    - Menghapus 2 data pendaftar sampah (`Khalil` & `TEST`) dan menambahkan policy public delete RLS pada tabel `registrations`.
+    - Memperluas eksekusi *Big Reset Total* agar menghapus `attendances`, `registrations`, dan `quiz_submissions` secara serentak.
+    - Mengintegrasikan master data 165 anggota ke dalam berkas unduhan backup JSON sehingga menjadi *Full Master Snapshot*.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Uji coba EC Arena Live Quiz pada pekan praktek eskul bersama adik-adik kelas A21 di 2–3 ruangan.

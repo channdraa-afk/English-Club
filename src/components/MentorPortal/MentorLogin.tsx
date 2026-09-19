@@ -24,7 +24,7 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
 
     if (pin.trim() === currentPin.trim()) {
       sound.playSuccess();
-      safeStorage.set('ec_mentor_auth', 'true');
+      safeStorage.set('ec_mentor_session_v2', currentPin.trim());
       onLoginSuccess();
     } else {
       sound.playError();

@@ -111,6 +111,7 @@ export const DataVault: React.FC<DataVaultProps> = ({
         active_meeting: activeMeeting,
       },
       data: {
+        members,
         attendances,
         registrations,
         active_meeting: activeMeeting,
@@ -154,12 +155,24 @@ export const DataVault: React.FC<DataVaultProps> = ({
           .eq('meeting_id', activeMeeting.id);
         if (error) throw error;
       } else {
-        // Global all test attendances wipe
-        const { error } = await supabase
-          .from('attendances')
-          .delete()
-          .neq('id', '00000000-0000-0000-0000-000000000000');
-        if (error) throw error;
+        // Global all test data wipe: attendances, registrations, and quiz_submissions
+        const [attRes, regRes, quizRes] = await Promise.all([
+          supabase
+            .from('attendances')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'),
+          supabase
+            .from('registrations')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'),
+          supabase
+            .from('quiz_submissions')
+            .delete()
+            .neq('id', '00000000-0000-0000-0000-000000000000'),
+        ]);
+        if (attRes.error) throw attRes.error;
+        if (regRes.error) throw regRes.error;
+        if (quizRes.error) throw quizRes.error;
       }
 
       sound.playSuccess();
@@ -168,7 +181,7 @@ export const DataVault: React.FC<DataVaultProps> = ({
         text:
           resetScope === 'session'
             ? `Berhasil mengosongkan presensi untuk sesi "${activeMeeting?.title || 'Sesi Aktif'}"! File backup JSON otomatis diunduh.`
-            : 'Big Reset Berhasil! Seluruh riwayat presensi uji coba telah bersih 0% dan dicadangkan ke JSON.',
+            : 'Big Reset Berhasil! Seluruh riwayat presensi, pendaftaran, dan kuis uji coba telah bersih 0% dan dicadangkan ke JSON.',
       });
 
       setConfirmPhrase('');
@@ -438,7 +451,7 @@ export const DataVault: React.FC<DataVaultProps> = ({
                     2. Big Reset Total (Opsi A)
                   </span>
                   <span className="text-[11px] font-bold text-slate-500 block">
-                    Kosongkan seluruh {attendances.length} presensi uji coba di seluruh database. Siap 0% untuk hari Rabu perdana.
+                    Kosongkan seluruh data presensi ({attendances.length}), pendaftaran ({registrations.length}), dan kuis di database. Siap 0% untuk hari Rabu perdana.
                   </span>
                 </div>
               </label>
