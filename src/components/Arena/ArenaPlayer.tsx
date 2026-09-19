@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
-  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search, Sparkles, RotateCcw, Play 
+  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search, Sparkles, RotateCcw, Play, RefreshCw, Users 
 } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
@@ -25,6 +25,11 @@ interface SavePointData {
 }
 
 export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome }) => {
+  // Lobby Tab & Live Session State
+  const [lobbyTab, setLobbyTab] = useState<'play' | 'leaderboard'>('play');
+  const [liveSession, setLiveSession] = useState<QuizSession | null>(null);
+  const [isLeaderboardLoading, setIsLeaderboardLoading] = useState(false);
+
   // Join Form State
   const [tokenInput, setTokenInput] = useState('');
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
@@ -79,6 +84,81 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
+
+  // Fetch submissions for a session
+  const fetchLeaderboardData = useCallback(async (sessionId: string) => {
+    setIsLeaderboardLoading(true);
+    try {
+      const { data: leadData } = await supabase
+        .from('quiz_submissions')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('score', { ascending: false });
+
+      if (leadData) {
+        setLeaderboard(leadData);
+        if (selectedMember) {
+          const myIndex = leadData.findIndex((s) => s.member_id === selectedMember.id);
+          setMyRank(myIndex !== -1 ? myIndex + 1 : null);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch leaderboard:', err);
+    } finally {
+      setIsLeaderboardLoading(false);
+    }
+  }, [selectedMember]);
+
+  // Check if there is an active session running on mount
+  const checkActiveSession = useCallback(async () => {
+    try {
+      const { data: sData } = await supabase
+        .from('quiz_sessions')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (sData) {
+        setLiveSession(sData);
+        if (!tokenInput) {
+          setTokenInput(sData.room_code);
+        }
+        fetchLeaderboardData(sData.id);
+      } else {
+        setLiveSession(null);
+      }
+    } catch (e) {
+      console.error('Failed to check active session:', e);
+    }
+  }, [tokenInput, fetchLeaderboardData]);
+
+  // On initial mount, discover active session for instant leaderboard
+  useEffect(() => {
+    checkActiveSession();
+  }, [checkActiveSession]);
+
+  // Realtime subscription for submissions across any active session
+  useEffect(() => {
+    const targetSessionId = session?.id || liveSession?.id;
+    if (!targetSessionId) return;
+
+    const channel = supabase
+      .channel(`realtime_arena_subs_${targetSessionId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'quiz_submissions', filter: `session_id=eq.${targetSessionId}` },
+        () => {
+          fetchLeaderboardData(targetSessionId);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [session?.id, liveSession?.id, fetchLeaderboardData]);
 
   // QUESTION TIMER ENGINE
   useEffect(() => {
@@ -487,7 +567,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
         )}
 
         {/* Header */}
-        <div className="text-center mb-6 space-y-2">
+        <div className="text-center mb-4 space-y-2">
           <div className="w-16 h-16 mx-auto rounded-3xl bg-blue-600 text-white flex items-center justify-center border-2 border-blue-800 shadow-[0_6px_0_0_#1e3a8a]">
             <Gamepad2 className="w-9 h-9" />
           </div>
@@ -499,123 +579,303 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           </p>
         </div>
 
-        {/* Join Box */}
-        <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-6 space-y-4">
-          <form onSubmit={handleJoin} className="space-y-4">
-            {/* Token Input */}
-            <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 text-center">
-                1. Masukkan Token Ruangan
-              </label>
-              <input
-                type="text"
-                value={tokenInput}
-                onChange={(e) => setTokenInput(e.target.value.toUpperCase())}
-                placeholder="Contoh: SMEGA"
-                maxLength={8}
-                className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center font-mono font-black text-xl text-blue-600 tracking-widest uppercase focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
-                autoFocus
-              />
-              <p className="text-[11px] text-slate-400 font-medium text-center mt-1">
-                *Lihat token yang ditulis kakak mentor di papan tulis kelasmu
-              </p>
-            </div>
+        {/* Tab Switcher: Main Kuis vs Papan Skor Live */}
+        <div className="flex items-center gap-2 p-1.5 bg-slate-100 rounded-2xl border-2 border-slate-200 mb-5 shadow-sm">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setLobbyTab('play');
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              lobbyTab === 'play'
+                ? 'bg-blue-600 text-white border-2 border-blue-800 shadow-[0_3px_0_0_#1e3a8a] active:translate-y-0.5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 border-2 border-transparent'
+            }`}
+          >
+            <Gamepad2 className="w-4 h-4" />
+            <span>Ikuti Kuis</span>
+          </button>
 
-            {/* Member Selector */}
-            <div>
-              <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 text-center">
-                2. Cari & Pilih Namamu (A21)
-              </label>
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setLobbyTab('leaderboard');
+              if (liveSession) {
+                fetchLeaderboardData(liveSession.id);
+              } else {
+                checkActiveSession();
+              }
+            }}
+            className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              lobbyTab === 'leaderboard'
+                ? 'bg-amber-500 text-white border-2 border-amber-700 shadow-[0_3px_0_0_#b45309] active:translate-y-0.5'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70 border-2 border-transparent'
+            }`}
+          >
+            <Trophy className="w-4 h-4" />
+            <span>Papan Skor Live</span>
+            {leaderboard.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-white text-amber-800 text-[10px] font-black shadow-xs">
+                {leaderboard.length}
+              </span>
+            )}
+          </button>
+        </div>
 
-              {selectedMember ? (
-                <div className="p-3.5 rounded-2xl bg-blue-50 border-2 border-blue-300 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <UserCheck className="w-5 h-5 text-blue-600 shrink-0" />
-                    <div>
-                      <p className="text-xs font-black text-slate-900">{selectedMember.name}</p>
-                      <p className="text-[11px] font-bold text-blue-700">{selectedMember.class_name}</p>
+        {lobbyTab === 'play' ? (
+          /* Join Box */
+          <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-6 space-y-4 animate-fade-in">
+            <form onSubmit={handleJoin} className="space-y-4">
+              {/* Token Input */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 text-center">
+                  1. Masukkan Token Ruangan
+                </label>
+                <input
+                  type="text"
+                  value={tokenInput}
+                  onChange={(e) => setTokenInput(e.target.value.toUpperCase())}
+                  placeholder="Contoh: SMEGA"
+                  maxLength={8}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center font-mono font-black text-xl text-blue-600 tracking-widest uppercase focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
+                  autoFocus
+                />
+                <p className="text-[11px] text-slate-400 font-medium text-center mt-1">
+                  *Lihat token yang ditulis kakak mentor di papan tulis kelasmu
+                </p>
+              </div>
+
+              {/* Member Selector */}
+              <div>
+                <label className="block text-xs font-black uppercase tracking-wider text-slate-700 mb-1.5 text-center">
+                  2. Cari & Pilih Namamu (A21)
+                </label>
+
+                {selectedMember ? (
+                  <div className="p-3.5 rounded-2xl bg-blue-50 border-2 border-blue-300 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <UserCheck className="w-5 h-5 text-blue-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-black text-slate-900">{selectedMember.name}</p>
+                        <p className="text-[11px] font-bold text-blue-700">{selectedMember.class_name}</p>
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sound.playPop();
+                        setSelectedMember(null);
+                        setSearchQuery('');
+                      }}
+                      className="text-xs font-black text-slate-400 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-white/80 transition-colors"
+                    >
+                      Ganti
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      sound.playPop();
-                      setSelectedMember(null);
-                      setSearchQuery('');
-                    }}
-                    className="text-xs font-black text-slate-400 hover:text-slate-700 px-2 py-1 rounded-lg hover:bg-white/80 transition-colors"
-                  >
-                    Ganti
-                  </button>
-                </div>
-              ) : (
-                <div className="relative">
-                  <div className="relative flex items-center">
-                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      placeholder="Ketik minimal 2 huruf namamu..."
-                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
-                    />
-                  </div>
+                ) : (
+                  <div className="relative">
+                    <div className="relative flex items-center">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Ketik minimal 2 huruf namamu..."
+                        className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
+                      />
+                    </div>
 
-                  {/* Suggestions list only when query >= 2 */}
-                  {searchQuery.trim().length >= 2 && (
-                    <div className="mt-2 max-h-48 overflow-y-auto divide-y divide-slate-100 rounded-2xl border-2 border-blue-500 bg-white shadow-lg">
-                      {filteredMembers.length === 0 ? (
-                        <div className="p-3 text-center text-xs text-slate-400 font-bold">
-                          Nama tidak ditemukan di Angkatan 21
-                        </div>
-                      ) : (
-                        <>
-                          <div className="px-3 py-1.5 bg-blue-50 text-[10px] font-black text-blue-900 border-b border-blue-200">
-                            Klik namamu untuk memilih:
+                    {/* Suggestions list only when query >= 2 */}
+                    {searchQuery.trim().length >= 2 && (
+                      <div className="mt-2 max-h-48 overflow-y-auto divide-y divide-slate-100 rounded-2xl border-2 border-blue-500 bg-white shadow-lg">
+                        {filteredMembers.length === 0 ? (
+                          <div className="p-3 text-center text-xs text-slate-400 font-bold">
+                            Nama tidak ditemukan di Angkatan 21
                           </div>
-                          {filteredMembers.map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => {
-                                sound.playPop();
-                                setSelectedMember(m);
-                                setSearchQuery('');
-                              }}
-                              className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between"
-                            >
-                              <span className="text-xs font-black text-slate-800">{m.name}</span>
-                              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
-                                {m.class_name}
-                              </span>
-                            </button>
-                          ))}
-                        </>
-                      )}
-                    </div>
-                  )}
+                        ) : (
+                          <>
+                            <div className="px-3 py-1.5 bg-blue-50 text-[10px] font-black text-blue-900 border-b border-blue-200">
+                              Klik namamu untuk memilih:
+                            </div>
+                            {filteredMembers.map((m) => (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => {
+                                  sound.playPop();
+                                  setSelectedMember(m);
+                                  setSearchQuery('');
+                                }}
+                                className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between"
+                              >
+                                <span className="text-xs font-black text-slate-800">{m.name}</span>
+                                <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                                  {m.class_name}
+                                </span>
+                              </button>
+                            ))}
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Error Message */}
+              {joinError && (
+                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{joinError}</span>
                 </div>
               )}
+
+              {/* Submit Button */}
+              <TactileButton
+                type="submit"
+                variant="brand"
+                size="lg"
+                className="w-full py-3.5 text-base"
+                disabled={!tokenInput.trim() || !selectedMember || isJoining}
+              >
+                <Gamepad2 className="w-5 h-5" />
+                <span>{isJoining ? 'MENGHUBUNGKAN...' : 'MASUK ARENA'}</span>
+              </TactileButton>
+
+              {/* Back Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  onBackToHome();
+                }}
+                className="w-full flex items-center justify-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-700 pt-2 transition-colors cursor-pointer"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                <span>Kembali ke Halaman Presensi</span>
+              </button>
+            </form>
+          </div>
+        ) : (
+          /* Live Leaderboard Tab View */
+          <div className="bg-white rounded-3xl border-2 border-amber-400 shadow-[0_6px_0_0_#d97706] p-6 space-y-4 animate-fade-in">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-slate-100 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center border border-amber-300">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">Papan Skor Live</h4>
+                  <p className="text-[11px] font-bold text-slate-400">
+                    {liveSession ? `Token: ${liveSession.room_code}` : 'Sesi Aktif'} • {leaderboard.length} Siswa Selesai
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                  Live
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    if (liveSession) fetchLeaderboardData(liveSession.id);
+                    else checkActiveSession();
+                  }}
+                  disabled={isLeaderboardLoading}
+                  className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                  title="Segarkan data klasemen"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isLeaderboardLoading ? 'animate-spin text-blue-600' : ''}`} />
+                </button>
+              </div>
             </div>
 
-            {/* Error Message */}
-            {joinError && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{joinError}</span>
+            {leaderboard.length === 0 ? (
+              <div className="p-8 text-center bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 space-y-2">
+                <Users className="w-8 h-8 mx-auto text-slate-300 animate-pulse" />
+                <p className="text-xs font-bold text-slate-600">
+                  Belum ada siswa yang menyelesaikan kuis ini.
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Jadilah yang pertama menyelesaikan kuis di ruanganmu!
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="overflow-hidden rounded-2xl border-2 border-slate-200 max-h-80 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-100 border-b-2 border-slate-200 text-slate-600 uppercase font-black tracking-wider text-[10px] sticky top-0 bg-white">
+                      <tr>
+                        <th className="py-2.5 px-3 text-center w-10">#</th>
+                        <th className="py-2.5 px-3">Nama Siswa</th>
+                        <th className="py-2.5 px-3 text-center">Benar</th>
+                        <th className="py-2.5 px-3 text-right">Skor</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 font-bold text-slate-800">
+                      {leaderboard.map((sub, idx) => {
+                        const isMe = selectedMember && sub.member_id === selectedMember.id;
+                        return (
+                          <tr
+                            key={sub.id || idx}
+                            className={
+                              isMe
+                                ? 'bg-blue-50/90 font-black border-l-4 border-blue-600'
+                                : idx === 0
+                                ? 'bg-amber-50/70 font-black'
+                                : idx === 1
+                                ? 'bg-slate-50/80'
+                                : idx === 2
+                                ? 'bg-orange-50/40'
+                                : 'hover:bg-slate-50'
+                            }
+                          >
+                            <td className="py-2.5 px-3 text-center font-black">
+                              {idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : idx + 1}
+                            </td>
+                            <td className="py-2.5 px-3">
+                              <div className="flex items-center gap-1.5">
+                                <span>{sub.member_name}</span>
+                                {isMe && (
+                                  <span className="px-1.5 py-0.5 rounded bg-blue-600 text-white text-[9px] font-black uppercase">
+                                    Kamu
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-medium">{sub.class_name}</span>
+                            </td>
+                            <td className="py-2.5 px-3 text-center text-emerald-700 font-black">
+                              {sub.correct_answers}/{sub.total_questions}
+                            </td>
+                            <td className="py-2.5 px-3 text-right font-black text-blue-600 text-sm">
+                              {sub.score}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
 
-            {/* Submit Button */}
+            {/* CTA to Join Quiz */}
             <TactileButton
-              type="submit"
               variant="brand"
-              size="lg"
-              className="w-full py-3.5 text-base"
-              disabled={!tokenInput.trim() || !selectedMember || isJoining}
+              size="md"
+              className="w-full mt-2"
+              onClick={() => {
+                sound.playPop();
+                setLobbyTab('play');
+              }}
             >
-              <Gamepad2 className="w-5 h-5" />
-              <span>{isJoining ? 'MENGHUBUNGKAN...' : 'MASUK ARENA'}</span>
+              <Gamepad2 className="w-4 h-4" />
+              <span>Mulai / Ikuti Kuis</span>
             </TactileButton>
 
             {/* Back Button */}
@@ -625,13 +885,13 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
                 sound.playPop();
                 onBackToHome();
               }}
-              className="w-full flex items-center justify-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-700 pt-2 transition-colors"
+              className="w-full flex items-center justify-center gap-1.5 text-xs font-black text-slate-400 hover:text-slate-700 pt-1 transition-colors cursor-pointer"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Kembali ke Halaman Presensi</span>
             </button>
-          </form>
-        </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -690,14 +950,32 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
 
         {/* Live Leaderboard */}
         <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-6 space-y-4">
-          <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-slate-100 pb-3">
             <h4 className="text-sm font-black text-slate-900 flex items-center gap-2">
               <Trophy className="w-4 h-4 text-amber-500" />
               <span>Klasemen Sementara (Seluruh Ruangan)</span>
             </h4>
-            <span className="text-[11px] font-bold text-slate-400">
-              {leaderboard.length} Siswa Selesai
-            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
+                Live
+              </span>
+              <span className="text-[11px] font-bold text-slate-400">
+                {leaderboard.length} Siswa Selesai
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  if (session) fetchLeaderboardData(session.id);
+                }}
+                disabled={isLeaderboardLoading}
+                className="p-1.5 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+                title="Segarkan papan skor"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLeaderboardLoading ? 'animate-spin text-blue-600' : ''}`} />
+              </button>
+            </div>
           </div>
 
           <div className="overflow-hidden rounded-2xl border-2 border-slate-200">
@@ -736,6 +1014,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
                             </span>
                           )}
                         </div>
+                        <span className="text-[10px] text-slate-400 font-medium">{sub.class_name}</span>
                       </td>
                       <td className="py-2.5 px-3 text-center text-emerald-700 font-black">
                         {sub.correct_answers}/{sub.total_questions}

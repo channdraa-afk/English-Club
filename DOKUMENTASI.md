@@ -391,6 +391,17 @@
     - Menambahkan tombol aksi taktil `[ 🔄 Reset ]` di setiap baris nama siswa pada tabel leaderboard live.
     - Jika seorang siswa kehabisan waktu akibat kendala sinyal atau HP drop dan mentor memberi izin retake, klik tombol ini akan menghapus riwayat kuis siswa tersebut dari tabel Supabase `quiz_submissions` secara realtime, mengizinkan siswa masuk dan mengerjakan kuis kembali dari awal.
 
+- [x] Papan Peringkat Kuis Terbuka & Realtime untuk Siswa (`ArenaPlayer.tsx`):
+  - **Tab Switcher Lobby Taktil (`[ 🎮 Ikuti Kuis ]` & `[ 🏆 Papan Skor Live ]`)**:
+    - Memberikan akses bebas bagi adik-adik kelas untuk melihat klasemen live kapan pun dari lobby depan tanpa harus mengisi token & nama ulang.
+    - Menampilkan total siswa yang telah menyelesaikan kuis pada badge tab.
+  - **Supabase WebSocket Realtime Sinkronisasi**:
+    - Menghubungkan tampilan klasemen siswa langsung ke channel WebSocket Supabase (`postgres_changes` tabel `quiz_submissions`).
+    - Papan skor di smartphone siswa bergerak dan ter-update seketika secara otomatis saat ada siswa lain yang baru submit dari ruangan kelas mana pun tanpa perlu reload browser.
+  - **Poles Klasemen Siswa & Tombol Refresh**:
+    - Dilengkapi tombol taktil `[ 🔄 Segarkan ]` manual dengan animasi berputar dan feedback audio Web Audio API.
+    - Menampilkan medali emas (🥇), perak (🥈), dan perunggu (🥉) untuk 3 besar, detail kelas siswa, dan penanda personal tebal `[ Kamu ]` pada baris si siswa.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Uji coba EC Arena Live Quiz pada pekan praktek eskul bersama adik-adik kelas A21 di 2–3 ruangan.
