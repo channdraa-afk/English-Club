@@ -332,10 +332,15 @@
   - **Refactor Akses Penyimpanan**: Mengganti 100% pemanggilan mentah `localStorage` dan `sessionStorage` di `App.tsx`, `MentorDashboard.tsx`, `MentorLogin.tsx`, dan `TalentScoutA21.tsx` menjadi `safeStorage.get()`, `safeStorage.set()`, dan `safeStorage.remove()`.
   - **Jaring Pengaman Global (`src/components/TactileErrorBoundary.tsx`)**: Membungkus root aplikasi di `main.tsx` dengan Error Boundary bertema taktil Duolingo. Jika ada runtime error tak terduga dari script eksternal atau ekstensi nakal, website tidak akan pernah menampilkan layar putih mati, melainkan menampilkan kartu taktil ramah dengan tombol *"Muat Ulang Halaman"*.
 
-- [x] Smart Time-Aware Auto-Route Engine & Pembersih Hash Riwayat Autocomplete Browser (`src/App.tsx`):
-  - **Pencegah Terjebak Hash Autocomplete (`#absen`)**: Memperbaiki logika inisialisasi route di mana browser modern sering menambahkan fragment `#absen` secara otomatis dari riwayat kunjungan terdahulu. Pada hari selain Rabu dan saat `manual_bypass` nonaktif, sistem secara proaktif mendeteksi ketidakaktifan sesi, membersihkan address bar dengan `window.history.replaceState()`, dan langsung menyajikan Beranda (Landing Page) resmi.
-  - **Auto-Direct Instan Sesi Rabu & Bypass Aktif**: Ketika hari Rabu pukul 15:40 – 17:30 WIB tiba ATAU saat ketua/mentor mengaktifkan mode Bypass di panel kontrol, pengunjung yang membuka alamat `englishclub.site` polos otomatis langsung diantarkan masuk ke Menu Presensi (`#absen`) tanpa perlu mengeklik tautan apa pun.
-  - **Sinkronisasi Realtime & Live Clock Ticker Auto-Eject**: Jika mode bypass dinonaktifkan di tengah jalan atau jam dinding melewati batas 17:30 WIB di luar jadwal, sistem via Supabase Realtime channel dan timer 15 detik akan otomatis membersihkan URL dan mengembalikan pengunjung ke Beranda tanpa reload paksa.
+- [x] Fortress Security Hardening (Salted SHA-256 & Brute-Force Lockout Shield) & Modul Master Roster Manager:
+  - **Salted Cryptographic Hash Super Admin (`SuperAdminModal.tsx`)**: Mengganti hash telanjang dengan kombinasi Salt rahasia (`SUPERADMIN_SALT`) + SHA-256 berstandar industri. Menghilangkan risiko tebak kamus *Rainbow Table* online secara total, serta menjamin nihil kebocoran plaintext di commit/source code.
+  - **Perisai Anti-Brute Force (Cooldown Lockout 60s)**: Mencegah tebakan kata sandi bertubi-tubi. Jika terjadi kegagalan input 3 kali berturut-turut, kotak input dan tombol akses dikunci mati selama 60 detik disertai countdown timer, audio peringatan, dan persistensi di memori perangkat.
+  - **Pusat Kendali Master Roster Anggota (`MemberRosterManager.tsx`)**:
+    - Eksklusif hanya terbuka untuk Ketua (Super Admin) di bawah kategori `🌐 UMUM`.
+    - **Form Tambah Anggota Manual**: Memungkinkan penambahan siswa susulan dengan validasi nama, kelas resmi SMKN 1 Purbalingga (X/XI/XII), dan angkatan (A21 / A20).
+    - **Protokol Siswa Keluar Bertingkat (Soft Delete)**: Mengubah status siswa menjadi nonaktif (`status: 'inactive'`) yang otomatis melenyapkannya dari form presensi Rabu dan live monitor, namun tetap menjaga keutuhan 100% riwayat hadir masa lalu di buku besar rapor. Wajib mencentang kotak persetujuan pengunduran diri sebelum tombol aktif (*Zero Accidental Click*).
+    - **GitHub Vault Safeguard Hapus Permanen (Hard Delete)**: Opsi khusus pembersihan salah ketik dobel dengan kewajiban mengetik frasa persis `HAPUS SISWA`.
+  - **Sanitasi Data Uji Coba**: Melakukan pencadangan JSON dan pengosongan 2 data presensi uji coba sehingga tabel `attendances` kembali bersih 0% siap pakai untuk hari Rabu perdana.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
