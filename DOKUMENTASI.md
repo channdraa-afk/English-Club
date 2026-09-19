@@ -363,9 +363,13 @@
   - **Podium Juara & Integrasi Talent Scout (`QuizManager.tsx`)**:
     - Podium 3D peraih Juara 1, 2, dan 3 dengan fanfare audio Web Audio API dan konfeti.
     - Tombol 1-klik "Simpan ke Radar Bakat": Otomatis memasukkan peraih juara kuis ke rekam jejak `talent_stars` (kategori `general_active`) untuk penilaian rapor.
-  - **Akses Publik Permanen & Tanpa Syarat (Unhidden Experience)**:
-    - Tombol **`🎮 Arena`** selalu tampil di Navbar publik, Header Landing Page, dan Hero Section (3D CTA) tanpa tersembunyi.
-    - Halaman presensi siswa selalu menampilkan kartu akses cepat ke EC Arena dengan transisi status: `🟢 LIVE` (saat ada kuis aktif) vs shortcut ramah saat sesi santai.
+  - **Integrasi Operasional A21 di Portal Mentor (`MentorDashboard.tsx`)**:
+    - Tab `🎮 EC Arena (Kuis Live)` dipindahkan langsung ke dalam kategori utama **`🎒 Operasional A21 (Adik Kelas)`**, sehingga seluruh 59 mentor di kelas langsung melihat tombol kuis di jajaran depan tanpa perlu membuka tab "Semua".
+  - **Eliminasi Stale Closure Skor & Klasemen (`ArenaPlayer.tsx`)**:
+    - Memperbaiki bug asinkron React di mana `setTimeout` menutup (*closure capture*) snapshot nilai lama soal ke-4 saat soal terakhir diserahkan. Nilai terbaru kini dihitung seketika dan diteruskan langsung via parameter serta disinkronkan ke `scoreRef` & `correctCountRef`. Skor di kartu atas dan klasemen Supabase dijamin 100% konsisten sinkron.
+  - **Penyelarasan Autocomplete Nama Siswa (`ArenaPlayer.tsx`)**:
+    - Menghilangkan preview 10 nama awal berawalan huruf "A" saat input masih kosong.
+    - Pencarian nama kini sama persis seperti form absensi: hanya aktif saat siswa mengetik minimal 2 huruf dengan ikon `Search` dan feedback ramah.
   - **Starter Pack Seed**: Paket kuis awal terpasang *"EC Practice Week #1: Slang & Daily Idioms"* (5 soal seru siap uji coba).
 
 ### 3.2. Roadmap Selanjutnya

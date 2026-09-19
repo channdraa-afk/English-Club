@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
-  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle 
+  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search 
 } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
@@ -30,6 +30,10 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   const [correctCount, setCorrectCount] = useState(0);
   const [startTime, setStartTime] = useState(0);
 
+  // Zero Stale Closure Refs
+  const scoreRef = useRef(0);
+  const correctCountRef = useRef(0);
+
   // Per-Question Timer & Interaction State
   const [timeLeft, setTimeLeft] = useState(20);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -49,8 +53,8 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   }, [members]);
 
   const filteredMembers = useMemo(() => {
-    if (!searchQuery.trim()) return a21Members.slice(0, 10);
-    const q = searchQuery.toLowerCase();
+    const q = searchQuery.trim().toLowerCase();
+    if (q.length < 2) return [];
     return a21Members.filter(
       (m) => m.name.toLowerCase().includes(q) || m.class_name.toLowerCase().includes(q)
     ).slice(0, 8);
@@ -105,17 +109,20 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     setStreak(0);
 
     setTimeout(() => {
-      advanceToNextQuestion();
+      advanceToNextQuestion(scoreRef.current, correctCountRef.current);
     }, 1500);
   };
 
   // Advance to next question or complete
-  const advanceToNextQuestion = () => {
+  const advanceToNextQuestion = (latestScore?: number, latestCorrect?: number) => {
     if (!quiz) return;
+    const finalScore = typeof latestScore === 'number' ? latestScore : scoreRef.current;
+    const finalCorrect = typeof latestCorrect === 'number' ? latestCorrect : correctCountRef.current;
+
     if (currentIdx + 1 < quiz.questions.length) {
       setCurrentIdx((prev) => prev + 1);
     } else {
-      handleFinishQuiz();
+      handleFinishQuiz(finalScore, finalCorrect);
     }
   };
 
@@ -131,6 +138,9 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     const elapsedSec = (Date.now() - questionStartMs.current) / 1000;
     const timeLimit = currentQ.time_limit || 20;
 
+    let newScore = scoreRef.current;
+    let newCorrect = correctCountRef.current;
+
     if (isCorrect) {
       sound.playCorrect();
       setAnswerState('correct');
@@ -140,10 +150,16 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
       const streakBonus = streak * 100;
       const totalForThisQ = basePoints + streakBonus;
 
+      newScore = scoreRef.current + totalForThisQ;
+      newCorrect = correctCountRef.current + 1;
+
+      scoreRef.current = newScore;
+      correctCountRef.current = newCorrect;
+
       setEarnedPoints(totalForThisQ);
-      setScore((prev) => prev + totalForThisQ);
+      setScore(newScore);
       setStreak((prev) => prev + 1);
-      setCorrectCount((prev) => prev + 1);
+      setCorrectCount(newCorrect);
     } else {
       sound.playWrong();
       setAnswerState('wrong');
@@ -151,13 +167,16 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     }
 
     setTimeout(() => {
-      advanceToNextQuestion();
+      advanceToNextQuestion(newScore, newCorrect);
     }, 1300);
   };
 
   // Handle finish quiz & save to Supabase
-  const handleFinishQuiz = async () => {
+  const handleFinishQuiz = async (finalScore?: number, finalCorrect?: number) => {
     if (!session || !quiz || !selectedMember) return;
+
+    const resolvedScore = typeof finalScore === 'number' ? finalScore : scoreRef.current;
+    const resolvedCorrect = typeof finalCorrect === 'number' ? finalCorrect : correctCountRef.current;
 
     setIsCompleted(true);
     sound.playFanfare();
@@ -178,12 +197,12 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           member_id: selectedMember.id,
           member_name: selectedMember.name,
           class_name: selectedMember.class_name,
-          score: score,
-          correct_answers: correctCount,
+          score: resolvedScore,
+          correct_answers: resolvedCorrect,
           total_questions: quiz.questions.length,
           time_spent_seconds: totalTime,
           completed_at: new Date().toISOString()
-        });
+        }, { onConflict: 'session_id,member_id' });
 
       // 2. Fetch leaderboard
       const { data: leadData } = await supabase
@@ -251,7 +270,9 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
         sound.playSuccess();
         setSession(sessionData);
         setScore(existingSub.score);
+        scoreRef.current = existingSub.score;
         setCorrectCount(existingSub.correct_answers);
+        correctCountRef.current = existingSub.correct_answers;
         setIsCompleted(true);
 
         // Fetch leaderboard
@@ -287,8 +308,10 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
       setQuiz(quizData);
       setCurrentIdx(0);
       setScore(0);
+      scoreRef.current = 0;
       setStreak(0);
       setCorrectCount(0);
+      correctCountRef.current = 0;
       setStartTime(Date.now());
       setIsCompleted(false);
     } catch (err: any) {
@@ -366,40 +389,51 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
                   </button>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Ketik nama atau kelasmu..."
-                    className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:border-blue-600 focus:outline-none"
-                  />
-
-                  {/* Suggestions list */}
-                  <div className="max-h-40 overflow-y-auto divide-y divide-slate-100 rounded-2xl border-2 border-slate-100 bg-slate-50/50">
-                    {filteredMembers.length === 0 ? (
-                      <div className="p-3 text-center text-xs text-slate-400 font-bold">
-                        Nama tidak ditemukan di Angkatan 21
-                      </div>
-                    ) : (
-                      filteredMembers.map((m) => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            sound.playPop();
-                            setSelectedMember(m);
-                          }}
-                          className="w-full text-left px-3.5 py-2 hover:bg-blue-50 transition-colors flex items-center justify-between"
-                        >
-                          <span className="text-xs font-black text-slate-800">{m.name}</span>
-                          <span className="text-[10px] font-bold text-slate-500 bg-white px-2 py-0.5 rounded-lg border border-slate-200">
-                            {m.class_name}
-                          </span>
-                        </button>
-                      ))
-                    )}
+                <div className="relative">
+                  <div className="relative flex items-center">
+                    <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Ketik minimal 2 huruf namamu..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 placeholder:text-slate-400 focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
+                    />
                   </div>
+
+                  {/* Suggestions list only when query >= 2 */}
+                  {searchQuery.trim().length >= 2 && (
+                    <div className="mt-2 max-h-48 overflow-y-auto divide-y divide-slate-100 rounded-2xl border-2 border-blue-500 bg-white shadow-lg">
+                      {filteredMembers.length === 0 ? (
+                        <div className="p-3 text-center text-xs text-slate-400 font-bold">
+                          Nama tidak ditemukan di Angkatan 21
+                        </div>
+                      ) : (
+                        <>
+                          <div className="px-3 py-1.5 bg-blue-50 text-[10px] font-black text-blue-900 border-b border-blue-200">
+                            Klik namamu untuk memilih:
+                          </div>
+                          {filteredMembers.map((m) => (
+                            <button
+                              key={m.id}
+                              type="button"
+                              onClick={() => {
+                                sound.playPop();
+                                setSelectedMember(m);
+                                setSearchQuery('');
+                              }}
+                              className="w-full text-left px-3.5 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between"
+                            >
+                              <span className="text-xs font-black text-slate-800">{m.name}</span>
+                              <span className="text-[10px] font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200">
+                                {m.class_name}
+                              </span>
+                            </button>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

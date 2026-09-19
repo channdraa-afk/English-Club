@@ -176,12 +176,12 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   const allTabs: TabItem[] = [
     // --- 🌐 UMUM (SISTEM & PUSAT) ---
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'general', superOnly: true },
-    { id: 'quiz', label: 'EC Arena (Kuis Live)', icon: Gamepad2, category: 'general', superOnly: false },
     { id: 'roster_manager', label: 'Kelola Master Anggota', icon: UserCog, category: 'general', superOnly: true },
     { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
     { id: 'data_vault', label: 'Brankas Reset & Backup', icon: Database, category: 'general', superOnly: true },
 
     // --- 🎒 OPERASIONAL A21 (ADIK KELAS) ---
+    { id: 'quiz', label: 'EC Arena (Kuis Live)', icon: Gamepad2, category: 'a21', superOnly: false },
     { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: false },
     { id: 'talent_scout', label: 'Radar Bibit Lomba', icon: Star, category: 'a21', superOnly: false },
     { id: 'helper_a21', label: 'Bantu Absen A21', icon: HandHeart, category: 'a21', superOnly: false },
