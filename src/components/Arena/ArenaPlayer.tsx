@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
-  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search, Sparkles, RotateCcw, Play, RefreshCw, LogOut 
+  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search, Sparkles, Play, RefreshCw, LogOut 
 } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
@@ -56,6 +56,8 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [answerState, setAnswerState] = useState<'idle' | 'correct' | 'wrong' | 'timeout'>('idle');
   const [earnedPoints, setEarnedPoints] = useState(0);
+  const [earnedBasePoints, setEarnedBasePoints] = useState(0);
+  const [earnedStreakBonus, setEarnedStreakBonus] = useState(0);
   const questionStartMs = useRef(Date.now());
   const timerRef = useRef<any>(null);
 
@@ -64,6 +66,8 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   const [isSpectating, setIsSpectating] = useState(false);
   const [leaderboard, setLeaderboard] = useState<QuizSubmission[]>([]);
   const [myRank, setMyRank] = useState<number | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isRetryingSubmit, setIsRetryingSubmit] = useState(false);
 
   // Filter A21 members for selection
   const a21Members = useMemo(() => {
@@ -122,9 +126,6 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
 
       if (sData) {
         setLiveSession(sData);
-        if (!tokenInput) {
-          setTokenInput(sData.room_code);
-        }
         fetchLeaderboardData(sData.id);
       } else {
         setLiveSession(null);
@@ -132,7 +133,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     } catch (e) {
       console.error('Failed to check active session:', e);
     }
-  }, [tokenInput, fetchLeaderboardData]);
+  }, [fetchLeaderboardData]);
 
   // On initial mount, discover active session for instant leaderboard
   useEffect(() => {
@@ -171,6 +172,8 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     setSelectedOption(null);
     setAnswerState('idle');
     setEarnedPoints(0);
+    setEarnedBasePoints(0);
+    setEarnedStreakBonus(0);
     setTimeLeft(currentQ.time_limit || 20);
     questionStartMs.current = Date.now();
 
@@ -266,6 +269,8 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
       streakRef.current = newStreak;
 
       setEarnedPoints(totalForThisQ);
+      setEarnedBasePoints(basePoints);
+      setEarnedStreakBonus(streakBonus);
       setScore(newScore);
       setStreak(newStreak);
       setCorrectCount(newCorrect);
@@ -299,35 +304,12 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     setPendingSavePoint(null);
   };
 
-  // Discard save point and start from Q1
-  const handleRestartFresh = (sessionData: QuizSession, quizData: Quiz) => {
-    sound.playPop();
-    if (selectedMember) {
-      safeStorage.remove(`ec_arena_save_${sessionData.id}_${selectedMember.id}`);
-    }
-    setSession(sessionData);
-    setQuiz(quizData);
-    setCurrentIdx(0);
-    setScore(0);
-    scoreRef.current = 0;
-    setStreak(0);
-    streakRef.current = 0;
-    setCorrectCount(0);
-    correctCountRef.current = 0;
-    setStartTime(Date.now());
-    setIsCompleted(false);
-    setPendingSavePoint(null);
-  };
-
   // Handle finish quiz & save to Supabase
   const handleFinishQuiz = async (finalScore?: number, finalCorrect?: number) => {
     if (!session || !quiz || !selectedMember) return;
 
     const resolvedScore = typeof finalScore === 'number' ? finalScore : scoreRef.current;
     const resolvedCorrect = typeof finalCorrect === 'number' ? finalCorrect : correctCountRef.current;
-
-    // Clear save point when quiz is completed
-    safeStorage.remove(`ec_arena_save_${session.id}_${selectedMember.id}`);
 
     setIsCompleted(true);
     sound.playFanfare();
@@ -341,7 +323,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
 
     try {
       // 1. Insert submission to Supabase
-      await supabase
+      const { error: subErr } = await supabase
         .from('quiz_submissions')
         .upsert({
           session_id: session.id,
@@ -355,6 +337,12 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           completed_at: new Date().toISOString()
         }, { onConflict: 'session_id,member_id' });
 
+      if (subErr) throw subErr;
+
+      // Safe: Hapus save point HANYA SETELAH Supabase konfirmasi data tersimpan
+      safeStorage.remove(`ec_arena_save_${session.id}_${selectedMember.id}`);
+      setSubmitError(null);
+
       // 2. Fetch leaderboard
       const { data: leadData } = await supabase
         .from('quiz_submissions')
@@ -367,8 +355,47 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
         const myIndex = leadData.findIndex((s) => s.member_id === selectedMember.id);
         setMyRank(myIndex !== -1 ? myIndex + 1 : null);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to submit quiz:', err);
+      setSubmitError('Koneksi internet terputus saat mengirim nilaimu ke server. Tenang, save point nilaimu tetap aman di HP ini! Silakan klik tombol di bawah untuk kirim ulang.');
+    }
+  };
+
+  // Handle retry submission if network dropped at completion
+  const handleRetrySubmit = async () => {
+    if (!session || !quiz || !selectedMember) return;
+    setIsRetryingSubmit(true);
+    setSubmitError(null);
+
+    const totalTime = Math.round((Date.now() - startTime) / 1000);
+
+    try {
+      const { error: subErr } = await supabase
+        .from('quiz_submissions')
+        .upsert({
+          session_id: session.id,
+          member_id: selectedMember.id,
+          member_name: selectedMember.name,
+          class_name: selectedMember.class_name,
+          score: scoreRef.current,
+          correct_answers: correctCountRef.current,
+          total_questions: quiz.questions.length,
+          time_spent_seconds: totalTime,
+          completed_at: new Date().toISOString()
+        }, { onConflict: 'session_id,member_id' });
+
+      if (subErr) throw subErr;
+
+      safeStorage.remove(`ec_arena_save_${session.id}_${selectedMember.id}`);
+      sound.playSuccess();
+      confetti({ particleCount: 60, spread: 50 });
+      fetchLeaderboardData(session.id);
+    } catch (err: any) {
+      console.error('Retry submission failed:', err);
+      sound.playError();
+      setSubmitError('Masih gagal terhubung ke server: ' + (err.message || 'Cek kuota/sinyal HP kamu lalu coba lagi.'));
+    } finally {
+      setIsRetryingSubmit(false);
     }
   };
 
@@ -555,15 +582,9 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
                   <span>Lanjutkan Soal ke-{pendingSavePoint.currentIdx + 1}</span>
                 </TactileButton>
 
-                <TactileButton
-                  variant="white"
-                  size="sm"
-                  className="w-full text-slate-500"
-                  onClick={() => handleRestartFresh(pendingSavePoint.sessionData, pendingSavePoint.quizData)}
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Ulangi dari Awal (Soal 1)</span>
-                </TactileButton>
+                <p className="text-[11px] text-center font-bold text-slate-400 pt-1">
+                  *Untuk mengulang kuis dari awal, silakan minta izin kakak mentor untuk me-reset di dashboard.
+                </p>
               </div>
             </div>
           </div>
@@ -596,6 +617,9 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
                 onChange={(e) => setTokenInput(e.target.value.toUpperCase())}
                 placeholder="Contoh: SMEGA"
                 maxLength={8}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
                 className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center font-mono font-black text-xl text-blue-600 tracking-widest uppercase focus:bg-white focus:border-blue-600 focus:outline-none transition-colors"
                 autoFocus
               />
@@ -854,10 +878,29 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
               </div>
             </div>
 
-            {/* Encouraging message */}
-            <p className="text-xs font-medium text-slate-600 leading-relaxed pt-1">
-              Skormu telah tercatat di papan peringkat gabungan seluruh 3 ruangan!
-            </p>
+            {/* Encouraging message / Submit Error Retry Banner */}
+            {submitError ? (
+              <div className="p-3.5 rounded-2xl bg-rose-50 border-2 border-rose-300 text-left space-y-2.5 mt-2 animate-fade-in">
+                <div className="flex items-start gap-2 text-rose-800 text-xs font-bold">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                  <p>{submitError}</p>
+                </div>
+                <TactileButton
+                  variant="brand"
+                  size="sm"
+                  className="w-full"
+                  disabled={isRetryingSubmit}
+                  onClick={handleRetrySubmit}
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isRetryingSubmit ? 'animate-spin' : ''}`} />
+                  <span>{isRetryingSubmit ? 'Mengirim Ulang...' : 'Kirim Ulang Nilai Sekarang'}</span>
+                </TactileButton>
+              </div>
+            ) : (
+              <p className="text-xs font-medium text-slate-600 leading-relaxed pt-1">
+                Skormu telah tercatat di papan peringkat gabungan seluruh 3 ruangan!
+              </p>
+            )}
           </div>
         )}
 
@@ -992,9 +1035,17 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
               {currentIdx + 1} / {quiz.questions.length}
             </span>
             {streak > 1 && (
-              <span className="px-2.5 py-1 rounded-xl bg-amber-100 text-amber-900 flex items-center gap-1 animate-bounce">
-                <Flame className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-                <span>Streak x{streak}</span>
+              <span className={`px-2.5 py-1 rounded-xl flex items-center gap-1.5 font-black text-xs transition-all shadow-sm ${
+                streak >= 5
+                  ? 'bg-gradient-to-r from-red-500 to-orange-500 text-white animate-bounce'
+                  : streak >= 3
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white animate-pulse'
+                  : 'bg-amber-100 text-amber-900'
+              }`}>
+                <Flame className={`w-3.5 h-3.5 ${streak >= 3 ? 'text-yellow-200 fill-yellow-200' : 'text-amber-500 fill-amber-500'}`} />
+                <span>
+                  {streak >= 5 ? `SUPERNOVA x${streak}! 🔥` : streak >= 3 ? `HOT STREAK x${streak}! 🔥` : `Streak x${streak}`}
+                </span>
               </span>
             )}
           </div>
@@ -1029,10 +1080,23 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
         </div>
 
         {/* Question Box */}
-        <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-6 text-center">
-          <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
-            Pertanyaan Bahasa Inggris
-          </span>
+        <div className={`bg-white rounded-3xl border-2 transition-all duration-300 p-6 text-center ${
+          streak >= 5
+            ? 'border-amber-400 ring-4 ring-amber-400/30 shadow-[0_6px_0_0_#f59e0b]'
+            : streak >= 3
+            ? 'border-orange-300 ring-2 ring-orange-300/30 shadow-[0_6px_0_0_#fb923c]'
+            : 'border-slate-200 shadow-[0_6px_0_0_#e2e8f0]'
+        }`}>
+          <div className="flex items-center justify-center gap-2 mb-2">
+            <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+              Pertanyaan Bahasa Inggris
+            </span>
+            {streak >= 3 && (
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white animate-pulse shadow-sm">
+                🔥 ON FIRE!
+              </span>
+            )}
+          </div>
           <h3 className="text-lg sm:text-xl font-black text-slate-900 leading-snug">
             {currentQ.question}
           </h3>
@@ -1041,17 +1105,41 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
         {/* Feedback Badge on Answer */}
         {answerState !== 'idle' && (
           <div
-            className={`p-3 rounded-2xl border-2 text-center text-sm font-black animate-bounce ${
+            className={`p-3.5 rounded-2xl border-2 text-center font-black transition-all ${
               answerState === 'correct'
-                ? 'bg-emerald-50 border-emerald-400 text-emerald-800'
+                ? 'bg-emerald-50 border-emerald-400 text-emerald-900 shadow-[0_4px_0_0_#34d399]'
                 : answerState === 'wrong'
-                ? 'bg-rose-50 border-rose-400 text-rose-800'
-                : 'bg-amber-50 border-amber-400 text-amber-800'
+                ? 'bg-rose-50 border-rose-400 text-rose-900 shadow-[0_4px_0_0_#f87171]'
+                : 'bg-amber-50 border-amber-400 text-amber-900 shadow-[0_4px_0_0_#fbbf24]'
             }`}
           >
-            {answerState === 'correct' && `✓ BENAR! +${earnedPoints} Poin! 🔥`}
-            {answerState === 'wrong' && '✕ YAH, KURANG TEPAT!'}
-            {answerState === 'timeout' && '⏰ WAKTU HABIS!'}
+            {answerState === 'correct' && (
+              <div className="space-y-1">
+                <div className="text-base sm:text-lg flex items-center justify-center gap-1.5 text-emerald-700">
+                  <span>✓ BENAR!</span>
+                  <span className="text-emerald-950 font-black">+{earnedPoints} Poin</span>
+                  <span>🔥</span>
+                </div>
+                <div className="text-xs text-emerald-700 flex items-center justify-center gap-3 font-bold">
+                  <span>⚡ Kecepatan: +{earnedBasePoints}</span>
+                  {earnedStreakBonus > 0 && (
+                    <span className="text-amber-700 font-black">
+                      🔥 Bonus Streak ({streak}x): +{earnedStreakBonus}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+            {answerState === 'wrong' && (
+              <div className="text-sm sm:text-base text-rose-700">
+                ✕ YAH, KURANG TEPAT! <span className="text-xs block font-bold text-rose-500 mt-0.5">Streak kembali ke 0</span>
+              </div>
+            )}
+            {answerState === 'timeout' && (
+              <div className="text-sm sm:text-base text-amber-700">
+                ⏰ WAKTU HABIS! <span className="text-xs block font-bold text-amber-500 mt-0.5">Streak kembali ke 0</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1063,20 +1151,27 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           type="button"
           disabled={selectedOption !== null || answerState !== 'idle'}
           onClick={() => handleSelectOption(0)}
-          className={`h-28 rounded-2xl border-2 p-3 text-left font-black transition-all flex flex-col justify-between select-none ${
+          className={`min-h-[112px] rounded-2xl border-2 p-3 font-black transition-all flex flex-col items-center justify-between select-none ${
             selectedOption === 0
               ? answerState === 'correct'
                 ? 'bg-emerald-500 border-emerald-700 text-white shadow-none translate-y-1'
                 : 'bg-rose-700 border-rose-900 text-white shadow-none translate-y-1'
+              : answerState !== 'idle' && currentQ.correct_option === 0
+              ? 'bg-rose-600 border-rose-800 text-white ring-4 ring-emerald-400 animate-pulse'
               : 'bg-rose-600 hover:bg-rose-500 border-rose-800 text-white shadow-[0_5px_0_0_#9f1239] active:shadow-none active:translate-y-1'
           }`}
         >
-          <span className="w-6 h-6 rounded-lg bg-black/20 flex items-center justify-center text-xs font-black">
-            🔺 A
-          </span>
-          <span className="text-xs sm:text-sm leading-tight line-clamp-3">
-            {currentQ.option_a}
-          </span>
+          <div className="w-full flex items-center justify-start">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/20 text-xs font-black tracking-wider text-white">
+              <span>🔺</span>
+              <span>A</span>
+            </span>
+          </div>
+          <div className="my-auto w-full text-center py-1">
+            <span className="text-sm sm:text-base font-extrabold leading-snug line-clamp-3">
+              {currentQ.option_a}
+            </span>
+          </div>
         </button>
 
         {/* Option B (Blue) */}
@@ -1084,20 +1179,27 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           type="button"
           disabled={selectedOption !== null || answerState !== 'idle'}
           onClick={() => handleSelectOption(1)}
-          className={`h-28 rounded-2xl border-2 p-3 text-left font-black transition-all flex flex-col justify-between select-none ${
+          className={`min-h-[112px] rounded-2xl border-2 p-3 font-black transition-all flex flex-col items-center justify-between select-none ${
             selectedOption === 1
               ? answerState === 'correct'
                 ? 'bg-emerald-500 border-emerald-700 text-white shadow-none translate-y-1'
                 : 'bg-blue-800 border-blue-950 text-white shadow-none translate-y-1'
+              : answerState !== 'idle' && currentQ.correct_option === 1
+              ? 'bg-blue-600 border-blue-800 text-white ring-4 ring-emerald-400 animate-pulse'
               : 'bg-blue-600 hover:bg-blue-500 border-blue-800 text-white shadow-[0_5px_0_0_#1e3a8a] active:shadow-none active:translate-y-1'
           }`}
         >
-          <span className="w-6 h-6 rounded-lg bg-black/20 flex items-center justify-center text-xs font-black">
-            🔷 B
-          </span>
-          <span className="text-xs sm:text-sm leading-tight line-clamp-3">
-            {currentQ.option_b}
-          </span>
+          <div className="w-full flex items-center justify-start">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/20 text-xs font-black tracking-wider text-white">
+              <span>🔷</span>
+              <span>B</span>
+            </span>
+          </div>
+          <div className="my-auto w-full text-center py-1">
+            <span className="text-sm sm:text-base font-extrabold leading-snug line-clamp-3">
+              {currentQ.option_b}
+            </span>
+          </div>
         </button>
 
         {/* Option C (Yellow) */}
@@ -1105,20 +1207,27 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           type="button"
           disabled={selectedOption !== null || answerState !== 'idle'}
           onClick={() => handleSelectOption(2)}
-          className={`h-28 rounded-2xl border-2 p-3 text-left font-black transition-all flex flex-col justify-between select-none ${
+          className={`min-h-[112px] rounded-2xl border-2 p-3 font-black transition-all flex flex-col items-center justify-between select-none ${
             selectedOption === 2
               ? answerState === 'correct'
                 ? 'bg-emerald-500 border-emerald-700 text-white shadow-none translate-y-1'
                 : 'bg-amber-700 border-amber-900 text-white shadow-none translate-y-1'
-              : 'bg-amber-500 hover:bg-amber-400 border-amber-700 text-slate-950 shadow-[0_5px_0_0_#b45309] active:shadow-none active:translate-y-1'
+              : answerState !== 'idle' && currentQ.correct_option === 2
+              ? 'bg-amber-400 border-amber-600 text-slate-950 ring-4 ring-emerald-400 animate-pulse'
+              : 'bg-amber-400 hover:bg-amber-300 border-amber-600 text-slate-950 shadow-[0_5px_0_0_#b45309] active:shadow-none active:translate-y-1'
           }`}
         >
-          <span className="w-6 h-6 rounded-lg bg-black/20 flex items-center justify-center text-xs font-black text-white">
-            🟡 C
-          </span>
-          <span className="text-xs sm:text-sm leading-tight line-clamp-3 text-slate-900">
-            {currentQ.option_c}
-          </span>
+          <div className="w-full flex items-center justify-start">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/15 text-xs font-black tracking-wider text-slate-950">
+              <span>🟡</span>
+              <span>C</span>
+            </span>
+          </div>
+          <div className="my-auto w-full text-center py-1">
+            <span className="text-sm sm:text-base font-extrabold leading-snug line-clamp-3 text-slate-950">
+              {currentQ.option_c}
+            </span>
+          </div>
         </button>
 
         {/* Option D (Green) */}
@@ -1126,20 +1235,27 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           type="button"
           disabled={selectedOption !== null || answerState !== 'idle'}
           onClick={() => handleSelectOption(3)}
-          className={`h-28 rounded-2xl border-2 p-3 text-left font-black transition-all flex flex-col justify-between select-none ${
+          className={`min-h-[112px] rounded-2xl border-2 p-3 font-black transition-all flex flex-col items-center justify-between select-none ${
             selectedOption === 3
               ? answerState === 'correct'
                 ? 'bg-emerald-500 border-emerald-700 text-white shadow-none translate-y-1'
                 : 'bg-emerald-800 border-emerald-950 text-white shadow-none translate-y-1'
+              : answerState !== 'idle' && currentQ.correct_option === 3
+              ? 'bg-emerald-600 border-emerald-800 text-white ring-4 ring-emerald-400 animate-pulse'
               : 'bg-emerald-600 hover:bg-emerald-500 border-emerald-800 text-white shadow-[0_5px_0_0_#15803d] active:shadow-none active:translate-y-1'
           }`}
         >
-          <span className="w-6 h-6 rounded-lg bg-black/20 flex items-center justify-center text-xs font-black">
-            🟩 D
-          </span>
-          <span className="text-xs sm:text-sm leading-tight line-clamp-3">
-            {currentQ.option_d}
-          </span>
+          <div className="w-full flex items-center justify-start">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/20 text-xs font-black tracking-wider text-white">
+              <span>🟩</span>
+              <span>D</span>
+            </span>
+          </div>
+          <div className="my-auto w-full text-center py-1">
+            <span className="text-sm sm:text-base font-extrabold leading-snug line-clamp-3">
+              {currentQ.option_d}
+            </span>
+          </div>
         </button>
       </div>
     </div>

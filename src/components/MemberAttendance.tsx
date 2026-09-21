@@ -320,6 +320,9 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
                 onChange={(e) => setTokenInput(e.target.value.toUpperCase())}
                 placeholder="CONTOH: EAGLE21"
                 maxLength={10}
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
                 className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-base font-black text-slate-900 tracking-wider placeholder:tracking-normal placeholder:text-slate-400 placeholder:font-bold focus:bg-white focus:border-emerald-500 focus:outline-none uppercase transition-colors"
               />
             </div>

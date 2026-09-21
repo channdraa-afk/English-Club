@@ -20,7 +20,8 @@ import {
   Star,
   Database,
   UserCog,
-  Gamepad2
+  Gamepad2,
+  FileText
 } from 'lucide-react';
 import { Member, Meeting, Attendance, Registration, TalentStar } from '../../types/database';
 import { MeetingControl } from './MeetingControl';
@@ -37,6 +38,7 @@ import { SuperAdminModal } from './SuperAdminModal';
 import { DataVault } from './DataVault';
 import { MemberRosterManager } from './MemberRosterManager';
 import { QuizManager } from './QuizManager';
+import { AdminDocGenerator } from './AdminDocGenerator';
 import { sound } from '../../lib/audio';
 import { safeStorage } from '../../lib/storage';
 
@@ -54,7 +56,35 @@ export type TabId =
   | 'mentor_attendance'
   | 'agenda_a20'
   | 'radar'
-  | 'structure';
+  | 'structure'
+  | 'admin_docs';
+
+export const TAB_CONFIG: Record<TabId, { category: 'general' | 'a21' | 'a20'; superOnly?: boolean }> = {
+  // General (Super Admin)
+  session: { category: 'general', superOnly: true },
+  roster_manager: { category: 'general', superOnly: true },
+  approvals: { category: 'general', superOnly: true },
+  data_vault: { category: 'general', superOnly: true },
+
+  // A21 (Adik Kelas)
+  quiz: { category: 'a21', superOnly: false },
+  live_monitor: { category: 'a21', superOnly: false },
+  talent_scout: { category: 'a21', superOnly: false },
+  helper_a21: { category: 'a21', superOnly: false },
+  recap: { category: 'a21', superOnly: false },
+  agenda_a21: { category: 'a21', superOnly: false },
+
+  // A20 (Pengurus)
+  admin_docs: { category: 'a20', superOnly: false },
+  mentor_attendance: { category: 'a20', superOnly: false },
+  radar: { category: 'a20', superOnly: false },
+  structure: { category: 'a20', superOnly: false },
+  agenda_a20: { category: 'a20', superOnly: true },
+};
+
+export const getTabCategory = (tab: TabId): 'general' | 'a21' | 'a20' => {
+  return TAB_CONFIG[tab]?.category || 'a21';
+};
 
 interface MentorDashboardProps {
   members: Member[];
@@ -77,6 +107,7 @@ interface MentorDashboardProps {
   onAttendanceChanged: () => void;
   onRefreshRegistrations: () => void;
   onMemberAdded: () => void;
+  onQuizSessionChanged?: (session: any) => void;
   talentStars?: TalentStar[];
   onAddTalentStar?: (star: Omit<TalentStar, 'id' | 'created_at'>) => Promise<void>;
   onRemoveTalentStar?: (starId: string) => Promise<void>;
@@ -106,6 +137,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   onAttendanceChanged,
   onRefreshRegistrations,
   onMemberAdded,
+  onQuizSessionChanged,
   talentStars,
   onAddTalentStar,
   onRemoveTalentStar,
@@ -115,54 +147,49 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTabState] = useState<TabId>(() => {
     const saved = safeStorage.get('ec_active_tab', 'session') as TabId | null;
-    const allowedRegular: TabId[] = [
-      'mentor_attendance',
-      'quiz',
-      'radar',
-      'live_monitor',
-      'talent_scout',
-      'helper_a21',
-      'recap',
-      'agenda_a21',
-      'structure'
-    ];
+    const allowedRegular: TabId[] = (Object.keys(TAB_CONFIG) as TabId[]).filter(
+      (k) => !TAB_CONFIG[k].superOnly
+    );
     if (saved) {
       if ((saved as any) === 'agenda') return 'agenda_a21';
       if (isSuperAdmin || allowedRegular.includes(saved)) {
         return saved;
       }
     }
-    return isSuperAdmin ? 'session' : 'mentor_attendance';
+    return isSuperAdmin ? 'session' : 'live_monitor';
+  });
+
+  const [currentCategory, setCurrentCategory] = useState<'general' | 'a21' | 'a20' | 'all'>(() => {
+    return getTabCategory(activeTab);
   });
 
   const setActiveTab = (tab: TabId) => {
     setActiveTabState(tab);
     safeStorage.set('ec_active_tab', tab, 'session');
+    const tabCat = getTabCategory(tab);
+    if (currentCategory !== 'all' && currentCategory !== tabCat) {
+      setCurrentCategory(tabCat);
+    }
   };
 
-  const [currentCategory, setCurrentCategory] = useState<'general' | 'a21' | 'a20' | 'all'>(
-    isSuperAdmin ? 'general' : 'a21'
-  );
   const [isSuperModalOpen, setIsSuperModalOpen] = useState(false);
   const tabsScrollRef = useRef<HTMLDivElement>(null);
 
-  // Safety fallback if regular mentor tries to stay on a super-admin tab
+  // Coherence & safety guard: keep activeTab aligned with permissions and active category
   useEffect(() => {
-    const allowedRegular: TabId[] = [
-      'mentor_attendance',
-      'quiz',
-      'radar',
-      'live_monitor',
-      'talent_scout',
-      'helper_a21',
-      'recap',
-      'agenda_a21',
-      'structure'
-    ];
-    if (!isSuperAdmin && !allowedRegular.includes(activeTab)) {
-      setActiveTab('mentor_attendance');
+    if (!isSuperAdmin && TAB_CONFIG[activeTab]?.superOnly) {
+      setActiveTab('live_monitor');
+      return;
     }
-  }, [isSuperAdmin, activeTab]);
+    if (currentCategory !== 'all') {
+      const tabCat = getTabCategory(activeTab);
+      if (tabCat !== currentCategory) {
+        if (currentCategory === 'a21') setActiveTab('live_monitor');
+        else if (currentCategory === 'a20') setActiveTab('mentor_attendance');
+        else if (currentCategory === 'general') setActiveTab(isSuperAdmin ? 'session' : 'live_monitor');
+      }
+    }
+  }, [isSuperAdmin, activeTab, currentCategory]);
 
   const pendingRegsCount = registrations.filter((r) => r.status === 'pending').length;
 
@@ -197,6 +224,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     { id: 'agenda_a21', label: 'Suara & Masukan Adik', icon: Sparkles, category: 'a21', superOnly: false },
 
     // --- 🛡️ INTERNAL A20 (PENGURUS) ---
+    { id: 'admin_docs', label: 'Administrasi & Surat (.docx)', icon: FileText, category: 'a20', superOnly: false },
     { id: 'mentor_attendance', label: 'Presensi Mandiri A20', icon: Users, category: 'a20', superOnly: false },
     { id: 'radar', label: 'Radar & Rekap Presensi A20', icon: ShieldAlert, category: 'a20', superOnly: false },
     { id: 'structure', label: 'Struktur Pengurus A20', icon: Award, category: 'a20', superOnly: false },
@@ -285,19 +313,31 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           </div>
         </div>
 
-        {/* Action Controls - Note: Akses Ketua button completely hidden for regular mentors */}
+        {/* Action Controls - Akses Ketua & Logout */}
         <div className="flex items-center gap-2 flex-wrap">
-          {isSuperAdmin && (
+          {isSuperAdmin ? (
             <button
               onClick={() => {
                 sound.playPop();
                 onSuperAdminLock();
               }}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-black transition-colors"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-xs font-black transition-colors cursor-pointer"
               title="Kunci Akses Super Admin"
             >
               <Lock className="w-3.5 h-3.5 text-amber-600" />
               <span>Kunci Admin</span>
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                sound.playPop();
+                setIsSuperModalOpen(true);
+              }}
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black transition-colors shadow-xs active:translate-y-0.5 cursor-pointer"
+              title="Buka Akses Ketua / Super Admin"
+            >
+              <Crown className="w-3.5 h-3.5 text-amber-600" />
+              <span>Akses Ketua</span>
             </button>
           )}
 
@@ -323,7 +363,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
               onClick={() => {
                 sound.playPop();
                 setCurrentCategory('general');
-                if (activeTab !== 'session' && activeTab !== 'approvals') {
+                if (getTabCategory(activeTab) !== 'general') {
                   setActiveTab('session');
                 }
               }}
@@ -342,8 +382,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
             onClick={() => {
               sound.playPop();
               setCurrentCategory('a21');
-              const a21TabIds: TabId[] = ['live_monitor', 'talent_scout', 'helper_a21', 'recap', 'agenda_a21'];
-              if (!a21TabIds.includes(activeTab)) {
+              if (getTabCategory(activeTab) !== 'a21') {
                 setActiveTab('live_monitor');
               }
             }}
@@ -362,8 +401,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
             onClick={() => {
               sound.playPop();
               setCurrentCategory('a20');
-              const a20TabIds: TabId[] = ['mentor_attendance', 'radar', 'structure', 'agenda_a20'];
-              if (!a20TabIds.includes(activeTab)) {
+              if (getTabCategory(activeTab) !== 'a20') {
                 setActiveTab('mentor_attendance');
               }
             }}
@@ -492,6 +530,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       {activeTab === 'session' && isSuperAdmin && (
         <MeetingControl
           activeMeeting={activeMeeting}
+          meetings={meetings}
           mentorToken={mentorToken}
           onMentorTokenUpdated={onMentorTokenUpdated}
           isManualBypass={isManualBypass}
@@ -510,7 +549,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         <QuizManager
           activeMeetingId={activeMeeting?.id}
           onAwardTalentStar={onAddTalentStar}
-          totalA21Count={members.filter((m) => m.generation === 21 && m.status === 'active').length || 104}
+          totalA21Count={members.filter((m) => m.generation === 21 && m.status === 'active').length || 103}
+          onSessionChanged={onQuizSessionChanged}
         />
       )}
 
@@ -614,13 +654,23 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         />
       )}
 
+      {/* Generator Administrasi & Dokumen Resmi (.docx) */}
+      {activeTab === 'admin_docs' && (
+        <AdminDocGenerator
+          members={members}
+          meetings={officialMeetings}
+          attendances={attendances}
+        />
+      )}
+
       {/* Super Admin Secret Modal */}
       <SuperAdminModal
         isOpen={isSuperModalOpen}
         onClose={() => setIsSuperModalOpen(false)}
         onSuccess={(sig) => {
           onSuperAdminUnlock(sig);
-          setActiveTab('live_monitor');
+          setCurrentCategory('general');
+          setActiveTab('session');
         }}
       />
     </div>

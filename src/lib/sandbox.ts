@@ -47,7 +47,6 @@ export async function startSandboxMode(): Promise<SandboxState> {
           word_of_the_day: 'Simulation',
           word_meaning: 'Mode Uji Coba & Pemeliharaan Sistem Terisolasi',
           is_active: true,
-          is_holiday: false,
         })
         .eq('id', sandboxMeetingId);
     } else {
@@ -60,7 +59,6 @@ export async function startSandboxMode(): Promise<SandboxState> {
           word_of_the_day: 'Simulation',
           word_meaning: 'Mode Uji Coba & Pemeliharaan Sistem Terisolasi',
           is_active: true,
-          is_holiday: false,
         })
         .select('id')
         .single();

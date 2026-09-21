@@ -8,7 +8,9 @@ import {
   Zap,
   AlertCircle,
   X,
-  Trash2
+  Trash2,
+  Calendar,
+  Plus
 } from 'lucide-react';
 import { Meeting } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -34,6 +36,7 @@ const formatMeetingDateIndo = (dateStr?: string) => {
 
 interface MeetingControlProps {
   activeMeeting: Meeting | null;
+  meetings?: Meeting[];
   mentorToken: string;
   onMentorTokenUpdated: (newTok: string) => void;
   isManualBypass: boolean;
@@ -48,6 +51,7 @@ interface MeetingControlProps {
 
 export const MeetingControl: React.FC<MeetingControlProps> = ({
   activeMeeting,
+  meetings = [],
   mentorToken,
   onMentorTokenUpdated,
   isManualBypass,
@@ -60,6 +64,11 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   onAttendanceChanged,
 }) => {
   const targetWed = getTargetWednesdayDate();
+
+  // Multi-session tracking: 'new' or specific meeting ID
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string>(
+    activeMeeting?.id || (meetings.length > 0 ? meetings[0].id : 'new')
+  );
 
   // New / Edit Meeting state
   const [meetingDate, setMeetingDate] = useState(activeMeeting?.meeting_date || targetWed.dateStr);
@@ -89,16 +98,57 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   }, [mentorToken]);
 
   useEffect(() => {
-    if (activeMeeting?.meeting_date) {
-      setMeetingDate(activeMeeting.meeting_date);
+    if (activeMeeting?.id && selectedMeetingId === 'new' && meetings.length === 0) {
+      setSelectedMeetingId(activeMeeting.id);
     }
-    if (activeMeeting?.title) setTitle(activeMeeting.title);
-    if (activeMeeting?.token) setToken(activeMeeting.token);
-    if (activeMeeting?.word_of_the_day) setWord(activeMeeting.word_of_the_day);
-    if (activeMeeting?.word_meaning) setMeaning(activeMeeting.word_meaning);
-    setIsHoliday(Boolean(activeMeeting?.is_holiday));
-    setHolidayReason(activeMeeting?.holiday_reason || '');
-  }, [activeMeeting]);
+  }, [activeMeeting, selectedMeetingId, meetings.length]);
+
+  const handleSelectMeeting = (id: string) => {
+    sound.playPop();
+    if (id === 'new') {
+      handleStartNewSession();
+      return;
+    }
+    const target = meetings.find((m) => m.id === id) || activeMeeting;
+    if (!target) return;
+    setSelectedMeetingId(id);
+    setMeetingDate(target.meeting_date || targetWed.dateStr);
+    setTitle(target.title || 'Weekly English Gathering');
+    setToken(target.token || 'EAGLE21');
+    setWord(target.word_of_the_day || 'Piece of cake (Sangat mudah)');
+    setMeaning(target.word_meaning || '');
+    setIsHoliday(Boolean(target.is_holiday));
+    setHolidayReason(target.holiday_reason || '');
+  };
+
+  const handleStartNewSession = () => {
+    sound.playPop();
+    let nextDateStr = targetWed.dateStr;
+    if (meetings && meetings.length > 0) {
+      const dates = meetings.map((m) => m.meeting_date).filter(Boolean).sort();
+      const latestDateStr = dates[dates.length - 1];
+      if (latestDateStr) {
+        const latest = new Date(latestDateStr + 'T00:00:00');
+        latest.setDate(latest.getDate() + 7);
+        const y = latest.getFullYear();
+        const m = String(latest.getMonth() + 1).padStart(2, '0');
+        const d = String(latest.getDate()).padStart(2, '0');
+        nextDateStr = `${y}-${m}-${d}`;
+      }
+    }
+    setSelectedMeetingId('new');
+    setMeetingDate(nextDateStr);
+    setTitle(`Weekly English Gathering #${meetings.length + 1}`);
+    const randToken = sampleStudentTokens[Math.floor(Math.random() * sampleStudentTokens.length)];
+    setToken(randToken);
+    const randIdiom = getRandomIdiom();
+    setWord(randIdiom.word);
+    setMeaning(randIdiom.meaning);
+    setIsHoliday(false);
+    setHolidayReason('');
+    setSuccessMsg(`Mode: Menyiapkan Sesi Baru untuk ${formatMeetingDateIndo(nextDateStr)}. Klik Simpan untuk menerbitkan!`);
+    setTimeout(() => setSuccessMsg(null), 4000);
+  };
 
   const handleRandomStudentToken = () => {
     sound.playPop();
@@ -130,13 +180,19 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     setIsHoliday(nextState);
     setShowHolidayModal(false);
 
-    await supabase
+    const { error: holErr } = await supabase
       .from('meetings')
       .update({
         is_holiday: nextState,
         holiday_reason: nextState ? reason : null,
       })
       .eq('id', activeMeeting.id);
+
+    if (holErr) {
+      console.warn('Kolom is_holiday belum terpasang di database Supabase:', holErr.message);
+      setErrorMsg('Catatan: Kolom hari libur belum aktif di database Supabase. Pengaturan lain tetap tersimpan normal.');
+      setTimeout(() => setErrorMsg(null), 5000);
+    }
 
     onMeetingUpdated();
   };
@@ -189,37 +245,65 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     setErrorMsg(null);
 
     try {
-      if (activeMeeting) {
-        // Update existing meeting
-        const { error } = await supabase
+      const basePayload = {
+        meeting_date: meetingDate || targetWed.dateStr,
+        title: title.trim(),
+        token: token.trim().toUpperCase(),
+        word_of_the_day: word.trim(),
+        word_meaning: meaning.trim(),
+        is_active: true,
+      };
+
+      const isExisting = selectedMeetingId && selectedMeetingId !== 'new';
+
+      if (isExisting) {
+        // Update existing meeting (graceful fallback if is_holiday column doesn't exist yet)
+        let { error } = await supabase
           .from('meetings')
           .update({
-            meeting_date: meetingDate || targetWed.dateStr,
-            title: title.trim(),
-            token: token.trim().toUpperCase(),
-            word_of_the_day: word.trim(),
-            word_meaning: meaning.trim(),
+            ...basePayload,
             is_holiday: isHoliday,
             holiday_reason: isHoliday ? holidayReason.trim() : null,
-            is_active: true,
           })
-          .eq('id', activeMeeting.id);
+          .eq('id', selectedMeetingId);
+
+        if (error && error.message?.includes('is_holiday')) {
+          const retry = await supabase
+            .from('meetings')
+            .update(basePayload)
+            .eq('id', selectedMeetingId);
+          error = retry.error;
+        }
 
         if (error) throw error;
       } else {
-        // Create new meeting
-        const { error } = await supabase.from('meetings').insert({
-          meeting_date: meetingDate || targetWed.dateStr,
-          title: title.trim(),
-          token: token.trim().toUpperCase(),
-          word_of_the_day: word.trim(),
-          word_meaning: meaning.trim(),
-          is_holiday: isHoliday,
-          holiday_reason: isHoliday ? holidayReason.trim() : null,
-          is_active: true,
-        });
+        // Create brand new meeting: nonaktifkan sesi lama agar hanya 1 sesi yang is_active
+        await supabase.from('meetings').update({ is_active: false }).neq('id', 'new');
+
+        let { data: insertedMeeting, error } = await supabase
+          .from('meetings')
+          .insert({
+            ...basePayload,
+            is_holiday: isHoliday,
+            holiday_reason: isHoliday ? holidayReason.trim() : null,
+          })
+          .select()
+          .single();
+
+        if (error && error.message?.includes('is_holiday')) {
+          const retry = await supabase
+            .from('meetings')
+            .insert(basePayload)
+            .select()
+            .single();
+          error = retry.error;
+          insertedMeeting = retry.data;
+        }
 
         if (error) throw error;
+        if (insertedMeeting?.id) {
+          setSelectedMeetingId(insertedMeeting.id);
+        }
       }
 
       // Save mentor token to app_settings
@@ -418,10 +502,68 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
       {/* Form Setup Pertemuan */}
       <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-6">
-        <h3 className="font-black text-slate-900 text-lg mb-4 flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-500" />
-          <span>Atur Sesi Pertemuan & Token</span>
-        </h3>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
+          <div>
+            <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-amber-500" />
+              <span>Atur Sesi Pertemuan & Token</span>
+            </h3>
+            <p className="text-xs font-bold text-slate-500 mt-0.5">
+              Kelola tanggal sesi mingguan, token presensi, dan status libur.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {meetings.length > 0 && (
+              <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-2xl border border-slate-300">
+                <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                <span className="text-[10px] font-black text-slate-500 uppercase">Pilih:</span>
+                <select
+                  value={selectedMeetingId}
+                  onChange={(e) => handleSelectMeeting(e.target.value)}
+                  className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer"
+                >
+                  {meetings.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.meeting_date ? formatMeetingDateIndo(m.meeting_date) : m.title} {m.id === activeMeeting?.id ? '★ (Aktif)' : ''}
+                    </option>
+                  ))}
+                  <option value="new">➕ Buat Sesi Baru (Pekan Depan)</option>
+                </select>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={handleStartNewSession}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_2px_0_0_#3730a3] active:translate-y-0.5 transition-all cursor-pointer"
+              title="Buka sesi baru untuk pertemuan hari Rabu berikutnya"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>➕ Buka Sesi Baru Pekan Depan</span>
+            </button>
+          </div>
+        </div>
+
+        {selectedMeetingId === 'new' && (
+          <div className="mb-4 p-3.5 rounded-2xl bg-indigo-50 border-2 border-indigo-200 text-indigo-900 text-xs font-bold flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-600 shrink-0" />
+              <span>
+                <strong>Mode Sesi Baru:</strong> Form ini disiapkan untuk menambah pertemuan baru ke database tanpa menimpa sesi lama.
+              </span>
+            </div>
+            {activeMeeting && (
+              <button
+                type="button"
+                onClick={() => handleSelectMeeting(activeMeeting.id)}
+                className="text-[11px] font-black text-indigo-700 hover:underline shrink-0"
+              >
+                Kembali ke Sesi Aktif
+              </button>
+            )}
+          </div>
+        )}
 
         {isHoliday && (
           <div className="mb-4 p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 space-y-1.5">

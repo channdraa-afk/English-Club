@@ -46,7 +46,10 @@
   - `sound.playError()`: Nada peringatan saat token keliru.
 - **Canvas Confetti** (`canvas-confetti`): Ledakan konfeti lembut saat presensi berhasil diserahkan.
 
-### 2.3. Backend & Cloud Database
+### 2.3. Generator Dokumen Word Resmi (.docx)
+- **docxtemplater** (`^3.68.2`) & **pizzip** (`^3.1.9`): Generator berkas Microsoft Word (.docx) murni di sisi browser (client-side binary XML templating) untuk Surat Peminjaman Ruang/Alat dan Laporan Bulanan 103 siswa.
+
+### 2.4. Backend & Cloud Database
 - **Supabase (PostgreSQL 15)**:
   - `@supabase/supabase-js`: Klien resmi.
   - Skema 5 Tabel: `members`, `meetings`, `attendances`, `registrations`, `app_settings`.
@@ -432,10 +435,81 @@
   - **Pembersihan Total Pendaftaran & Kuis (Zero Residue di `DataVault.tsx`)**:
     - Menghapus 2 data pendaftar sampah (`Khalil` & `TEST`) dan menambahkan policy public delete RLS pada tabel `registrations`.
     - Memperluas eksekusi *Big Reset Total* agar menghapus `attendances`, `registrations`, dan `quiz_submissions` secara serentak.
-    - Mengintegrasikan master data 165 anggota ke dalam berkas unduhan backup JSON sehingga menjadi *Full Master Snapshot*.
+- [x] Penguatan Keamanan EC Arena (Safe Submission & Anti-Re-roll Save Point):
+  - **Problem**: Jika sinyal smartphone siswa terputus di soal terakhir, `safeStorage.remove` yang dieksekusi lebih awal menyebabkan save point terhapus sebelum data masuk ke database, menghilangkan nilai siswa secara permanen. Selain itu, tombol "Ulangi dari Awal" di modal pemulihan dapat dieksploitasi siswa untuk re-roll soal demi mengejar skor sempurna.
+  - **Solution / State**: Penghapusan save point dipindahkan ke dalam blok sukses setelah `supabase.upsert` terkonfirmasi. Jika jaringan gagal, save point tetap utuh di HP dan menampilkan banner error serta tombol taktil `[ 🔄 Kirim Ulang Nilai Sekarang ]`. Tombol re-roll "Ulangi dari Awal" dicabut dari siswa, mewajibkan kelanjutan soal atau meminta reset resmi ke mentor via tombol live reset dashboard.
+- [x] Sinkronisasi Master Roster A21 (104 ➔ 103 Siswa Sesuai LB Agustus 2026):
+  - **Problem**: Pada draf awal `LAPORAN DAFTAR ANGGOTA ENGLISH CLUB 2026.docx`, terdaftar 104 siswa A21 (termasuk Nabila Rizki Priauto di nomor urut 19 kelas X AKL 3). Namun pada Laporan Bulanan resmi `LB AGUSTUS 2026.docx` yang ditandatangani Pembina (Nanang Cahyana, S.Pd.Ing) dan Waka, Nabila tidak tercantum dan total anggota A21 resmi adalah 103 siswa.
+  - **Solution / State**: Baris nomor 19 dihapus dari dokumen Word `LAPORAN DAFTAR ANGGOTA ENGLISH CLUB 2026.docx` dan nomor 20..104 di-renumbering menjadi 19..103 (total tepat 103). Data Nabila dihapus dari `members_parsed.json` dan Supabase `members`. Seluruh teks UI dan fallback di `App.tsx`, `LandingPage.tsx`, `MentorDashboard.tsx`, `QuizManager.tsx`, dan `DataVault.tsx` disinkronkan ke 103 siswa.
+- [x] Generator Administrasi & Dokumen Resmi Word (.docx) Otomatis:
+  - **Problem**: Sekretaris (Naila) dan Ketua (Chandra) setiap bulan dan setiap acara harus membuat Surat Peminjaman Ruang & Alat ke Sarpras dan Laporan Bulanan (LB) untuk Pembina dan Waka Kesiswaan secara manual di Microsoft Word. Mengetik ulang kop, format tabel, daftar ruangan, peralatan, dan 103 siswa sangat memakan waktu dan rentan salah ketik.
+  - **Solution / State**: Dibangun modul `AdminDocGenerator.tsx` di tab Portal Pengurus `[ 📄 Administrasi & Surat (.docx) ]` menggunakan binary XML templating `docxtemplater` dan `pizzip`.
+    - **Surat Peminjaman**: Menyediakan form interaktif untuk nomor surat, tanggal, waktu, tempat, ketua, sekretaris, tabel ruangan dinamis dengan preset (Ruang 4, Ruang 5, Ruang Kuliner, Aula Sudirman), dan tabel alat dinamis (Sound system, mic wireless, proyektor, kabel roll) yang langsung di-compile menjadi `.docx` resmi dengan kop SMKN 1 Purbalingga.
+    - **Laporan Bulanan (LB)**: Format formulir ISO FO-002 s/d FO-008, rekapitulasi kehadiran dan evaluasi materi otomatis terhitung dari database (atau manual override), dan 103 anggota aktif Angkatan 21 otomatis tercetak presensinya dengan tanda centang (✓) ke Tabel 3 Word.
+    - **Dokumentasi Foto**: Disertakan frame placeholder foto dokumentasi siap copy-paste langsung di Word tanpa merusak layout atau tabel.
+- [x] Perbaikan Sinkronisasi Sesi Kuis & Indikator Navbar Arena:
+  - **Problem**: Setelah sesi kuis ditutup di `QuizManager`, menu `[ 🎮 Arena ]` di navigasi atas masih terus berkedip (`animate-pulse` dan dot hijau `animate-ping`) karena `QuizManager` tidak memiliki callback ke `App.tsx` dan event realtime `postgres_changes` Supabase tidak memancarkan update ke klien anonim.
+  - **Solution / State**: Dipasang callback langsung `onQuizSessionChanged` dari `QuizManager` $\rightarrow$ `MentorDashboard` $\rightarrow$ `App.tsx`, broadcast channel realtime `arena_global` untuk sinkronisasi instan lintas perangkat, dan self-healing ticker berkala pada `App.tsx`. Indikator kedip langsung padam seketika (0ms) saat kuis ditutup.
+- [x] Paket Kuis Interaktif Sie Kurikulum (Agree & Disagree Mastery - 20 Soal):
+  - **Problem**: Menjelang eskul Rabu, 23 September 2026, Sie Kurikulum menyusun silabus evaluasi materi *Expressing Agreement & Disagreement* dalam bentuk 20 butir soal percakapan situasional pada `soal games.docx` yang perlu dimasukkan ke bank soal EC Arena.
+  - **Solution / State**: 20 butir soal beserta opsi pilihan ganda dan kunci jawaban terverifikasi diinjeksi ke tabel `quizzes` di Supabase dengan judul `EC Practice Week #2: Agree & Disagree Mastery`. Durasi 20 detik per soal, mendukung live scoring dan visual game display di EC Arena.
+- [x] Stabilisasi Presensi Siswa, Sinkronisasi Portal Pengurus Mobile, Keamanan Token & Redesain Estetika EC Arena:
+  - **Problem**:
+    1. Membuka menu presensi siswa (`#absen`) membuat layar mental kembali ke landing page setelah 15 detik karena interval ticker jam di `App.tsx` mengeksekusi `setView('home')` jika di luar jam eskul resmi.
+    2. Badge status di Navbar menampilkan "🟢 Sesi Dibuka" meskipun waktu eskul belum dimulai akibat properti `isMeetingActive` hanya membaca ada tidaknya baris pertemuan aktif di database tanpa mencocokkan jadwal jam riil.
+    3. Menu kategori "🌐 Umum" tidak dapat diakses mentor biasa di smartphone, dan saat login mentor pertama kali membuka tab absensi A20, tombol kategori yang menyala keliru di `a21`.
+    4. Saat sesi EC Arena dibuka, input token di smartphone adik kelas otomatis terisi sendiri sehingga siswa tidak perlu membaca token dari papan tulis.
+    5. Kartu pilihan ganda A, B, C, D di smartphone tampak berantakan: ikon bentuk dan huruf (`🔺 A`) terhimpit di kotak 24px (`w-6 h-6`) sehingga bertumpuk, dan teks jawaban terlempar ke pojok kiri bawah. Perhitungan skor dan efek *streak* api juga tidak memiliki rincian transparan.
+  - **Solution / State**:
+    1. **Anti Auto-Kick Presensi**: Menghapus seluruh pemanggilan paksa `setView('home')` pada hash `#absen` / `#presensi` di inisialisasi awal, interval ticker 15 detik, dan `fetchData` di `App.tsx`. Siswa kini bebas membuka form presensi kapan saja tanpa pernah terlempar keluar.
+    2. **Sinkronisasi Jadwal Riil Navbar**: Menghubungkan badge navbar langsung ke fungsi `isSessionActiveNow(isEffectiveBypass, 'student')`. Navbar kini 100% patuh pada jam resmi (Rabu 15:40–17:30 WIB) atau status saklar bypass pengurus.
+    3. **Aksesibilitas & Sinkronisasi Kategori Mentor Mobile**: Menambahkan tombol `[ 👑 Akses Ketua ]` di header portal pengurus agar mentor biasa di ponsel dapat langsung membuka prompt kata sandi Super Admin. Mengaitkan kategori aktif dengan `activeTab` (`getTabCategory(activeTab)`) sehingga saat default ke tab `mentor_attendance`, kategori yang menyala tepat di `a20`.
+    4. **Keamanan Token Arena Whiteboard**: Menghapus `setTokenInput(sData.room_code)` dari `checkActiveSession` di `ArenaPlayer.tsx`. Siswa kini wajib mengetikkan 4 digit kode token yang ditulis mentor di papan tulis.
+    5. **Redesain Taktil 3D Pilihan Ganda & Efek Streak Api Transparan**:
+       - Mengganti kotak sempit `w-6 h-6` dengan pill badge lega `inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-black/20 text-xs font-black`.
+       - Menyelaraskan teks jawaban ke posisi tengah vertikal dan horizontal (`my-auto w-full text-center`) dengan tipografi `text-sm sm:text-base font-extrabold line-clamp-3`.
+       - Menghadirkan sistem api bertingkat (*Tiered Fire Aura*): Badge dinamis (*Streak x2*, *HOT STREAK x3! 🔥*, *SUPERNOVA x5! 🔥*), aura cincin menyala pada boks pertanyaan (`ring-4 ring-amber-400/30 animate-pulse`), dan rincian skor transparan saat menjawab benar: `✓ BENAR! +XXX Poin! 🔥` dengan breakdown `⚡ Kecepatan: +XXX` dan `🔥 Bonus Streak (Nx): +XXX`.
+
+- [x] Validasi Hapus Universal (Safe Deletion Modals 3D) & Perombakan Mutu 20 Soal Agree & Disagree:
+  - **Problem**:
+    1. Aksi penghapusan di `QuizManager.tsx` terlalu rentan salah klik: tombol hapus paket kuis mengandalkan dialog native browser `confirm()` yang mudah kepencet di layar smartphone, tombol hapus butir soal di editor langsung melenyapkan soal tanpa konfirmasi apa pun, dan tombol reset skor siswa juga memakai popup kaku.
+    2. Paket 20 soal kuis *Agree & Disagree* dari draf awal memiliki kelemahan pedagogis fatal: polanya 100% biner dan berpola murahan (selalu 3 opsi setuju vs 1 opsi sanggah, atau 3 sanggah vs 1 setuju), sehingga siswa dapat menebak kunci jawaban hanya dengan mencari satu-satunya opsi yang berbeda sendiri tanpa perlu membaca dan memahami isi teks bahasa Inggris.
+  - **Solution / State**:
+    1. **Universal Safe Deletion Protocol (`QuizManager.tsx`)**:
+       - Mengganti seluruh dialog native browser dengan **Modal Konfirmasi Taktil 3D (Duolingo Style)**.
+       - *Hapus Paket Kuis*: Menampilkan rincian judul kuis dan jumlah butir soal, badge peringatan permanen rose, tombol abu-abu `[ Batal ]`, dan tombol merah pushable 3D `[ Ya, Hapus 🗑️ ]`.
+       - *Hapus Butir Soal Editor*: Soal kosong terhapus hening, sedangkan soal yang memiliki teks wajib melalui modal konfirmasi spesifik *"Hapus Soal Nomor X?"* dengan cuplikan teks soal.
+       - *Reset Skor Siswa*: Menampilkan modal taktil amber dengan nama siswa, kelas, skor saat ini, dan tombol `[ Ya, Izinkan Mengulang 🔄 ]`.
+    2. **Perombakan Total 20 Soal Kuis Kurikulum (Anti Pola 3 vs 1)**:
+       - Memperbarui paket kuis `EC Practice Week #2: Agree & Disagree Mastery` di Supabase dengan 20 butir soal baru berstandar CEFR B1–B2.
+       - Di setiap soal, 4 opsi dibuat **berimbang (2 bernada persetujuan, 2 bernada sanggahan)** sehingga siswa wajib membaca dan menganalisis konteks percakapan.
+       - Menyematkan idiom jebakan umum berkualitas tinggi: *"I couldn't agree more"* (persetujuan kuat berkedok kata negatif), *"You can say that again!"* (persetujuan antusias), *"I beg to differ"* & *"That's not necessarily the case"* (sanggahan santun formal), *"I agree up to a point, but..."* (persetujuan parsial), *"No doubt about it"*, *"Tell me about it!"*, *"I second that"*, dan evaluasi stance/sikap pembicara.
+       - Menjaga panjang percakapan tetap 2–3 baris agar nyaman terbaca dalam 5–6 detik di bawah timer 20 detik EC Arena.
+
+- [x] Perbaikan Matriks Presensi Bulanan (Anti-Duplikasi Tanggal, Format LB FO-003, Bebas Rapor) & Manajemen Multi-Sesi:
+  - **Problem**:
+    1. Pada `ReportRecap.tsx`, tabel rekap bulanan menampilkan header tanggal berantakan: `23/09 (Pekan 1) | 09/09 (Pekan 2) | 16/09 (Pekan 3) | 23/09 (Pekan 4)`. Tanggal 23/09 muncul dua kali akibat fallback `|| existingMeetings[i]` membajak satu-satunya baris pertemuan di database (`2026-09-23`) dan memaksanya tampil di Pekan 1. Selain itu, bulan dengan 5 hari Rabu (seperti September 2026) terpotong kaku ke 4 pekan.
+    2. Masih terdapat residu label `% Rapor` pada tabel bulanan dan tab navigasi `Rekap Rapor Semester`, bertentangan dengan arahan Chandra bahwa predikat rapor merupakan hak prerogatif guru/pembina sekolah, bukan mentor ekstrakurikuler.
+    3. Pada menu `MeetingControl.tsx`, menekan tombol simpan dengan tanggal berbeda menimpa (*overwrite*) pertemuan lama di database melalui query `.update().eq('id', activeMeeting.id)`, sehingga sistem tidak dapat menyimpan riwayat sesi mingguan atau membuat sesi baru untuk pekan depan. Akibatnya dropdown Talent Scout hanya memuat 1 sesi.
+  - **Solution / State**:
+    1. **Matriks Kalender Dinamis & Anti-Bajak (`ReportRecap.tsx`)**: Menghapus fallback index `existingMeetings[i]`. Seluruh slot tanggal dihasilkan secara dinamis dan urut kronologis berdasarkan seluruh hari Rabu dalam bulan terpilih (4 atau 5 pekan: `02/09`, `09/09`, `16/09`, `23/09`, `30/09`) dan hanya memetakan pertemuan jika tanggalnya persis sama. Filter sesi efektif (`heldNonHolidayMeetings`) kini mewajibkan `isPastOrToday`, mencegah kalkulasi 0% keliru pada sesi masa depan.
+    2. **Penyelarasan Format Baku Laporan Bulanan (LB FO-003) & Terminologi Keaktifan**: Mengganti `% Rapor` menjadi `% Keaktifan`, menyelaraskan ekspor CSV (`Rekap_Bulanan_EC_SMEGA_YYYY-MM.csv`), mengubah tab navigasi menjadi `Rekap Bulanan` dan `Rekap Keaktifan Semester`, serta membersihkan teks judul cetak PDF menjadi `Laporan Keaktifan Semester`.
+    3. **Manajemen Multi-Sesi & Tombol Sesi Baru (`MeetingControl.tsx` & `MentorDashboard.tsx`)**: Meneruskan daftar seluruh `meetings` dari dashboard. Menghadirkan Session Selector dropdown di form kontrol pertemuan untuk memilih sesi lama atau beralih ke sesi aktif, serta tombol taktil `[ ➕ Buka Sesi Baru Pekan Depan ]` yang secara otomatis menghitung tanggal hari Rabu berikutnya, mengacak token baru dan idiom, serta mengeksekusi `INSERT` tanpa menimpa sesi lama. Seluruh sesi tersimpan utuh dan dapat dinilai di Talent Scout.
+
+- [x] Sinkronisasi Kategori & Tab Portal Mentor, Anti-Mental Presensi Ditutup, & Keamanan Token Arena:
+  - **Problem**:
+    1. Desinkronisasi Kategori & Tampilan di Smartphone (`media_1789959844519.jpg`): Tombol kategori `🎒 A21 (Adik)` menyala hijau dan carousel menampilkan menu A21, namun kartu yang dirender di bawahnya adalah `Presensi & Curhat Sesi — Angkatan 20` (`<MentorAttendance />`). Hal ini terjadi karena inisialisasi awal `activeTab` mengarah ke `'mentor_attendance'` sementara `currentCategory` ke `'a21'`, tab kuis arena (`quiz`) sempat tercecer dari fungsi pengecekan kategori, dan tidak ada mekanisme auto-align.
+    2. Layar Mental Saat Presensi Ditutup: Ketika saklar bypass dimatikan atau presensi ditutup, listener WebSocket Supabase di `App.tsx` mengeksekusi `setCurrentView('landing')`, membanting paksa siswa di `#absen` kembali ke beranda alih-alih menampilkan pengumuman jadwal resmi.
+    3. Kebocoran Token Arena di Banner & Auto-Fill: Banner kuis live di landing page sempat menampilkan `Token: {room_code}` secara terbuka ke publik, input token di arena otomatis terisi kode, serta input token belum dilengkapi atribut pencegah browser autocomplete.
+  - **Solution / State**:
+    1. **Single Source of Truth Kategori Tab (`MentorDashboard.tsx`)**: Mendefinisikan konfigurasi tab statis `TAB_CONFIG` dan helper `getTabCategory(tabId)`. Menjadikan default `activeTab` bagi mentor biasa ke `'live_monitor'` (A21). Memasang guard sinkronisasi otomatis (`useEffect` dan onClick handler): saat kategori berganti (misal ke `a21`), sistem otomatis mengarahkan `activeTab` ke tab utama kategori tersebut (`live_monitor`), mengeliminasi 100% peluang terjadinya tampilan salah kamar.
+    2. **Pencabutan Kode Pengusir Mental (`App.tsx`)**: Menghapus total baris pemaksaan redirect `setCurrentView('landing')` saat event bypass mati diterima. Siswa di `#absen` tetap tenang di halaman presensi dan otomatis melihat kartu jadwal resmi `⏰ Presensi Ditutup`.
+    3. **Keamanan Token Whiteboard & Anti-Autocomplete (`ArenaPlayer.tsx` & `MemberAttendance.tsx`)**: Banner kuis hanya menampilkan instruksi netral, pengisian otomatis token dicabut, dan input token diproteksi dengan `autoComplete="off"`, `autoCapitalize="characters"`, dan `spellCheck={false}`. Siswa wajib membaca dan mengetik manual token fisik dari papan tulis.
 
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Uji coba EC Arena Live Quiz pada pekan praktek eskul bersama adik-adik kelas A21 di 2–3 ruangan.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
+
+

@@ -41,7 +41,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     setOptimisticAttendances(attendances);
   }, [attendances]);
 
-  // Filter Angkatan 21 active students (104 members)
+  // Filter Angkatan 21 active students (103 members)
   const a21Students = useMemo(() => {
     return members.filter((m) => m.generation === 21 && m.status === 'active');
   }, [members]);

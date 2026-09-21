@@ -14,9 +14,15 @@ interface QuizManagerProps {
   activeMeetingId?: string;
   onAwardTalentStar?: (star: Omit<TalentStar, 'id' | 'created_at'>) => Promise<void>;
   totalA21Count?: number;
+  onSessionChanged?: (session: QuizSession | null) => void;
 }
 
-export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwardTalentStar, totalA21Count = 104 }) => {
+export const QuizManager: React.FC<QuizManagerProps> = ({ 
+  activeMeetingId, 
+  onAwardTalentStar, 
+  totalA21Count = 103,
+  onSessionChanged
+}) => {
   const liveMonitorRef = useRef<HTMLDivElement>(null);
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
   const [activeSession, setActiveSession] = useState<QuizSession | null>(null);
@@ -37,6 +43,11 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
   const [isStarting, setIsStarting] = useState(false);
   const [showCloseConfirm, setShowCloseConfirm] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+  const [quizToDelete, setQuizToDelete] = useState<Quiz | null>(null);
+  const [isDeletingQuiz, setIsDeletingQuiz] = useState(false);
+  const [questionToDeleteIdx, setQuestionToDeleteIdx] = useState<number | null>(null);
+  const [subToReset, setSubToReset] = useState<QuizSubmission | null>(null);
+  const [isResettingSub, setIsResettingSub] = useState(false);
 
   // Podium View
   const [showPodium, setShowPodium] = useState(false);
@@ -165,11 +176,25 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
     ]);
   };
 
-  // Remove question from editor
-  const handleRemoveQuestion = (idx: number) => {
+  // Remove question from editor with safety check
+  const promptRemoveQuestion = (idx: number) => {
     sound.playPop();
-    if (questions.length <= 1) return;
-    setQuestions(questions.filter((_, i) => i !== idx));
+    const targetQ = questions[idx];
+    if (!targetQ) return;
+    // If question has no text and options are blank, remove silently
+    if (!targetQ.question.trim() && !targetQ.option_a.trim() && !targetQ.option_b.trim()) {
+      setQuestions((prev) => prev.filter((_, i) => i !== idx));
+      return;
+    }
+    // Otherwise require confirmation
+    setQuestionToDeleteIdx(idx);
+  };
+
+  const handleConfirmRemoveQuestion = () => {
+    if (questionToDeleteIdx === null) return;
+    sound.playPop();
+    setQuestions((prev) => prev.filter((_, i) => i !== questionToDeleteIdx));
+    setQuestionToDeleteIdx(null);
   };
 
   // Save quiz
@@ -228,19 +253,26 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
     }
   };
 
-  // Delete quiz
-  const handleDeleteQuiz = async (quizId: string) => {
+  // Delete quiz (Safe 3D Tactile Modal)
+  const promptDeleteQuiz = (q: Quiz) => {
     sound.playPop();
-    if (!confirm('Yakin ingin menghapus paket kuis ini?')) return;
+    setQuizToDelete(q);
+  };
 
+  const handleConfirmDeleteQuiz = async () => {
+    if (!quizToDelete) return;
+    setIsDeletingQuiz(true);
     try {
-      const { error } = await supabase.from('quizzes').delete().eq('id', quizId);
+      const { error } = await supabase.from('quizzes').delete().eq('id', quizToDelete.id);
       if (error) throw error;
       sound.playSuccess();
+      setQuizToDelete(null);
       loadData();
     } catch (err: any) {
       sound.playError();
       alert('Gagal menghapus kuis: ' + (err.message || err));
+    } finally {
+      setIsDeletingQuiz(false);
     }
   };
 
@@ -273,6 +305,19 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
 
       sound.playSuccess();
       setActiveSession(data);
+      onSessionChanged?.(data);
+
+      // Instant cross-tab & cross-device broadcast
+      try {
+        supabase.channel('arena_global').send({
+          type: 'broadcast',
+          event: 'quiz_session_state',
+          payload: { session: data },
+        });
+      } catch {
+        // Fallback
+      }
+
       setStartConfirmQuiz(null);
       setSubmissions([]);
       loadData();
@@ -299,6 +344,19 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
       sound.playSuccess();
       setShowCloseConfirm(false);
       setActiveSession(null);
+      onSessionChanged?.(null);
+
+      // Instant cross-tab & cross-device broadcast
+      try {
+        supabase.channel('arena_global').send({
+          type: 'broadcast',
+          event: 'quiz_session_state',
+          payload: { session: null },
+        });
+      } catch {
+        // Fallback
+      }
+
       loadData();
     } catch (err: any) {
       sound.playError();
@@ -308,24 +366,31 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
     }
   };
 
-  // Reset student submission so they can retake the quiz
-  const handleResetSubmission = async (sub: QuizSubmission) => {
+  // Reset student submission (Safe 3D Tactile Modal)
+  const promptResetSubmission = (sub: QuizSubmission) => {
     sound.playPop();
-    if (!confirm(`Izinkan ${sub.member_name} mengulang pengerjaan kuis? Jawaban dan skor saat ini akan dihapus dari leaderboard.`)) return;
+    setSubToReset(sub);
+  };
 
+  const handleConfirmResetSubmission = async () => {
+    if (!subToReset) return;
+    setIsResettingSub(true);
     try {
       const { error } = await supabase
         .from('quiz_submissions')
         .delete()
-        .eq('id', sub.id);
+        .eq('id', subToReset.id);
 
       if (error) throw error;
 
       sound.playSuccess();
-      setSubmissions((prev) => prev.filter((s) => s.id !== sub.id));
+      setSubmissions((prev) => prev.filter((s) => s.id !== subToReset.id));
+      setSubToReset(null);
     } catch (err: any) {
       sound.playError();
       alert('Gagal mereset pengerjaan: ' + (err.message || err));
+    } finally {
+      setIsResettingSub(false);
     }
   };
 
@@ -488,7 +553,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                   {questions.length > 1 && (
                     <button
                       type="button"
-                      onClick={() => handleRemoveQuestion(qIdx)}
+                      onClick={() => promptRemoveQuestion(qIdx)}
                       className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
                       title="Hapus soal ini"
                     >
@@ -781,7 +846,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                 Peserta Selesai
               </span>
               <span className="text-2xl font-black text-slate-900">
-                {submissions.length} <span className="text-xs text-slate-400 font-bold">/ {totalA21Count || 104} Siswa</span>
+                {submissions.length} <span className="text-xs text-slate-400 font-bold">/ {totalA21Count || 103} Siswa</span>
               </span>
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 text-center">
@@ -892,7 +957,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                         <td className="py-2.5 px-3 text-center">
                           <button
                             type="button"
-                            onClick={() => handleResetSubmission(sub)}
+                            onClick={() => promptResetSubmission(sub)}
                             className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-black text-rose-600 hover:text-rose-800 hover:bg-rose-50 border border-rose-200 transition-colors"
                             title="Hapus riwayat & izinkan siswa mengulang kuis"
                           >
@@ -983,7 +1048,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                         <Edit3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteQuiz(q.id)}
+                        onClick={() => promptDeleteQuiz(q)}
                         className="p-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-xl transition-colors"
                         title="Hapus paket kuis"
                       >
@@ -1240,6 +1305,151 @@ export const QuizManager: React.FC<QuizManagerProps> = ({ activeMeetingId, onAwa
                 }}
               >
                 Tutup Podium
+              </TactileButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: KONFIRMASI HAPUS PAKET KUIS */}
+      {quizToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-rose-500 shadow-[0_8px_0_0_#e11d48] max-w-sm w-full p-6 space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto border border-rose-200">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-black text-slate-900">Hapus Paket Kuis?</h4>
+              <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 text-left">
+                <p className="text-xs font-black text-rose-950 line-clamp-2">
+                  {quizToDelete.title}
+                </p>
+                <p className="text-[11px] font-bold text-rose-700 mt-1">
+                  📦 {quizToDelete.questions?.length || 0} butir soal
+                </p>
+              </div>
+              <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                Tindakan ini permanen. Seluruh butir soal dan data pengerjaan terkait paket kuis ini akan terhapus bersih dari sistem.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <TactileButton
+                variant="white"
+                size="md"
+                className="w-1/2"
+                onClick={() => {
+                  sound.playPop();
+                  setQuizToDelete(null);
+                }}
+              >
+                Batal
+              </TactileButton>
+              <TactileButton
+                variant="crimson"
+                size="md"
+                className="w-1/2"
+                onClick={handleConfirmDeleteQuiz}
+                disabled={isDeletingQuiz}
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>{isDeletingQuiz ? 'Menghapus...' : 'Ya, Hapus'}</span>
+              </TactileButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: KONFIRMASI HAPUS BUTIR SOAL DI EDITOR */}
+      {questionToDeleteIdx !== null && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-rose-500 shadow-[0_8px_0_0_#e11d48] max-w-sm w-full p-6 space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center mx-auto border border-rose-200">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-black text-slate-900">
+                Hapus Soal Nomor {questionToDeleteIdx + 1}?
+              </h4>
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 text-left">
+                <p className="text-xs font-bold text-slate-800 line-clamp-3 italic">
+                  "{questions[questionToDeleteIdx]?.question || 'Teks soal kosong'}"
+                </p>
+              </div>
+              <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                Teks pertanyaan dan 4 pilihan jawaban pada nomor ini akan dihapus dari paket kuis.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <TactileButton
+                variant="white"
+                size="md"
+                className="w-1/2"
+                onClick={() => {
+                  sound.playPop();
+                  setQuestionToDeleteIdx(null);
+                }}
+              >
+                Batal
+              </TactileButton>
+              <TactileButton
+                variant="crimson"
+                size="md"
+                className="w-1/2"
+                onClick={handleConfirmRemoveQuestion}
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Ya, Hapus Soal</span>
+              </TactileButton>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: KONFIRMASI RESET PENGERJAAN SISWA */}
+      {subToReset && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-amber-500 shadow-[0_8px_0_0_#d97706] max-w-sm w-full p-6 space-y-4">
+            <div className="text-center space-y-2">
+              <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto border border-amber-200">
+                <RotateCcw className="w-6 h-6" />
+              </div>
+              <h4 className="text-base font-black text-slate-900">Izinkan Mengulang Kuis?</h4>
+              <div className="p-3 bg-amber-50 rounded-2xl border border-amber-200 text-left space-y-1">
+                <p className="text-xs font-black text-amber-950">
+                  {subToReset.member_name} ({subToReset.class_name})
+                </p>
+                <p className="text-[11px] font-bold text-amber-800">
+                  Skor saat ini: {subToReset.score} PTS ({subToReset.correct_answers}/{subToReset.total_questions} Benar)
+                </p>
+              </div>
+              <p className="text-xs font-medium text-slate-600 leading-relaxed">
+                Skor dan riwayat jawaban siswa ini akan dihapus dari leaderboard agar ia dapat bergabung dan mengerjakan kuis kembali dari awal.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <TactileButton
+                variant="white"
+                size="md"
+                className="w-1/2"
+                onClick={() => {
+                  sound.playPop();
+                  setSubToReset(null);
+                }}
+              >
+                Batal
+              </TactileButton>
+              <TactileButton
+                variant="brand"
+                size="md"
+                className="w-1/2"
+                onClick={handleConfirmResetSubmission}
+                disabled={isResettingSub}
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>{isResettingSub ? 'Mereset...' : 'Ya, Izinkan'}</span>
               </TactileButton>
             </div>
           </div>

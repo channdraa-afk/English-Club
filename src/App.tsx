@@ -57,18 +57,7 @@ export const App: React.FC = () => {
 
       // If URL contains #absen or #presensi:
       if (hash === '#absen' || hash === '#presensi') {
-        // If session is active (Wednesday 15:40-17:30 WIB or bypass is ON), open attendance
-        if (isSessionActive) {
-          return 'student';
-        }
-        // Outside extracurricular hours and bypass is OFF:
-        // Strip stale #absen from browser autocomplete history and default to Landing Page!
-        try {
-          window.history.replaceState(null, '', window.location.pathname);
-        } catch {
-          window.location.hash = '';
-        }
-        return 'landing';
+        return 'student';
       }
 
       // If opening root URL without hash:
@@ -157,19 +146,6 @@ export const App: React.FC = () => {
               }
             } else {
               safeStorage.remove('ec_manual_bypass');
-              // If bypass is turned OFF and outside Wednesday hours:
-              // If user is currently on #absen, auto-clean URL and return to landing!
-              if (!isSessionActiveNow(false, 'student')) {
-                const hash = window.location.hash.toLowerCase();
-                if (hash === '#absen' || hash === '#presensi') {
-                  try {
-                    window.history.replaceState(null, '', window.location.pathname);
-                  } catch {
-                    window.location.hash = '';
-                  }
-                  setCurrentView('landing');
-                }
-              }
             }
           } else if (row.key === 'registration_open') {
             setIsRegistrationOpen(Boolean(row.value));
@@ -229,33 +205,46 @@ export const App: React.FC = () => {
       )
       .subscribe();
 
+    const arenaBroadcastChannel = supabase
+      .channel('arena_global')
+      .on('broadcast', { event: 'quiz_session_state' }, ({ payload }: any) => {
+        setActiveQuizSession(payload?.session || null);
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(quizChannel);
       supabase.removeChannel(settingsChannel);
+      supabase.removeChannel(arenaBroadcastChannel);
     };
   }, []);
 
-  // Live Clock Ticker: checks every 15 seconds for Wednesday 15:40 WIB arrival or expiration
+  // Live Clock Ticker: checks every 15 seconds for Wednesday 15:40 WIB arrival, expiration, and quiz status sync
   useEffect(() => {
     const interval = setInterval(() => {
       const hash = window.location.hash.toLowerCase();
       const isActive = isSessionActiveNow(isManualBypass, 'student');
+
+      // Re-verify active quiz session to guarantee zero stale indicator across tabs
+      supabase
+        .from('quiz_sessions')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+        .then(
+          ({ data }) => {
+            setActiveQuizSession(data || null);
+          },
+          () => {}
+        );
 
       // If user is visiting root (empty hash), check if session just started
       if (hash === '' || hash === '#') {
         if (isActive) {
           setCurrentView('student');
           window.location.hash = '#absen';
-        }
-      } else if (hash === '#absen' || hash === '#presensi') {
-        // If session expired (e.g. clock hit 17:30) and bypass is false:
-        if (!isActive) {
-          try {
-            window.history.replaceState(null, '', window.location.pathname);
-          } catch {
-            window.location.hash = '';
-          }
-          setCurrentView('landing');
         }
       }
     }, 15000);
@@ -330,16 +319,6 @@ export const App: React.FC = () => {
                 if (isSessionActive) {
                   setCurrentView('student');
                   window.location.hash = '#absen';
-                }
-              } else if (hash === '#absen' || hash === '#presensi') {
-                // If bypass is off and session is not active, clean up stale hash and return to landing!
-                if (!isSessionActive) {
-                  try {
-                    window.history.replaceState(null, '', window.location.pathname);
-                  } catch {
-                    window.location.hash = '';
-                  }
-                  setCurrentView('landing');
                 }
               }
             }
@@ -556,7 +535,7 @@ export const App: React.FC = () => {
             window.location.hash = '#arena';
           }}
           membersCount={{
-            a21: members.filter((m) => m.generation === 21).length || 104,
+            a21: members.filter((m) => m.generation === 21).length || 103,
             a20: members.filter((m) => m.generation === 20).length || 59,
           }}
           isRegistrationOpen={isRegistrationOpen}
@@ -576,7 +555,7 @@ export const App: React.FC = () => {
           {/* Navbar untuk Mode Presensi & Portal Pengurus */}
           <Navbar
             activeMeetingTitle={activeMeeting?.title}
-            isMeetingActive={Boolean(activeMeeting?.is_active)}
+            isMeetingActive={isSessionActiveNow(isEffectiveBypass, 'student')}
             onOpenMentor={() => {
               sound.playPop();
               setCurrentView('mentor');
@@ -654,7 +633,7 @@ export const App: React.FC = () => {
                             EC Arena — Pekan Praktek
                           </h4>
                           <p className="text-xs font-medium text-blue-100">
-                            Token: <span className="font-mono font-black bg-white/25 px-2 py-0.5 rounded-lg text-white">{activeQuizSession.room_code}</span>
+                            Cek kode token yang ditulis mentor di papan tulis kelasmu
                           </p>
                         </div>
                       </div>
@@ -739,6 +718,7 @@ export const App: React.FC = () => {
                   onAttendanceChanged={() => fetchData(true)}
                   onRefreshRegistrations={() => fetchData(true)}
                   onMemberAdded={() => fetchData(true)}
+                  onQuizSessionChanged={(session) => setActiveQuizSession(session)}
                   talentStars={talentStars}
                   onAddTalentStar={handleAddTalentStar}
                   onRemoveTalentStar={handleRemoveTalentStar}

@@ -385,7 +385,7 @@ export const DataVault: React.FC<DataVaultProps> = ({
           <p className="font-bold flex items-center gap-1.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>
-              <strong>Perlindungan Master Roster</strong>: Data 104 adik kelas & 59 pengurus tidak dapat dihapus melalui formulir ini.
+              <strong>Perlindungan Master Roster</strong>: Data 103 adik kelas & 59 pengurus tidak dapat dihapus melalui formulir ini.
             </span>
           </p>
           <p className="text-[11px] text-rose-800/80 leading-relaxed">

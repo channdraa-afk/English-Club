@@ -299,31 +299,33 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       d.setDate(d.getDate() + 1);
     }
 
-    // Buat tepat 4 slot pekan utama (Pekan 1 s.d. Pekan 4)
-    const slots: MonthSlot[] = [];
-    for (let i = 0; i < 4; i++) {
-      const wedDate = wednesdayDates[i];
-      const matchedMeeting = (wedDate ? existingMeetings.find((m) => m.meeting_date === wedDate) : null) || existingMeetings[i] || null;
-      const dateStr = matchedMeeting?.meeting_date || wedDate || `${selectedMonth}-${String((i + 1) * 7).padStart(2, '0')}`;
+    // Buat slot pekan dinamis berdasarkan seluruh hari Rabu di bulan terpilih
+    // serta gabungkan tanggal sesi unik di database (jika ada sesi selain hari Rabu)
+    const allSlotDates = Array.from(
+      new Set([...wednesdayDates, ...existingMeetings.map((m) => m.meeting_date)])
+    ).sort();
+
+    const slots: MonthSlot[] = allSlotDates.map((dateStr, idx) => {
+      const matchedMeeting = existingMeetings.find((m) => m.meeting_date === dateStr) || null;
       const parts = dateStr.split('-');
       const dd = parts[2] || '01';
       const mm = parts[1] || '01';
 
-      slots.push({
+      return {
         dateStr,
         displayDate: `${dd}/${mm}`,
-        weekLabel: `Pekan ${i + 1}`,
+        weekLabel: `Pekan ${idx + 1}`,
         meeting: matchedMeeting,
         isPastOrToday: dateStr <= todayStr,
-      });
-    }
+      };
+    });
 
     return slots;
   }, [selectedMonth, meetings]);
 
-  // Sesi efektif yang sudah benar-benar berjalan & bukan libur (pembagi nilai rapor)
+  // Sesi efektif yang sudah benar-benar berjalan & bukan libur (pembagi persentase keaktifan)
   const heldNonHolidayMeetings = useMemo(() => {
-    return monthSlots.filter((s) => s.meeting && !s.meeting.is_holiday);
+    return monthSlots.filter((s) => s.meeting && !s.meeting.is_holiday && s.isPastOrToday);
   }, [monthSlots]);
 
   // Attendance lookup: Map key = `${meeting_id}_${member_id}`
@@ -460,7 +462,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       if (s.meeting?.is_holiday) return `"${s.displayDate} (LIBUR)"`;
       return `"${s.displayDate} (${s.weekLabel})"`;
     });
-    const headers = ['"No"', '"Nama Lengkap"', '"Kelas"', ...dateHeaders, '"Hadir (H)"', '"Izin (I)"', '"Alpa (A)"', '"Persentase"'];
+    const headers = ['"No"', '"Nama Lengkap"', '"Kelas"', ...dateHeaders, '"Hadir (H)"', '"Izin (I)"', '"Alpa (A)"', '"% Keaktifan"'];
 
     const rows = monthlyMatrixRows.map((r, idx) => {
       const datesData = r.slotStatuses.map((s) => {
@@ -620,7 +622,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
             }`}
           >
             <CalendarRange className="w-4 h-4" />
-            <span>Rekap Bulanan (4 Pekan)</span>
+            <span>Rekap Bulanan</span>
           </button>
 
           <button
@@ -636,7 +638,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Rekap Rapor Semester</span>
+            <span>Rekap Keaktifan Semester</span>
           </button>
         </div>
 
@@ -1009,7 +1011,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                     <th className="border border-slate-300 py-2.5 px-1 text-center w-12 bg-emerald-100 text-emerald-900" title="Total Hadir (H)">H</th>
                     <th className="border border-slate-300 py-2.5 px-1 text-center w-12 bg-amber-100 text-amber-900" title="Total Izin Surat Fisik (I)">I</th>
                     <th className="border border-slate-300 py-2.5 px-1 text-center w-12 bg-rose-100 text-rose-900" title="Total Alpa / Tanpa Keterangan (A)">A</th>
-                    <th className="border border-slate-300 py-2.5 px-2 text-center w-16 bg-slate-200">% Rapor</th>
+                    <th className="border border-slate-300 py-2.5 px-2 text-center w-16 bg-slate-200" title="Persentase Keaktifan Presensi">% Keaktifan</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 font-bold">
@@ -1080,7 +1082,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
       )}
 
       {/* ========================================================= */}
-      {/* MODE 3: REKAP KUMULATIF SEMESTER (RAPOR AKHIR - 9 KOLOM LEGA) */}
+      {/* MODE 3: REKAP KUMULATIF SEMESTER (STATUS KEAKTIFAN)       */}
       {/* ========================================================= */}
       {recapMode === 'cumulative' && (
         <div id="printable-cumulative" className="space-y-4 bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-6">
@@ -1090,19 +1092,19 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               <img src="/logo.png" alt="EC SMEGA Logo" className="w-14 h-14 object-contain shrink-0" />
               <div>
                 <h2 className="text-lg font-black text-slate-950 uppercase tracking-tight leading-tight">
-                  REKAPITULASI RAPOR KEHADIRAN KUMULATIF EKSTRAKURIKULER ENGLISH CLUB
+                  REKAPITULASI KEAKTIFAN ANGGOTA EKSTRAKURIKULER ENGLISH CLUB
                 </h2>
                 <p className="text-xs font-black text-slate-700 mt-0.5">
                   SMK NEGERI 1 PURBALINGGA — ANGKATAN 21
                 </p>
                 <p className="text-[11px] font-bold text-slate-500 mt-0.5">
-                  Akumulasi Seluruh Pertemuan: {allHeldMeetings.length} Sesi Terlaksana • Evaluasi Nilai Rapor
+                  Akumulasi Seluruh Pertemuan: {allHeldMeetings.length} Sesi Terlaksana • Evaluasi Tingkat Partisipasi
                 </p>
               </div>
             </div>
             <div className="text-right shrink-0">
               <span className="inline-block px-3 py-1 rounded-xl bg-slate-100 text-slate-800 text-[10px] font-black border border-slate-300 uppercase tracking-wider">
-                Rapor Resmi Semester
+                Laporan Keaktifan Semester
               </span>
             </div>
           </div>
