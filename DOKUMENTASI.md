@@ -506,6 +506,12 @@
     2. **Pencabutan Kode Pengusir Mental (`App.tsx`)**: Menghapus total baris pemaksaan redirect `setCurrentView('landing')` saat event bypass mati diterima. Siswa di `#absen` tetap tenang di halaman presensi dan otomatis melihat kartu jadwal resmi `⏰ Presensi Ditutup`.
     3. **Keamanan Token Whiteboard & Anti-Autocomplete (`ArenaPlayer.tsx` & `MemberAttendance.tsx`)**: Banner kuis hanya menampilkan instruksi netral, pengisian otomatis token dicabut, dan input token diproteksi dengan `autoComplete="off"`, `autoCapitalize="characters"`, dan `spellCheck={false}`. Siswa wajib membaca dan mengetik manual token fisik dari papan tulis.
 
+- [x] Stealth Super Admin Access & Eliminasi Tombol Publik "Akses Ketua" (`MentorDashboard.tsx`):
+  - **Problem**:
+    Tombol kuning `[ 👑 Akses Ketua ]` yang terletak berdampingan dengan tombol logout di header portal mentor terlalu mencolok (`media_1789960720090.png`). Hal ini mengundang rasa penasaran siswa atau mentor lain yang melihat layar ponsel Chandra dan berpotensi memicu upaya tebak PIN yang tidak diinginkan.
+  - **Solution / State**:
+    Tombol publik `[ 👑 Akses Ketua ]` dihapus 100% dari antarmuka visual header sehingga hanya menyisakan tombol logout yang bersih bagi mentor biasa. Sebagai penggantinya, dipasang mekanisme **Stealth 3-Tap Trigger** pada area judul header *"Portal Pengurus EC SMEGA"*. Chandra cukup mengetuk judul header 3 kali berturut-turut secara cepat di halaman mana pun untuk memunculkan modal PIN Super Admin. Saat status Super Admin aktif, tombol `[ 🔒 Kunci Admin ]` tetap tersedia untuk mengunci kembali hak akses.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Uji coba EC Arena Live Quiz pada pekan praktek eskul bersama adik-adik kelas A21 di 2–3 ruangan.

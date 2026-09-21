@@ -173,6 +173,21 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   };
 
   const [isSuperModalOpen, setIsSuperModalOpen] = useState(false);
+  const [headerTapCount, setHeaderTapCount] = useState(0);
+
+  const handleSecretHeaderTap = () => {
+    if (isSuperAdmin) return;
+    sound.playPop();
+    const next = headerTapCount + 1;
+    if (next >= 3) {
+      setHeaderTapCount(0);
+      setIsSuperModalOpen(true);
+    } else {
+      setHeaderTapCount(next);
+      setTimeout(() => setHeaderTapCount(0), 2500);
+    }
+  };
+
   const tabsScrollRef = useRef<HTMLDivElement>(null);
 
   // Coherence & safety guard: keep activeTab aligned with permissions and active category
@@ -295,7 +310,11 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
-          <div className="min-w-0">
+          <div 
+            onClick={handleSecretHeaderTap}
+            className="min-w-0 cursor-pointer select-none"
+            title={isSuperAdmin ? undefined : 'Portal Pengurus EC SMEGA'}
+          >
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <h2 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
                 {isSuperAdmin ? 'Pusat Komando Super Admin' : 'Portal Pengurus EC SMEGA'}
@@ -313,9 +332,9 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           </div>
         </div>
 
-        {/* Action Controls - Akses Ketua & Logout */}
+        {/* Action Controls - Kunci Admin (khusus Super Admin) & Logout */}
         <div className="flex items-center gap-2 flex-wrap">
-          {isSuperAdmin ? (
+          {isSuperAdmin && (
             <button
               onClick={() => {
                 sound.playPop();
@@ -327,18 +346,6 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
               <Lock className="w-3.5 h-3.5 text-amber-600" />
               <span>Kunci Admin</span>
             </button>
-          ) : (
-            <button
-              onClick={() => {
-                sound.playPop();
-                setIsSuperModalOpen(true);
-              }}
-              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black transition-colors shadow-xs active:translate-y-0.5 cursor-pointer"
-              title="Buka Akses Ketua / Super Admin"
-            >
-              <Crown className="w-3.5 h-3.5 text-amber-600" />
-              <span>Akses Ketua</span>
-            </button>
           )}
 
           <button
@@ -346,7 +353,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
               sound.playPop();
               onLogout();
             }}
-            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition-colors"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-black transition-colors cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Logout</span>
