@@ -535,6 +535,16 @@
     2. *Total Database Reset Pra-Peluncuran*: Menjalankan sanitasi total data uji coba. Seluruh `quiz_submissions` (0), `quiz_sessions` (0), `attendances` (0), `registrations` (0), dan pertemuan dummy dibersihkan. Sesi resmi eskul hari ini (`2026-09-23`, Token: `2112`, *"First Gathering & Speaking Icebreaker"*) dipastikan berstatus aktif dan steril.
     3. *Panduan Uji Coba*: Mendokumentasikan perbedaan token secara tegas: Saklar "Bypass Jadwal" di Pengaturan Pertemuan membuka presensi di luar jam eskul dengan menggunakan token pertemuan resmi (`2112`), sedangkan "Mode Sandbox" di Pusat Data menggunakan token `COBA` dengan pertemuan simulasi.
 
+- [x] Dynamic Meeting Day (Fleksibilitas Pindah Hari) & Rebranding Saklar Override Jadwal:
+  - **Problem**:
+    1. Logika jadwal lama di `schedule.ts` mengunci kaku hari pertemuan pada `weekday === 'Wed'`. Jika di masa depan English Club berganti hari eskul (misal Kamis/Jumat) atau mengadakan gladi bersih di hari Senin, sistem akan menolak presensi siswa meskipun pengurus sudah membuat pertemuan resmi untuk tanggal tersebut.
+    2. Fitur `manual_bypass` sebelumnya berlabel *"Bypass Jadwal (Uji Coba)"*, memicu kerancuan mental seolah-olah fitur ini adalah alat testing seperti Sandbox. Padahal fungsinya adalah saklar darurat lapangan yang menyimpan data presensi secara riil dan permanen ke pertemuan aktif.
+  - **Solution / State**:
+    1. *Dynamic Meeting Day Recognition (`src/lib/schedule.ts`)*: Logika penentu hari eskul di-upgrade untuk mencocokkan tanggal hari ini (WIB) dengan atribut `meeting.meeting_date` pertemuan aktif (`isMeetingDay = meeting?.meeting_date ? meeting.meeting_date === todayWIBStr : isWednesday`). Jika pengurus menjadwalkan pertemuan di hari selain Rabu, sistem otomatis mengenali hari tersebut sebagai hari sesi eskul resmi tanpa terblokir aturan hari Rabu.
+    2. *Rebranding Saklar Override Lapangan (`MeetingControl.tsx`)*: Label tombol diperbarui menjadi `[ ⚡ Buka Manual (Override Jadwal) ]` / `[ ⚡ Override Manual: AKTIF ]` disertai keterangan edukatif bahwa tombol ini digunakan jika jam eskul maju/mundur dari jadwal 15:40 WIB, dan presensi siswa tersimpan resmi ke buku besar rapor.
+    3. *Sanitasi Banner Siswa (`MemberAttendance.tsx`)*: Teks banner peringatan saat bypass aktif diubah dari *"Mode Uji Coba / Bypass Manual Aktif..."* menjadi *"⚡ Pintu Presensi Dibuka Manual oleh Pengurus: Sesi pertemuan resmi dapat diisi saat ini."*, melenyapkan kata "simulasi/uji coba" agar siswa yakin presensinya sah.
+    4. *Penegasan Role Separation*: Menetapkan Mode Sandbox di `DataVault.tsx` sebagai satu-satunya wahana simulasi terisolasi (Token: `COBA`) dengan jaminan penghapusan bersih data uji coba (*auto-purge*).
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

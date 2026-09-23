@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from './lib/supabase';
 import { Member, Meeting, Attendance, Registration, TalentStar, BigEvent, GalleryItem, QuizSession } from './types/database';
 import { Navbar } from './components/Navbar';
@@ -40,6 +40,16 @@ export const App: React.FC = () => {
   const [isManualBypass, setIsManualBypass] = useState<boolean>(() => {
     return safeStorage.get('ec_manual_bypass') === 'true';
   });
+
+  // Current active meeting (routed to Sandbox Meeting if Sandbox is ON)
+  const isSandboxModeActive = Boolean(sandboxState?.is_active);
+  const activeMeeting = useMemo(() => {
+    return isSandboxModeActive
+      ? (meetings.find((m) => m.token === 'COBA' || m.id === sandboxState?.meeting_id) || meetings.find((m) => m.is_active) || null)
+      : (meetings.find((m) => m.is_active && m.token !== 'COBA' && !m.title.includes('[UJI COBA]')) || meetings.find((m) => m.token !== 'COBA' && !m.title.includes('[UJI COBA]')) || null);
+  }, [meetings, isSandboxModeActive, sandboxState]);
+
+  const isEffectiveBypass = isManualBypass || isSandboxModeActive;
 
   const [isLoading, setIsLoading] = useState(true);
   const [dbError, setDbError] = useState<string | null>(null);
@@ -223,7 +233,7 @@ export const App: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       const hash = window.location.hash.toLowerCase();
-      const isActive = isSessionActiveNow(isManualBypass, 'student');
+      const isActive = isSessionActiveNow(isManualBypass, 'student', activeMeeting);
 
       // Re-verify active quiz session to guarantee zero stale indicator across tabs
       supabase
@@ -250,7 +260,7 @@ export const App: React.FC = () => {
     }, 15000);
 
     return () => clearInterval(interval);
-  }, [isManualBypass]);
+  }, [isManualBypass, activeMeeting]);
 
   // Fetch all data from Supabase
   const fetchData = useCallback(async (isSilent = false) => {
@@ -369,14 +379,6 @@ export const App: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Current active meeting (routed to Sandbox Meeting if Sandbox is ON)
-  const isSandboxModeActive = Boolean(sandboxState?.is_active);
-  const activeMeeting = isSandboxModeActive
-    ? (meetings.find((m) => m.token === 'COBA' || m.id === sandboxState?.meeting_id) || meetings.find((m) => m.is_active) || null)
-    : (meetings.find((m) => m.is_active && m.token !== 'COBA' && !m.title.includes('[UJI COBA]')) || meetings.find((m) => m.token !== 'COBA' && !m.title.includes('[UJI COBA]')) || null);
-
-  const isEffectiveBypass = isManualBypass || isSandboxModeActive;
 
   // Handlers
   const handleAttendanceSuccess = (member: Member, meeting: Meeting) => {

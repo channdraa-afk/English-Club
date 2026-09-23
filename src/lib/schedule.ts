@@ -114,6 +114,9 @@ export function getScheduleStatus(
   const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: 'Asia/Jakarta',
     weekday: 'short',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: 'numeric',
     minute: 'numeric',
     hour12: false,
@@ -121,10 +124,19 @@ export function getScheduleStatus(
 
   const parts = formatter.formatToParts(now);
   const weekday = parts.find((p) => p.type === 'weekday')?.value || '';
+  const yearStr = parts.find((p) => p.type === 'year')?.value || '2026';
+  const monthStr = parts.find((p) => p.type === 'month')?.value || '01';
+  const dayStr = parts.find((p) => p.type === 'day')?.value || '01';
   const hour = parseInt(parts.find((p) => p.type === 'hour')?.value || '0', 10);
   const minute = parseInt(parts.find((p) => p.type === 'minute')?.value || '0', 10);
 
+  const todayWIBStr = `${yearStr}-${monthStr}-${dayStr}`;
   const isWednesday = weekday === 'Wed';
+
+  // Dynamic Meeting Day:
+  // If active meeting has an explicit meeting_date, check if today WIB matches meeting_date.
+  // Otherwise fallback to default weekly schedule (Wednesday).
+  const isMeetingDay = meeting?.meeting_date ? meeting.meeting_date === todayWIBStr : isWednesday;
   const totalMinutes = hour * 60 + minute;
 
   // Window start: 15:40 WIB (940 min)
@@ -133,18 +145,18 @@ export function getScheduleStatus(
   const isMentor = role === 'mentor';
   const windowEnd = isMentor ? 18 * 60 : 17 * 60 + 30;
 
-  const isWithinWindow = isWednesday && totalMinutes >= windowStart && totalMinutes <= windowEnd;
+  const isWithinWindow = isMeetingDay && totalMinutes >= windowStart && totalMinutes <= windowEnd;
   const currentTimeWIB = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} WIB`;
 
-  // If Super Admin activated manual bypass
+  // If Super Admin activated manual override (Buka Manual / Override Jadwal)
   if (isManualBypass) {
     return {
       isActive: true,
       isWithinWindow,
-      isWednesday,
+      isWednesday: isMeetingDay,
       isHoliday: false,
       isManualBypass: true,
-      statusText: '⚡ Mode Uji Coba / Bypass Manual (Dibuka oleh Ketua)',
+      statusText: '⚡ Pintu Presensi Dibuka Manual oleh Pengurus (Override Jadwal)',
       badgeColor: 'amber',
       currentTimeWIB,
     };
@@ -163,7 +175,7 @@ export function getScheduleStatus(
     return {
       isActive: true,
       isWithinWindow: true,
-      isWednesday: true,
+      isWednesday: isMeetingDay,
       isHoliday: false,
       isManualBypass: false,
       statusText,
@@ -172,12 +184,12 @@ export function getScheduleStatus(
     };
   }
 
-  // If outside window
-  if (isWednesday && totalMinutes > windowEnd) {
+  // If outside window on a meeting day
+  if (isMeetingDay && totalMinutes > windowEnd) {
     return {
       isActive: false,
       isWithinWindow: false,
-      isWednesday: true,
+      isWednesday: isMeetingDay,
       isHoliday: false,
       isManualBypass: false,
       statusText: isMentor
@@ -188,11 +200,11 @@ export function getScheduleStatus(
     };
   }
 
-  if (isWednesday && totalMinutes < windowStart) {
+  if (isMeetingDay && totalMinutes < windowStart) {
     return {
       isActive: false,
       isWithinWindow: false,
-      isWednesday: true,
+      isWednesday: isMeetingDay,
       isHoliday: false,
       isManualBypass: false,
       statusText: '⏳ Menunggu Jam Eskul (Mulai pukul 15:40 WIB)',
@@ -208,8 +220,8 @@ export function getScheduleStatus(
     isHoliday: false,
     isManualBypass: false,
     statusText: isMentor
-      ? '⏸️ Di Luar Jadwal (Presensi Pengurus Setiap Rabu 15:40 - 18:00 WIB)'
-      : '⏸️ Di Luar Jadwal (Eskul Beroperasi Setiap Rabu 15:40 - 17:30 WIB)',
+      ? '⏸️ Di Luar Jadwal (Presensi Pengurus Dibuka Saat Hari & Jam Sesi Aktif)'
+      : '⏸️ Di Luar Jadwal (Eskul Beroperasi Saat Hari & Jam Sesi Aktif)',
     badgeColor: 'slate',
     currentTimeWIB,
   };
@@ -235,7 +247,8 @@ function getCurrentWIBString(): string {
  */
 export function isSessionActiveNow(
   isManualBypass: boolean = false,
-  role: 'student' | 'mentor' = 'student'
+  role: 'student' | 'mentor' = 'student',
+  meeting: Meeting | null = null
 ): boolean {
-  return getScheduleStatus(null, isManualBypass, role).isActive;
+  return getScheduleStatus(meeting, isManualBypass, role).isActive;
 }

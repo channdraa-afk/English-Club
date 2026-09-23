@@ -320,7 +320,7 @@ export const DataVault: React.FC<DataVaultProps> = ({
                 )}
               </h3>
               <p className="text-xs font-bold text-slate-500">
-                Uji coba fitur baru secara terisolasi tanpa mencemari database absensi & kuis asli.
+                Satu-satunya wahana simulasi terisolasi (Token: <code className="px-1 bg-amber-100 text-amber-900 rounded font-mono font-bold">COBA</code>). Seluruh data simulasi otomatis dihapus bersih saat dimatikan.
               </p>
             </div>
           </div>

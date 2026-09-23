@@ -369,22 +369,28 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => {
-            if (!isManualBypass) sound.playSuccess();
-            else sound.playPop();
-            onToggleManualBypass(!isManualBypass);
-          }}
-          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs border transition-all cursor-pointer ${
-            isManualBypass
-              ? 'bg-amber-500 text-white border-amber-700 shadow-[0_2px_0_0_#b45309]'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
-          }`}
-        >
-          <Zap className="w-3.5 h-3.5" />
-          <span>{isManualBypass ? 'Bypass Manual: AKTIF' : 'Bypass Jadwal (Uji Coba)'}</span>
-        </button>
+        <div className="flex flex-col sm:items-end gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={() => {
+              if (!isManualBypass) sound.playSuccess();
+              else sound.playPop();
+              onToggleManualBypass(!isManualBypass);
+            }}
+            title="Buka pintu presensi secara manual di luar rentang jadwal normal (Data tersimpan permanen ke pertemuan resmi)"
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs border transition-all cursor-pointer ${
+              isManualBypass
+                ? 'bg-amber-500 text-white border-amber-700 shadow-[0_2px_0_0_#b45309]'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>{isManualBypass ? '⚡ Override Manual: AKTIF' : '⚡ Buka Manual (Override Jadwal)'}</span>
+          </button>
+          <span className="text-[10px] font-bold text-slate-400">
+            {isManualBypass ? 'Pintu resmi terbuka bebas jam' : 'Saklar darurat jika jam eskul maju/mundur'}
+          </span>
+        </div>
       </div>
 
       {/* Dual Active Token Hero Card */}
