@@ -512,10 +512,33 @@
   - **Solution / State**:
     Tombol publik `[ 👑 Akses Ketua ]` dihapus 100% dari antarmuka visual header sehingga hanya menyisakan tombol logout yang bersih bagi mentor biasa. Sebagai penggantinya, dipasang mekanisme **Stealth 3-Tap Trigger** pada area judul header *"Portal Pengurus EC SMEGA"*. Chandra cukup mengetuk judul header 3 kali berturut-turut secara cepat di halaman mana pun untuk memunculkan modal PIN Super Admin. Saat status Super Admin aktif, tombol `[ 🔒 Kunci Admin ]` tetap tersedia untuk mengunci kembali hak akses.
 
+- [x] Sistem Proctoring Anti-Curang EC Arena (2-Strike Tab Switching & Save Point Purge):
+  - **Problem**: Saat kuis live berlangsung di EC Arena, siswa dapat berpindah tab browser atau membuka aplikasi Google Terjemahan / browser lain untuk mencari jawaban tanpa terdeteksi oleh sistem.
+  - **Solution / State**: Diimplementasikan sistem pengawasan integritas bertingkat (2-Strike Shield) di `ArenaPlayer.tsx` dan `audio.ts`:
+    1. *Deteksi Visibilitas Realtime*: Memanfaatkan `document.visibilitychange` untuk mencatat detik siswa meninggalkan layar aktif.
+    2. *Strike 1 (Teguran & Freeze)*: Begitu siswa kembali ke tab, sistem membunyikan sirine alarm darurat via Web Audio API murni (`sound.playWarningAlarm()`), membekukan hitung mundur timer soal kuis (`showWarningModalRef`), dan menampilkan Modal Peringatan Taktil 3D fullscreen (*Peringatan Berpindah Tab 1/2*) yang mewajibkan siswa menekan tombol konfirmasi untuk melanjutkan.
+    3. *Strike 2 (Diskualifikasi & Hangus)*: Jika siswa melanggar untuk kedua kalinya, sesi kuis seketika dikunci dan dinyatakan gugur (`isDisqualified`). Skor yang didapat saat itu dibekukan dan dikirim ke Supabase, save point lokal langsung dimusnahkan (`safeStorage.remove`) agar tidak bisa direfresh/diakali, dan layar berganti ke Layar Diskualifikasi berdesain taktil 3D merah mawar dengan opsi melihat papan peringkat live atau kembali ke beranda. Mentor tetap memiliki wewenang untuk mereset sesi siswa jika pelanggaran terjadi akibat kendala perangkat darurat.
+- [x] Generator Surat Peminjaman Ruang & Alat: Pembina Dinamis (1 vs 2 Pembina Sekaligus):
+  - **Problem**: Data tanda tangan Pembina pada Surat Peminjaman Ruang dan Alat (`template_surat_peminjaman.docx`) tertulis permanen (*hardcoded*) sebagai Nanang Cahyana, S.Pd.Ing dengan NIP statis. Padahal English Club memiliki 2 Pembina resmi (Pak Nanang & Bu Rita Puspitasari, S.Pd), dan pihak sekolah terkadang memerlukan surat yang ditandatangani oleh salah satu pembina piket atau kedua pembina sekaligus.
+  - **Solution / State**: Diimplementasikan modul konfigurasi pembina dinamis di `AdminDocGenerator.tsx` dan `template_surat_peminjaman.docx`:
+    1. *Selector Mode Tanda Tangan*: Pilihan fleksibel antara **1 Pembina Bertugas** (tanda tangan tunggal di tengah bawah) atau **2 Pembina Sekaligus** (tanda tangan berdampingan 2 kolom horizontal via tabel tanpa bingkai).
+    2. *Preset 1-Klik*: Tombol taktil `[ 👨‍🏫 Pak Nanang ]` dan `[ 👩‍🏫 Bu Rita ]` untuk pengisian instan nama, NIP/identitas, dan jabatan tanpa perlu mengetik ulang manual.
+- [x] Eksekusi Big Reset Zero-Residue & Penguatan Live Ticker Otomatisasi Jam Eskul 15:40 WIB:
+  - **Problem**: Menjelang pertemuan perdana eskul sore hari (Rabu, 23 September 2026), masih terdapat residu rekaman kuis uji coba (Doni Saputra), 1 sesi arena dummy (`ASW`), dan 1 galeri `test` di Supabase. Selain itu, form presensi siswa dan pengurus sebelumnya mengandalkan `useMemo` tanpa interval timer internal, sehingga siswa yang sudah standby di halaman `#absen` sejak 15:38 atau 15:39 WIB tidak akan otomatis melihat form terbuka saat jam 15:40:00 WIB tiba tanpa menekan refresh.
+  - **Solution / State**:
+    1. *Big Reset Database 100%*: Seluruh tabel transaksional (`attendances`, `registrations`, `quiz_submissions`, `quiz_sessions`) dikosongkan bersih ke 0 rekaman. Nilai `gallery_items` dummy dihapus, `talent_stars` bersih `[]`, dan seluruh mode bypass dinonaktifkan. Sesi resmi hari ini (`2026-09-23`, Token: `2112`, *"First Gathering & Speaking Icebreaker"*) dipertahankan aktif dan steril.
+    2. *Zero-Bug Live Ticker (Auto-Unlock 0ms)*: Menambahkan interval ticker 10 detik di `MemberAttendance.tsx` dan `MentorAttendance.tsx`. Tepat saat jam menyentuh 15:40:00 WIB, tampilan di smartphone siswa yang sedang standby seketika berganti dari *"Presensi Ditutup"* menjadi **Formulir Presensi Terbuka** secara otomatis tanpa perlu me-refresh halaman (F5).
+- [x] Kalibrasi 20 Soal EC Arena ke CEFR A2–B1 & Total Database Reset Steril:
+  - **Problem**: 20 soal kuis situasi sebelumnya dinilai terlalu berbelit dan sulit bagi adik kelas X (A21) yang baru pertama kali bergabung ke English Club, dengan kosakata tingkat lanjut dan idiom asing yang sulit diproses dalam limit 20 detik. Selain itu, masih terdapat sesi kuis aktif menggantung (`ASW`), sisa submission uji coba, dan ketidakjelasan antara fitur "Bypass Jadwal" (butuh token resmi pertemuan) vs "Mode Sandbox" (butuh token `COBA`) saat uji coba mandiri.
+  - **Solution / State**:
+    1. *Kalibrasi 20 Soal Situasional A2–B1*: Seluruh 20 butir soal kuis dirombak total menggunakan konteks keseharian siswa SMK (kantin sekolah, PR sore hari, nonton film bersubtitle, membawa tumbler, cuaca Purbalingga). Kalimat dirancang ringkas, ramah batas waktu 20 detik, tanpa idiom aneh, dengan 4 opsi pilihan jelas dan proporsional. Berkas kurikulum resmi di [`docs/KURIKULUM_AGREE_DISAGREE_20_SOAL.md`](file:///c:/My%20Project/English%20Club/docs/KURIKULUM_AGREE_DISAGREE_20_SOAL.md) dan record `quizzes` di Supabase diperbarui serentak.
+    2. *Total Database Reset Pra-Peluncuran*: Menjalankan sanitasi total data uji coba. Seluruh `quiz_submissions` (0), `quiz_sessions` (0), `attendances` (0), `registrations` (0), dan pertemuan dummy dibersihkan. Sesi resmi eskul hari ini (`2026-09-23`, Token: `2112`, *"First Gathering & Speaking Icebreaker"*) dipastikan berstatus aktif dan steril.
+    3. *Panduan Uji Coba*: Mendokumentasikan perbedaan token secara tegas: Saklar "Bypass Jadwal" di Pengaturan Pertemuan membuka presensi di luar jam eskul dengan menggunakan token pertemuan resmi (`2112`), sedangkan "Mode Sandbox" di Pusat Data menggunakan token `COBA` dengan pertemuan simulasi.
+
 ### 3.2. Roadmap Selanjutnya
-- [ ] Uji coba lapangan perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
-- [ ] Uji coba EC Arena Live Quiz pada pekan praktek eskul bersama adik-adik kelas A21 di 2–3 ruangan.
-- [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan (Prisa Aztasyah) via tab Radar Kedisiplinan.
+- [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
+- [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
+- [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
 
 

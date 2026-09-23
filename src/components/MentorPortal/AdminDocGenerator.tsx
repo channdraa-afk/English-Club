@@ -113,6 +113,14 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
   const [namaSekre, setNamaSekre] = useState('Naila Soraya Candeli');
   const [nisSekre, setNisSekre] = useState('19351');
 
+  // Konfigurasi Pembina Surat Peminjaman
+  const [pembinaMode, setPembinaMode] = useState<'single' | 'dual'>('single');
+  const [namaPembina1, setNamaPembina1] = useState('Nanang Cahyana, S.Pd.Ing');
+  const [nipPembina1, setNipPembina1] = useState('19860317 202321 1 003');
+  const [jabatanPembina1, setJabatanPembina1] = useState('Pembina ENGLISH CLUB');
+  const [namaPembina2, setNamaPembina2] = useState('Rita Puspitasari, S.Pd');
+  const [nipPembina2, setNipPembina2] = useState('-');
+
   const [ruangList, setRuangList] = useState<RuangItem[]>([
     { id: '1', nama: 'Ruang 4', waktu: '15:30 - 17:00', keterangan: 'Pertemuan rutin & Ice Breaking' },
     { id: '2', nama: 'Ruang Kuliner', waktu: '15:30 - 17:00', keterangan: 'Praktek speaking kelompok' },
@@ -235,6 +243,13 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
         linebreaks: true,
       });
 
+      const formatNip = (nip: string) => {
+        const clean = nip.trim();
+        if (!clean || clean === '-') return '';
+        if (/^NIP/i.test(clean)) return clean;
+        return `NIP. ${clean}`;
+      };
+
       doc.render({
         tanggal_surat: tanggalSurat,
         nomor_surat: nomorSurat,
@@ -248,6 +263,15 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
         nis_ketua: nisKetua,
         nama_sekre: namaSekre,
         nis_sekre: nisSekre,
+        is_single_pembina: pembinaMode === 'single',
+        is_dual_pembina: pembinaMode === 'dual',
+        jabatan_pembina: jabatanPembina1 || 'Pembina ENGLISH CLUB',
+        nama_pembina: namaPembina1,
+        nip_pembina: formatNip(nipPembina1),
+        nama_pembina_1: namaPembina1,
+        nip_pembina_1: formatNip(nipPembina1),
+        nama_pembina_2: namaPembina2,
+        nip_pembina_2: formatNip(nipPembina2),
         ruang_list: ruangList.map((r, idx) => ({
           no: String(idx + 1),
           nama_ruang: r.nama,
@@ -598,50 +622,259 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Card 2: Penandatangan (Ketua & Sekre) */}
-          <div className="bg-white p-5 sm:p-6 rounded-3xl border-2 border-slate-200 shadow-sm space-y-4">
-            <h3 className="text-base font-black text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Users className="w-5 h-5 text-indigo-600" />
-              Penandatangan Surat (Ketua & Sekretaris)
-            </h3>
+          {/* Card 2: Penandatangan Surat (Ketua, Sekre, & Pembina) */}
+          <div className="bg-white p-5 sm:p-6 rounded-3xl border-2 border-slate-200 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+              <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                Penandatangan Surat (Ketua, Sekretaris & Pembina)
+              </h3>
+              <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl border border-slate-200 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    setPembinaMode('single');
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    pembinaMode === 'single'
+                      ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  👤 1 Pembina
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    setPembinaMode('dual');
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                    pembinaMode === 'dual'
+                      ? 'bg-white text-indigo-700 shadow-sm border border-slate-200'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  👥 2 Pembina Sekaligus
+                </button>
+              </div>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-              <div>
-                <label className="block text-xs font-black text-slate-600 mb-1">Nama Ketua</label>
-                <input
-                  type="text"
-                  value={namaKetua}
-                  onChange={(e) => setNamaKetua(e.target.value)}
-                  className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
-                />
+            {/* Sub-Seksi 1: Ketua & Sekretaris */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                1. Pengesahan Pengurus (Ketua & Sekretaris)
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-600 mb-1">Nama Ketua</label>
+                  <input
+                    type="text"
+                    value={namaKetua}
+                    onChange={(e) => setNamaKetua(e.target.value)}
+                    className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-600 mb-1">NIS Ketua</label>
+                  <input
+                    type="text"
+                    value={nisKetua}
+                    onChange={(e) => setNisKetua(e.target.value)}
+                    className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-600 mb-1">Nama Sekretaris</label>
+                  <input
+                    type="text"
+                    value={namaSekre}
+                    onChange={(e) => setNamaSekre(e.target.value)}
+                    className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-600 mb-1">NIS Sekretaris</label>
+                  <input
+                    type="text"
+                    value={nisSekre}
+                    onChange={(e) => setNisSekre(e.target.value)}
+                    className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-black text-slate-600 mb-1">NIS Ketua</label>
-                <input
-                  type="text"
-                  value={nisKetua}
-                  onChange={(e) => setNisKetua(e.target.value)}
-                  className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
-                />
+            </div>
+
+            {/* Sub-Seksi 2: Pembina Ekstrakurikuler */}
+            <div className="space-y-3 pt-3 border-t border-slate-100">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  2. Pengesahan Mengetahui ({pembinaMode === 'single' ? '1 Pembina Bertugas' : '2 Pembina Berdampingan'})
+                </span>
+
+                {/* Preset Cepat */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[11px] font-bold text-slate-500">Preset Cepat:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playPop();
+                      setNamaPembina1('Nanang Cahyana, S.Pd.Ing');
+                      setNipPembina1('19860317 202321 1 003');
+                      setJabatanPembina1('Pembina ENGLISH CLUB');
+                    }}
+                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    👨‍🏫 Pak Nanang
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playPop();
+                      if (pembinaMode === 'single') {
+                        setNamaPembina1('Rita Puspitasari, S.Pd');
+                        setNipPembina1('-');
+                        setJabatanPembina1('Pembina ENGLISH CLUB');
+                      } else {
+                        setNamaPembina2('Rita Puspitasari, S.Pd');
+                        setNipPembina2('-');
+                      }
+                    }}
+                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    👩‍🏫 Bu Rita
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sound.playPop();
+                      setNamaPembina1('Nanang Cahyana, S.Pd.Ing');
+                      setNipPembina1('19860317 202321 1 003');
+                      setNamaPembina2('Rita Puspitasari, S.Pd');
+                      setNipPembina2('-');
+                    }}
+                    className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    🔄 Reset Default (Keduanya)
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-black text-slate-600 mb-1">Nama Sekretaris</label>
-                <input
-                  type="text"
-                  value={namaSekre}
-                  onChange={(e) => setNamaSekre(e.target.value)}
-                  className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-black text-slate-600 mb-1">NIS Sekretaris</label>
-                <input
-                  type="text"
-                  value={nisSekre}
-                  onChange={(e) => setNisSekre(e.target.value)}
-                  className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-blue-500 outline-none transition-all"
-                />
-              </div>
+
+              {pembinaMode === 'single' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                  <div>
+                    <label className="block text-xs font-black text-slate-600 mb-1">
+                      Nama Pembina yang Mengetahui
+                    </label>
+                    <input
+                      type="text"
+                      value={namaPembina1}
+                      onChange={(e) => setNamaPembina1(e.target.value)}
+                      placeholder="Contoh: Nanang Cahyana, S.Pd.Ing"
+                      className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-600 mb-1">
+                      NIP / Identitas Pembina
+                    </label>
+                    <input
+                      type="text"
+                      value={nipPembina1}
+                      onChange={(e) => setNipPembina1(e.target.value)}
+                      placeholder="Contoh: 19860317 202321 1 003 (atau - jika belum ber-NIP)"
+                      className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-slate-600 mb-1">
+                      Jabatan Pengesahan
+                    </label>
+                    <input
+                      type="text"
+                      value={jabatanPembina1}
+                      onChange={(e) => setJabatanPembina1(e.target.value)}
+                      placeholder="Pembina ENGLISH CLUB"
+                      className="w-full px-3 py-2 text-xs sm:text-sm font-bold bg-white border-2 border-slate-200 rounded-xl focus:border-indigo-500 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100">
+                  {/* Pembina 1 */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-indigo-900 flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-indigo-600" />
+                        Pembina I (Kiri)
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Kolom 1</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-600 mb-1">Nama Pembina I</label>
+                        <input
+                          type="text"
+                          value={namaPembina1}
+                          onChange={(e) => setNamaPembina1(e.target.value)}
+                          placeholder="Nanang Cahyana, S.Pd.Ing"
+                          className="w-full px-3 py-1.5 text-xs font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-600 mb-1">NIP Pembina I</label>
+                        <input
+                          type="text"
+                          value={nipPembina1}
+                          onChange={(e) => setNipPembina1(e.target.value)}
+                          placeholder="19860317 202321 1 003"
+                          className="w-full px-3 py-1.5 text-xs font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-indigo-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Pembina 2 */}
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-purple-900 flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-purple-600" />
+                        Pembina II (Kanan)
+                      </span>
+                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Kolom 2</span>
+                    </div>
+                    <div className="space-y-2">
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-600 mb-1">Nama Pembina II</label>
+                        <input
+                          type="text"
+                          value={namaPembina2}
+                          onChange={(e) => setNamaPembina2(e.target.value)}
+                          placeholder="Rita Puspitasari, S.Pd"
+                          className="w-full px-3 py-1.5 text-xs font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 outline-none transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-600 mb-1">NIP Pembina II</label>
+                        <input
+                          type="text"
+                          value={nipPembina2}
+                          onChange={(e) => setNipPembina2(e.target.value)}
+                          placeholder="NIP / NUPTK / - (kosongkan bila tidak ada)"
+                          className="w-full px-3 py-1.5 text-xs font-bold bg-slate-50 border-2 border-slate-200 rounded-xl focus:bg-white focus:border-purple-500 outline-none transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <p className="text-[11px] text-slate-500 font-medium">
+                {pembinaMode === 'single'
+                  ? '💡 Di lembar surat Word, tanda tangan pembina akan dicetak rapi di posisi tengah bawah.'
+                  : '💡 Di lembar surat Word, Pembina I dan Pembina II dicetak berdampingan 2 kolom sehingga tidak menggeser halaman lampiran.'}
+              </p>
             </div>
           </div>
 

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, CheckCircle2, KeyRound, Sparkles, UserCheck, AlertCircle, RefreshCw } from 'lucide-react';
 import { Member, Meeting } from '../types/database';
 import { TactileButton } from './TactileButton';
@@ -57,9 +57,18 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
     setSearchQuery('');
   };
 
+  // Live ticker to re-evaluate scheduleStatus every 10 seconds (e.g. at 15:40 WIB arrival)
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setClockTick((t) => t + 1);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   const scheduleStatus = useMemo(() => {
     return getScheduleStatus(activeMeeting, isManualBypass);
-  }, [activeMeeting, isManualBypass]);
+  }, [activeMeeting, isManualBypass, clockTick]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Users, 
   Search, 
@@ -61,10 +61,19 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
     return new Set(currentMeetingAttendances.map((a) => a.member_id));
   }, [currentMeetingAttendances]);
 
+  // Live ticker to re-evaluate scheduleStatus every 10 seconds (e.g. at 15:40 and 18:00 WIB arrival)
+  const [clockTick, setClockTick] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setClockTick((t) => t + 1);
+    }, 10000);
+    return () => clearInterval(timer);
+  }, []);
+
   // Schedule status specifically for mentors (active until 18:00 WIB)
   const scheduleStatus = useMemo(() => {
     return getScheduleStatus(activeMeeting, Boolean(isManualBypass), 'mentor');
-  }, [activeMeeting, isManualBypass]);
+  }, [activeMeeting, isManualBypass, clockTick]);
 
   // Autocomplete matching
   const searchResults = useMemo(() => {

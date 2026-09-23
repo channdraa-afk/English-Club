@@ -210,6 +210,35 @@ class SoundFX {
       // Audio fallback
     }
   }
+
+  // Urgent two-tone siren/buzzer when student caught switching tabs in Arena
+  playWarningAlarm() {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const tones = [880, 587.33, 880, 587.33]; // A5, D5, A5, D5
+      tones.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.12);
+
+        gain.gain.setValueAtTime(0.25, ctx.currentTime + idx * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + idx * 0.12 + 0.11);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(ctx.currentTime + idx * 0.12);
+        osc.stop(ctx.currentTime + idx * 0.12 + 0.12);
+      });
+    } catch {
+      // Audio fallback
+    }
+  }
 }
 
 export const sound = new SoundFX();
+

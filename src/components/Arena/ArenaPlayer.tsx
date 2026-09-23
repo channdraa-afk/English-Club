@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { 
-  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search, Sparkles, Play, RefreshCw, LogOut 
+  Gamepad2, ArrowLeft, Trophy, Flame, UserCheck, AlertCircle, Search, Sparkles, Play, RefreshCw, LogOut,
+  ShieldAlert, AlertTriangle, Lock, BellRing 
 } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
@@ -68,6 +69,16 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
   const [myRank, setMyRank] = useState<number | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isRetryingSubmit, setIsRetryingSubmit] = useState(false);
+
+  // ----------------------------------------------------
+  // ANTI-CHEAT: 2-STRIKE TAB SWITCHING PROCTORING SHIELD
+  // ----------------------------------------------------
+  const [tabViolationCount, setTabViolationCount] = useState(0);
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [isDisqualified, setIsDisqualified] = useState(false);
+  const showWarningModalRef = useRef(false);
+  const isDisqualifiedRef = useRef(false);
+  const hasLeftTabRef = useRef(false);
 
   // Filter A21 members for selection
   const a21Members = useMemo(() => {
@@ -161,9 +172,85 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     };
   }, [session?.id, liveSession?.id, fetchLeaderboardData]);
 
+  // ----------------------------------------------------
+  // ANTI-CHEAT ENGINE: VISIBILITY & DISQUALIFICATION
+  // ----------------------------------------------------
+  const handleDisqualify = useCallback(async () => {
+    setIsDisqualified(true);
+    isDisqualifiedRef.current = true;
+    setShowWarningModal(false);
+    showWarningModalRef.current = false;
+    sound.playError();
+
+    if (timerRef.current) clearInterval(timerRef.current);
+
+    // 1. Purge local save point so they cannot reload to retry
+    if (session && selectedMember) {
+      safeStorage.remove(`ec_arena_save_${session.id}_${selectedMember.id}`);
+    }
+
+    // 2. Submit current frozen score to Supabase
+    if (session && quiz && selectedMember) {
+      try {
+        const totalTime = Math.round((Date.now() - startTime) / 1000);
+        await supabase
+          .from('quiz_submissions')
+          .upsert({
+            session_id: session.id,
+            member_id: selectedMember.id,
+            member_name: selectedMember.name,
+            class_name: selectedMember.class_name,
+            score: scoreRef.current,
+            correct_answers: correctCountRef.current,
+            total_questions: quiz.questions.length,
+            time_spent_seconds: totalTime,
+            completed_at: new Date().toISOString()
+          }, { onConflict: 'session_id,member_id' });
+      } catch (err) {
+        console.error('Failed to submit disqualified score:', err);
+      }
+    }
+  }, [session, quiz, selectedMember, startTime]);
+
+  const handleTabViolation = useCallback(() => {
+    sound.playWarningAlarm();
+
+    setTabViolationCount((prev) => {
+      const nextCount = prev + 1;
+      if (nextCount === 1) {
+        setShowWarningModal(true);
+        showWarningModalRef.current = true;
+      } else if (nextCount >= 2) {
+        handleDisqualify();
+      }
+      return nextCount;
+    });
+  }, [handleDisqualify]);
+
+  // Monitor visibility state while actively playing
+  useEffect(() => {
+    if (!session || !quiz || isCompleted || isSpectating || isDisqualified) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        hasLeftTabRef.current = true;
+      } else {
+        if (hasLeftTabRef.current) {
+          hasLeftTabRef.current = false;
+          handleTabViolation();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [session, quiz, isCompleted, isSpectating, isDisqualified, handleTabViolation]);
+
   // QUESTION TIMER ENGINE
   useEffect(() => {
-    if (!session || !quiz || isCompleted) return;
+    if (!session || !quiz || isCompleted || isDisqualified) return;
 
     const currentQ = quiz.questions[currentIdx];
     if (!currentQ) return;
@@ -180,6 +267,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     if (timerRef.current) clearInterval(timerRef.current);
 
     timerRef.current = setInterval(() => {
+      if (showWarningModalRef.current || isDisqualifiedRef.current) return;
       setTimeLeft((prev) => {
         if (prev <= 1) {
           clearInterval(timerRef.current);
@@ -196,7 +284,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [currentIdx, session, quiz, isCompleted]);
+  }, [currentIdx, session, quiz, isCompleted, isDisqualified]);
 
   // Handle Timeout (time ran out)
   const handleTimeout = () => {
@@ -302,6 +390,12 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     setStartTime(Date.now() - (save.currentIdx * 20000));
     setIsCompleted(false);
     setPendingSavePoint(null);
+    setTabViolationCount(0);
+    setShowWarningModal(false);
+    showWarningModalRef.current = false;
+    setIsDisqualified(false);
+    isDisqualifiedRef.current = false;
+    hasLeftTabRef.current = false;
   };
 
   // Handle finish quiz & save to Supabase
@@ -526,6 +620,12 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
       setStartTime(Date.now());
       setIsSpectating(false);
       setIsCompleted(false);
+      setTabViolationCount(0);
+      setShowWarningModal(false);
+      showWarningModalRef.current = false;
+      setIsDisqualified(false);
+      isDisqualifiedRef.current = false;
+      hasLeftTabRef.current = false;
     } catch (err: any) {
       sound.playError();
       setJoinError('Terjadi kendala jaringan: ' + (err.message || err));
@@ -752,6 +852,75 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
               <span>Kembali ke Halaman Presensi</span>
             </button>
           </form>
+        </div>
+      </div>
+    );
+  }
+
+  // VIEW: DISQUALIFIED SCREEN (LOCKED OUT DUE TO 2ND STRIKE)
+  if (isDisqualified) {
+    return (
+      <div className="w-full max-w-lg mx-auto px-4 py-8 animate-fade-in space-y-6">
+        <div className="bg-white rounded-3xl border-2 border-rose-400 shadow-[0_8px_0_0_#e11d48] p-6 text-center space-y-5">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-rose-100 text-rose-600 flex items-center justify-center border-2 border-rose-300 shadow-[0_4px_0_0_#fda4af] animate-pulse">
+            <Lock className="w-8 h-8" />
+          </div>
+
+          <div className="space-y-1">
+            <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+              <ShieldAlert className="w-3.5 h-3.5" />
+              Sesi Kuis Terkunci • Disqualified
+            </span>
+            <h3 className="text-xl font-black text-slate-900 mt-2">
+              {selectedMember?.name}
+            </h3>
+            <p className="text-xs font-bold text-slate-500">{selectedMember?.class_name}</p>
+          </div>
+
+          <div className="p-4 rounded-2xl bg-rose-50/80 border border-rose-200 text-left space-y-2">
+            <div className="flex items-center gap-2 text-rose-800 font-black text-xs">
+              <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+              <span>Terdeteksi Berpindah Tab Sebanyak 2 Kali</span>
+            </div>
+            <p className="text-xs text-rose-700 leading-relaxed font-medium">
+              Demi menjunjung tinggi kejujuran dan sportivitas bersama, sesi kuis kamu telah dihentikan secara otomatis karena terdeteksi meninggalkan halaman kuis. Skor terakhirmu (<strong className="font-bold text-rose-900">{score} PTS</strong>) telah dibekukan ke dalam sistem.
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-2">
+            <TactileButton
+              variant="brand"
+              size="lg"
+              className="w-full py-3.5 text-base"
+              onClick={() => {
+                sound.playPop();
+                if (session) {
+                  fetchLeaderboardData(session.id);
+                  setIsSpectating(true);
+                  setIsCompleted(true);
+                  setIsDisqualified(false);
+                } else {
+                  onBackToHome();
+                }
+              }}
+            >
+              <Trophy className="w-5 h-5 text-amber-300" />
+              <span>Lihat Papan Peringkat Live</span>
+            </TactileButton>
+
+            <TactileButton
+              variant="white"
+              size="md"
+              className="w-full text-slate-700 font-black border-2 border-slate-200"
+              onClick={() => {
+                sound.playPop();
+                onBackToHome();
+              }}
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Kembali ke Halaman Presensi</span>
+            </TactileButton>
+          </div>
         </div>
       </div>
     );
@@ -1258,6 +1427,51 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
           </div>
         </button>
       </div>
+
+      {/* MODAL PERINGATAN INTEGRITAS: STRIKE 1 PINDAH TAB */}
+      {showWarningModal && !isDisqualified && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+          <div className="w-full max-w-sm bg-white rounded-3xl border-2 border-amber-400 shadow-[0_8px_0_0_#d97706] p-6 text-center space-y-4 animate-scale-up">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center border-2 border-amber-300 shadow-[0_4px_0_0_#fcd34d] animate-bounce">
+              <BellRing className="w-7 h-7" />
+            </div>
+
+            <div className="space-y-1">
+              <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-amber-800 bg-amber-50 px-3 py-1 rounded-full border border-amber-200">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                Peringatan Berpindah Tab ({tabViolationCount}/2)
+              </span>
+              <h3 className="text-lg font-black text-slate-900 mt-2">
+                Jangan Tinggalkan Layar Kuis!
+              </h3>
+            </div>
+
+            <p className="text-xs text-slate-600 leading-relaxed font-medium">
+              Kamu terdeteksi baru saja berpindah tab atau membuka aplikasi lain. Tetaplah fokus di halaman kuis ini.
+            </p>
+
+            <div className="p-3 bg-rose-50 rounded-2xl border border-rose-200 text-left">
+              <p className="text-[11px] text-rose-700 font-bold leading-normal">
+                ⚠️ Peringatan Terakhir: Jika kamu berpindah tab sekali lagi, sesi kuismu akan otomatis <strong>DIKUNCI</strong> dan <strong>DINYATAKAN GUGUR</strong>!
+              </p>
+            </div>
+
+            <TactileButton
+              variant="brand"
+              size="lg"
+              className="w-full py-3.5 text-sm"
+              onClick={() => {
+                sound.playPop();
+                setShowWarningModal(false);
+                showWarningModalRef.current = false;
+              }}
+            >
+              <Gamepad2 className="w-4 h-4" />
+              <span>Saya Mengerti, Lanjutkan Kuis!</span>
+            </TactileButton>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
