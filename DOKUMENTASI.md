@@ -545,6 +545,12 @@
     3. *Sanitasi Banner Siswa (`MemberAttendance.tsx`)*: Teks banner peringatan saat bypass aktif diubah dari *"Mode Uji Coba / Bypass Manual Aktif..."* menjadi *"⚡ Pintu Presensi Dibuka Manual oleh Pengurus: Sesi pertemuan resmi dapat diisi saat ini."*, melenyapkan kata "simulasi/uji coba" agar siswa yakin presensinya sah.
     4. *Penegasan Role Separation*: Menetapkan Mode Sandbox di `DataVault.tsx` sebagai satu-satunya wahana simulasi terisolasi (Token: `COBA`) dengan jaminan penghapusan bersih data uji coba (*auto-purge*).
 
+- [x] Gamifikasi "Ready to Fight" — Visibilitas Kondisional EC Arena Siswa & Navbar:
+  - **Problem**: Saat tidak ada sesi kuis yang aktif, halaman presensi siswa (`App.tsx`) tetap menampilkan kartu putih statis `[ Buka Arena ➔ ]` dan tombol Navbar `[ 🎮 Arena ]` selalu muncul (`media_1790148189470.png`). Hal ini mendistraksi siswa yang baru hadir pukul 15:40 WIB, berpotensi memicu klik penasaran ke lobi kuis yang belum dibuka mentor, serta menghilangkan sensasi kejutan gamifikasi.
+  - **Solution / State**:
+    1. *Visibilitas Banner Presensi (`App.tsx`)*: Menghapus blok fallback statis. Kartu Hero Battle Arena (gradien biru-indigo elektrik dengan tombol emas 3D) kini **MURNI 100% hanya dirender saat `activeQuizSession !== null`**. Saat kuis ditutup, area presensi siswa bersih tanpa sisa.
+    2. *Visibilitas Dinamis Navbar (`Navbar.tsx`)*: Tombol `[ 🎮 Arena ]` di navigasi atas disembunyikan saat kuis mati, dan otomatis meledak muncul (`hasActiveQuiz || currentView === 'arena'`) dengan animasi denyut (*animate-pulse*) dan titik hijau berkedip (*animate-ping*) seketika saat mentor menekan "Mulai Sesi Live" di portal kelas.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

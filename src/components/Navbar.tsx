@@ -92,8 +92,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* Quiz Arena Button (Always Visible & Accessible for Students) */}
-          {onOpenArena && (
+          {/* Quiz Arena Button ("Ready to Fight" — Only visible when quiz is active or inside arena) */}
+          {(hasActiveQuiz || currentView === 'arena') && onOpenArena && (
             <button
               type="button"
               onClick={() => {
@@ -108,9 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className={`flex items-center gap-1.5 p-1.5 px-2 sm:px-3 sm:py-1.5 rounded-xl text-xs font-black border transition-all shrink-0 cursor-pointer ${
                 currentView === 'arena'
                   ? 'bg-blue-600 text-white border-blue-800 shadow-[0_2px_0_0_#1e3a8a]'
-                  : hasActiveQuiz
-                  ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-800 shadow-[0_2px_0_0_#1e3a8a] active:translate-y-0.5 animate-pulse'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 shadow-[0_2px_0_0_#cbd5e1] active:translate-y-0.5'
+                  : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white border-blue-800 shadow-[0_2px_0_0_#1e3a8a] active:translate-y-0.5 animate-pulse'
               }`}
             >
               <span className="text-xs">🎮</span>
