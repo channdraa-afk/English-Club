@@ -523,29 +523,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </span>
             </button>
 
-            {/* EC Arena Live Quiz Button */}
-            {onOpenArena && (
+            {/* EC Arena Live Quiz Button ("Ready to Fight" — Only visible when arena is active) */}
+            {hasActiveQuiz && onOpenArena && (
               <button
                 type="button"
                 onClick={() => {
                   sound.playPop();
                   onOpenArena();
                 }}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-xl sm:rounded-2xl text-xs font-black border-2 transition-all cursor-pointer shrink-0 ${
-                  hasActiveQuiz
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-blue-800 shadow-[0_3px_0_0_#1e3a8a] animate-pulse active:translate-y-0.5'
-                    : 'bg-white hover:bg-slate-100 text-slate-800 border-slate-300 shadow-[0_3px_0_0_#cbd5e1] active:translate-y-0.5'
-                }`}
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-2 rounded-xl sm:rounded-2xl text-xs font-black border-2 transition-all cursor-pointer shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-blue-800 shadow-[0_3px_0_0_#1e3a8a] animate-pulse active:translate-y-0.5"
                 title="Buka Kuis Live EC Arena"
               >
-                <Gamepad2 className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                <Gamepad2 className="w-3.5 h-3.5 text-blue-200 shrink-0" />
                 <span>
                   <span className="min-[440px]:hidden">Arena</span>
                   <span className="hidden min-[440px]:inline">EC Arena</span>
                 </span>
-                {hasActiveQuiz && (
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                )}
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               </button>
             )}
           </div>
@@ -628,22 +622,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span>PRESENSI ESKUL</span>
             </button>
 
-            {/* EC Arena Live Quiz */}
-            {onOpenArena && (
+            {/* EC Arena Live Quiz ("Ready to Fight" — Only visible when arena is active) */}
+            {hasActiveQuiz && onOpenArena && (
               <button
                 type="button"
                 onClick={() => {
                   sound.playPop();
                   onOpenArena();
                 }}
-                className={`w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-xs sm:text-sm font-black border-2 transition-all cursor-pointer ${
-                  hasActiveQuiz
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-blue-800 shadow-[0_4px_0_0_#1e3a8a] active:translate-y-1 animate-pulse'
-                    : 'bg-blue-600 hover:bg-blue-700 text-white border-blue-800 shadow-[0_4px_0_0_#1e3a8a] active:translate-y-1 active:shadow-none'
-                }`}
+                className="w-full sm:w-auto flex-1 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl text-xs sm:text-sm font-black border-2 transition-all cursor-pointer bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white border-blue-800 shadow-[0_4px_0_0_#1e3a8a] active:translate-y-1 animate-pulse"
               >
-                <Gamepad2 className="w-4 h-4 shrink-0" />
-                <span>KUIS EC ARENA</span>
+                <Gamepad2 className="w-4 h-4 shrink-0 text-blue-200" />
+                <span>KUIS EC ARENA (LIVE)</span>
               </button>
             )}
 

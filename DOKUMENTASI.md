@@ -562,6 +562,20 @@
        - Bonus Streak Bertingkat Terbatas (*Capped*): $+50$ per streak dan **dikunci maksimal di $+250$ poin** ($\text{Math.min}(250, \text{streak} \times 50)$).
        - Hasil: Total bonus streak 20 soal teredam menjadi maksimal $\approx 4.250$ poin (bukan 19.000). Selisih poin antar-juara kini proporsional dan kompetitif (500 – 2.500 poin), melenyapkan blowout skor jomplang secara permanen.
 
+- [x] Audit Forensik Source Code & Perbaikan Bug Presensi Pengurus A20:
+  - **Problem**:
+    1. Bug Badge Pengurus 85 Orang (media_1790212876190.png): Pada tab Presensi Mandiri A20, badge header tertulis "85 Orang" dan banner atas tertulis "Pengurus Hadir: 85 / 59", padahal jumlah pengurus hanya 59. Akar masalah: attendedMentorSet di MentorAttendance.tsx mengambil seluruh ID presensi sesi aktif tanpa memfilter angkatan, sehingga 55 presensi adik kelas A21 ikut terhitung.
+    2. Tombol Arena Selalu Muncul di Landing Page: Tombol "KUIS EC ARENA" di header dan hero section LandingPage.tsx selalu dirender permanen meski kuis sedang tidak dinyalakan.
+    3. Jembatan Status Libur Terputus: Cadangan holiday_config di app_settings tidak pernah disuntikkan ke meetings di App.tsx, sehingga jika mentor meliburkan eskul, portal siswa tidak mengenali status libur.
+    4. Sesi Kuis Zombie Menggantung: Sesi kuis tanggal 23 September berstatus active tanpa batas waktu karena mentor lupa menekan tombol "Tutup Sesi".
+    5. Query Phantom Table talent_stars: Query langsung ke tabel phantom memicu error HTTP 404 PGRST205 di console.
+  - **Solution / State**:
+    1. Strict Generation Filter (MentorAttendance.tsx & HelperAttendanceA21.tsx): attendedMentorSet disaring menggunakan a20MemberIds.has(a.member_id). Hasil: Badge dan banner kini menampilkan angka riil pengurus yang hadir (30 / 59 Orang).
+    2. Kunci Visibilitas Arena Landing Page (LandingPage.tsx): Membungkus tombol di header dan hero section dengan hasActiveQuiz && onOpenArena agar 100% menghilang saat kuis mati, konsisten dengan konsep "Ready to Fight".
+    3. Jembatan Libur holiday_config (App.tsx): Menyuntikkan konfigurasi libur dari app_settings langsung ke data meetings dan listener realtime, sehingga portal siswa dan countdown eskul otomatis mengenali status libur.
+    4. Auto-Retire Zombie Quiz Session (App.tsx): Menambahkan helper sanitizeActiveQuizSession yang secara otomatis menutup sesi kuis yang berusia lebih dari 12 jam di background Supabase. Sesi kuis 23 September langsung ditutup secara resmi.
+    5. Eliminasi Query Phantom (App.tsx & sandbox.ts): Menghapus seluruh query langsung ke tabel phantom talent_stars dan mengalihkannya 100% ke app_settings.talent_stars dengan nol HTTP 404 error.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

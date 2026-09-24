@@ -145,14 +145,14 @@ export async function getSandboxStats(): Promise<SandboxStats> {
         .in('meeting_id', testMeetIds);
       testAttendances = attCount || 0;
 
-      try {
-        const { count: starCount } = await supabase
-          .from('talent_stars')
-          .select('*', { count: 'exact', head: true })
-          .in('meeting_id', testMeetIds);
-        testStars = starCount || 0;
-      } catch {
-        // Ignored if table not created
+      // Read talent stars count from app_settings
+      const { data: starSettings } = await supabase
+        .from('app_settings')
+        .select('value')
+        .eq('key', 'talent_stars')
+        .maybeSingle();
+      if (starSettings && Array.isArray(starSettings.value)) {
+        testStars = starSettings.value.filter((s: any) => testMeetIds.includes(s.meeting_id)).length;
       }
     }
 
@@ -210,17 +210,7 @@ export async function stopSandboxModeAndPurge(): Promise<void> {
         .delete()
         .in('meeting_id', testMeetingIds);
 
-      // B. Delete test talent stars
-      try {
-        await supabase
-          .from('talent_stars')
-          .delete()
-          .in('meeting_id', testMeetingIds);
-      } catch (e) {
-        console.warn('Talent stars cleanup notice:', e);
-      }
-
-      // C. Also clean fallback talent_stars from app_settings
+      // B. Clean test talent stars from app_settings
       const { data: settingsData } = await supabase
         .from('app_settings')
         .select('*')

@@ -22,6 +22,27 @@ import { RefreshCw, AlertCircle } from 'lucide-react';
 import { isSessionActiveNow } from './lib/schedule';
 import { safeStorage } from './lib/storage';
 
+/**
+ * Auto-retires zombie active quiz sessions older than 12 hours.
+ * Guarantees that "KUIS EC ARENA (LIVE)" never hangs forever on the landing page
+ * if mentors forget to close the session after extracurricular hours.
+ */
+function sanitizeActiveQuizSession(session: QuizSession | null): QuizSession | null {
+  if (!session) return null;
+  if (session.created_at) {
+    const ageHours = (Date.now() - new Date(session.created_at).getTime()) / (1000 * 3600);
+    if (ageHours > 12) {
+      supabase
+        .from('quiz_sessions')
+        .update({ status: 'closed', closed_at: new Date().toISOString() })
+        .eq('id', session.id)
+        .then(() => {});
+      return null;
+    }
+  }
+  return session;
+}
+
 export const App: React.FC = () => {
   const [members, setMembers] = useState<Member[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -163,6 +184,21 @@ export const App: React.FC = () => {
             setMentorPin(typeof row.value === 'string' ? row.value : String(row.value));
           } else if (row.key === 'mentor_token') {
             setMentorToken(typeof row.value === 'string' ? row.value : String(row.value));
+          } else if (row.key === 'holiday_config') {
+            const hConfig = row.value as any;
+            if (hConfig && hConfig.meeting_date) {
+              setMeetings((prev) =>
+                prev.map((m) =>
+                  m.meeting_date === hConfig.meeting_date
+                    ? {
+                        ...m,
+                        is_holiday: Boolean(hConfig.is_holiday),
+                        holiday_reason: hConfig.reason || m.holiday_reason,
+                      }
+                    : m
+                )
+              );
+            }
           }
         }
       )
@@ -188,7 +224,7 @@ export const App: React.FC = () => {
             .order('created_at', { ascending: false })
             .limit(1)
             .maybeSingle()
-            .then(({ data }) => setActiveQuizSession(data || null));
+            .then(({ data }) => setActiveQuizSession(sanitizeActiveQuizSession(data || null)));
         }
       )
       .subscribe();
@@ -245,7 +281,7 @@ export const App: React.FC = () => {
         .maybeSingle()
         .then(
           ({ data }) => {
-            setActiveQuizSession(data || null);
+            setActiveQuizSession(sanitizeActiveQuizSession(data || null));
           },
           () => {}
         );
@@ -284,7 +320,7 @@ export const App: React.FC = () => {
         .order('meeting_date', { ascending: false });
 
       if (meetingErr) throw meetingErr;
-      setMeetings(meetingData || []);
+      let rawMeetings = meetingData || [];
 
       // 3. Fetch attendances
       const { data: attendanceData, error: attErr } = await supabase
@@ -306,6 +342,8 @@ export const App: React.FC = () => {
 
       // 5. Fetch app_settings
       const { data: settingsData } = await supabase.from('app_settings').select('*');
+      let holidayConfig: any = null;
+
       if (settingsData) {
         settingsData.forEach((s) => {
           if (s.key === 'registration_open') {
@@ -314,6 +352,8 @@ export const App: React.FC = () => {
             setMentorPin(typeof s.value === 'string' ? s.value : String(s.value));
           } else if (s.key === 'mentor_token') {
             setMentorToken(typeof s.value === 'string' ? s.value : String(s.value));
+          } else if (s.key === 'holiday_config') {
+            holidayConfig = s.value;
           } else if (s.key === 'manual_bypass') {
             const bypassVal = Boolean(s.value);
             setIsManualBypass(bypassVal);
@@ -344,15 +384,20 @@ export const App: React.FC = () => {
         });
       }
 
-      // 6. Fetch talent_stars table if available
-      try {
-        const { data: starData, error: starErr } = await supabase.from('talent_stars').select('*');
-        if (!starErr && starData) {
-          setTalentStars(starData);
-        }
-      } catch {
-        // Handled via app_settings fallback
+      // Merge holiday_config into rawMeetings if present
+      if (holidayConfig && holidayConfig.meeting_date) {
+        rawMeetings = rawMeetings.map((m) => {
+          if (m.meeting_date === holidayConfig.meeting_date) {
+            return {
+              ...m,
+              is_holiday: Boolean(holidayConfig.is_holiday),
+              holiday_reason: holidayConfig.reason || m.holiday_reason,
+            };
+          }
+          return m;
+        });
       }
+      setMeetings(rawMeetings);
 
       // 7. Fetch active quiz session if available
       try {
@@ -364,7 +409,7 @@ export const App: React.FC = () => {
           .limit(1)
           .maybeSingle();
 
-        setActiveQuizSession(qSession || null);
+        setActiveQuizSession(sanitizeActiveQuizSession(qSession || null));
       } catch {
         // Fallback null
       }
@@ -467,12 +512,6 @@ export const App: React.FC = () => {
     setTalentStars(updated);
 
     try {
-      await supabase.from('talent_stars').insert(star);
-    } catch {
-      // Handled via fallback below
-    }
-
-    try {
       await supabase.from('app_settings').upsert({
         key: 'talent_stars',
         value: updated,
@@ -486,12 +525,6 @@ export const App: React.FC = () => {
   const handleRemoveTalentStar = async (starId: string) => {
     const updated = talentStars.filter((s) => s.id !== starId);
     setTalentStars(updated);
-
-    try {
-      await supabase.from('talent_stars').delete().eq('id', starId);
-    } catch {
-      // Handled via fallback below
-    }
 
     try {
       await supabase.from('app_settings').upsert({

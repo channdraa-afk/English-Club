@@ -43,6 +43,10 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
     return members.filter((m) => m.generation === 21 && m.status === 'active');
   }, [members]);
 
+  const a21StudentIds = useMemo(() => {
+    return new Set(a21Students.map((m) => m.id));
+  }, [a21Students]);
+
   // Current meeting attendances
   const currentAttendances = useMemo(() => {
     if (!activeMeeting) return [];
@@ -50,8 +54,12 @@ export const HelperAttendanceA21: React.FC<HelperAttendanceA21Props> = ({
   }, [optimisticAttendances, activeMeeting]);
 
   const attendedSet = useMemo(() => {
-    return new Set(currentAttendances.map((a) => a.member_id));
-  }, [currentAttendances]);
+    return new Set(
+      currentAttendances
+        .filter((a) => a21StudentIds.has(a.member_id))
+        .map((a) => a.member_id)
+    );
+  }, [currentAttendances, a21StudentIds]);
 
   // Distinct classes
   const classList = useMemo(() => {

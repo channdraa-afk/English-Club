@@ -51,15 +51,23 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
     return members.filter((m) => m.generation === 20 && m.status === 'active');
   }, [members]);
 
-  // Attendances for current meeting
+  const a20MemberIds = useMemo(() => {
+    return new Set(a20Mentors.map((m) => m.id));
+  }, [a20Mentors]);
+
+  // Attendances for current meeting (strictly filtered to Angkatan 20 mentors)
   const currentMeetingAttendances = useMemo(() => {
     if (!activeMeeting) return [];
     return attendances.filter((a) => a.meeting_id === activeMeeting.id);
   }, [attendances, activeMeeting]);
 
   const attendedMentorSet = useMemo(() => {
-    return new Set(currentMeetingAttendances.map((a) => a.member_id));
-  }, [currentMeetingAttendances]);
+    return new Set(
+      currentMeetingAttendances
+        .filter((a) => a20MemberIds.has(a.member_id))
+        .map((a) => a.member_id)
+    );
+  }, [currentMeetingAttendances, a20MemberIds]);
 
   // Live ticker to re-evaluate scheduleStatus every 10 seconds (e.g. at 15:40 and 18:00 WIB arrival)
   const [clockTick, setClockTick] = useState(0);
