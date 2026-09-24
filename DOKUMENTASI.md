@@ -587,6 +587,10 @@
     2. *Pemisahan Aksi Simpan*: Untuk sesi arsip, tombol utama beralih menjadi `[ 💾 Simpan Catatan Arsip Saja (Tetap Tutup) ]` yang hanya memperbarui metadata tanpa mengubah status `is_active: false` dan tidak menimpa token mentor publik.
     3. *Modal Konfirmasi Aktivasi*: Aktivasi sesi arsip ke publik dipisahkan ke tombol khusus `[ ⚡ Jadikan Sesi Aktif di Portal Siswa ]` dengan modal konfirmasi dua tahap (*Are you sure?*) sebelum menonaktifkan sesi lain.
 
+- [x] Panduan Fasilitator Icebreaker First Gathering (`docs/PANDUAN_ICEBREAKER_FIRST_GATHERING.md`):
+  - **Problem**: Dokumentasi panduan teknis permainan percakapan interaktif (*Speed Mingling*, *Two Truths and One Wish*, *Sentence Chain*) untuk persiapan eskul perdana 23 September belum terarsip di repositori.
+  - **Solution / State**: Disusun modul panduan resmi berbobot tinggi untuk fasilitator A20 tertanggal 22 September 2026 yang merinci alur rundown 90 menit dan 5 prinsip emas mentor agar adik kelas bebas dari rasa cemas berbicara bahasa Inggris.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
