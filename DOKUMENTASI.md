@@ -576,6 +576,10 @@
     4. Auto-Retire Zombie Quiz Session (App.tsx): Menambahkan helper sanitizeActiveQuizSession yang secara otomatis menutup sesi kuis yang berusia lebih dari 12 jam di background Supabase. Sesi kuis 23 September langsung ditutup secara resmi.
     5. Eliminasi Query Phantom (App.tsx & sandbox.ts): Menghapus seluruh query langsung ke tabel phantom talent_stars dan mengalihkannya 100% ke app_settings.talent_stars dengan nol HTTP 404 error.
 
+- [x] Anggota Susulan & Presensi Retroaktif A21 (Nabila Rizki Priyanto - X AKL 3):
+  - **Problem**: Siswi bernama Nabila Rizki Priyanto (X AKL 3) belum tercantum di daftar anggota resmi Angkatan 21, sehingga tidak dapat mengisi presensi mandiri pada pertemuan perdana Rabu, 23 September 2026.
+  - **Solution / State**: Ditambahkan record baru ke tabel members (ID: ffa41033-3db5-420d-92a6-d90bb44d058b, generation: 21, role: member, status: active) dan dibuatkan entri presensi hadir retroaktif di tabel attendances (ID: 7f15d1ac-ebdd-4c03-9f9c-85098f8af9ce). Anggota X AKL 3 kini genap 11 orang dan total presensi pertemuan perdana terdata 86 siswa/pengurus (56 A21 + 30 A20).
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
