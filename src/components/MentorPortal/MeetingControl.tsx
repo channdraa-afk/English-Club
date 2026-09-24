@@ -88,6 +88,12 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   const [newPin, setNewPin] = useState('');
   const [pinSuccess, setPinSuccess] = useState(false);
 
+  // Archive Safeguard & Confirmation States
+  const [showActivateConfirmModal, setShowActivateConfirmModal] = useState(false);
+  const isSelectedActive = Boolean(activeMeeting && selectedMeetingId === activeMeeting.id);
+  const isNewSession = selectedMeetingId === 'new';
+  const isArchiveSession = !isNewSession && !isSelectedActive;
+
   const sampleStudentTokens = ['EAGLE21', 'SPEAK21', 'SMART21', 'VOCA21', 'BRAVO21', 'SUPER21'];
   const sampleMentorTokens = ['LEAD20', 'CREW20', 'MENTOR20', 'COMMAND20', 'SMEGA20'];
 
@@ -248,20 +254,32 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     }
   };
 
-  const handleSaveMeeting = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveMeeting = async (e?: React.FormEvent, forceActivate?: boolean) => {
+    if (e) e.preventDefault();
     setIsLoading(true);
     setSuccessMsg(null);
     setErrorMsg(null);
 
     try {
+      const isExisting = Boolean(selectedMeetingId && selectedMeetingId !== 'new');
+      // Tentukan apakah sesi ini akan menjadi sesi aktif atau tetap arsip
+      const willBeActive = isExisting ? (forceActivate ?? isSelectedActive) : true;
+
+      // Jika sesi ini dijadikan aktif, nonaktifkan sesi aktif lainnya terlebih dahulu
+      if (willBeActive) {
+        await supabase
+          .from('meetings')
+          .update({ is_active: false })
+          .neq('id', isExisting ? selectedMeetingId : 'new');
+      }
+
       const basePayload = {
         meeting_date: meetingDate || targetWed.dateStr,
         title: title.trim(),
         token: token.trim().toUpperCase(),
         word_of_the_day: word.trim(),
         word_meaning: meaning.trim(),
-        is_active: true,
+        is_active: willBeActive,
       };
 
       const isSchemaError = (err: any) => {
@@ -274,8 +292,6 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           msg.includes('does not exist')
         );
       };
-
-      const isExisting = Boolean(selectedMeetingId && selectedMeetingId !== 'new');
 
       if (isExisting) {
         // Update existing meeting (graceful fallback if holiday columns don't exist yet)
@@ -327,29 +343,35 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         }
       }
 
-      // Sync holiday configuration to app_settings as safety backup
-      try {
-        await supabase.from('app_settings').upsert({
-          key: 'holiday_config',
-          value: {
-            meeting_date: basePayload.meeting_date,
-            is_holiday: isHoliday,
-            reason: isHoliday ? holidayReason.trim() : null,
-          },
-        });
-      } catch {
-        // Ignored
+      // Sync holiday configuration & mentor token (hanya jika sesi ini aktif)
+      if (willBeActive) {
+        try {
+          await supabase.from('app_settings').upsert({
+            key: 'holiday_config',
+            value: {
+              meeting_date: basePayload.meeting_date,
+              is_holiday: isHoliday,
+              reason: isHoliday ? holidayReason.trim() : null,
+            },
+          });
+        } catch {
+          // Ignored
+        }
+
+        // Save mentor token to app_settings
+        const cleanMentorTok = mentorTokenInput.trim().toUpperCase();
+        await supabase
+          .from('app_settings')
+          .upsert({ key: 'mentor_token', value: cleanMentorTok });
+        onMentorTokenUpdated(cleanMentorTok);
       }
 
-      // Save mentor token to app_settings
-      const cleanMentorTok = mentorTokenInput.trim().toUpperCase();
-      await supabase
-        .from('app_settings')
-        .upsert({ key: 'mentor_token', value: cleanMentorTok });
-      onMentorTokenUpdated(cleanMentorTok);
-
       sound.playSuccess();
-      setSuccessMsg('Sesi pertemuan & kedua token berhasil disimpan!');
+      if (willBeActive) {
+        setSuccessMsg(`Sesi "${title}" berhasil disimpan dan dijadikan Sesi Aktif!`);
+      } else {
+        setSuccessMsg(`Catatan arsip "${title}" berhasil diperbarui (tetap tersimpan sebagai arsip).`);
+      }
       onMeetingUpdated();
       setTimeout(() => setSuccessMsg(null), 3500);
     } catch (err: any) {
@@ -359,6 +381,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
       setTimeout(() => setErrorMsg(null), 5000);
     } finally {
       setIsLoading(false);
+      setShowActivateConfirmModal(false);
     }
   };
 
@@ -545,12 +568,34 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
       <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-200">
           <div>
-            <h3 className="font-black text-slate-900 text-lg flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              <span>Atur Sesi Pertemuan & Token</span>
-            </h3>
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <Sparkles className="w-5 h-5 text-amber-500 shrink-0" />
+              <h3 className="font-black text-slate-900 text-lg">
+                Atur Sesi Pertemuan & Token
+              </h3>
+              {isSelectedActive && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  Sesi Aktif Saat Ini
+                </span>
+              )}
+              {isArchiveSession && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-slate-100 text-slate-700 border border-slate-300">
+                  📁 Arsip Pertemuan Lalu (Tutup)
+                </span>
+              )}
+              {isNewSession && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-indigo-100 text-indigo-800 border border-indigo-300">
+                  ✨ Mode Sesi Baru
+                </span>
+              )}
+            </div>
             <p className="text-xs font-bold text-slate-500 mt-0.5">
-              Kelola tanggal sesi mingguan, token presensi, dan status libur.
+              {isSelectedActive
+                ? 'Sesi ini sedang aktif digunakan oleh adik kelas di portal publik presensi.'
+                : isArchiveSession
+                ? 'Membuka arsip sesi lampau. Menyimpan di sini aman dan tidak akan mengaktifkan sesi ke publik.'
+                : 'Menyiapkan pertemuan baru untuk pekan depan.'}
             </p>
           </div>
 
@@ -562,13 +607,18 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                 <select
                   value={selectedMeetingId}
                   onChange={(e) => handleSelectMeeting(e.target.value)}
-                  className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer"
+                  className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer max-w-[220px] truncate"
                 >
-                  {meetings.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.meeting_date ? formatMeetingDateIndo(m.meeting_date) : m.title} {m.id === activeMeeting?.id ? '★ (Aktif)' : ''}
-                    </option>
-                  ))}
+                  {meetings.map((m) => {
+                    const isMActive = m.id === activeMeeting?.id;
+                    const dateFormatted = m.meeting_date ? formatMeetingDateIndo(m.meeting_date) : m.title;
+                    return (
+                      <option key={m.id} value={m.id}>
+                        {isMActive ? '🟢 [AKTIF] ' : '📁 [ARSIP] '}
+                        {dateFormatted}
+                      </option>
+                    );
+                  })}
                   <option value="new">➕ Buat Sesi Baru (Pekan Depan)</option>
                 </select>
               </div>
@@ -758,10 +808,10 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
             </div>
           )}
 
-          <div className="pt-2">
+          <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <TactileButton
               type="submit"
-              variant="brand"
+              variant={isArchiveSession ? 'slate' : 'brand'}
               size="md"
               disabled={isLoading}
               className="w-full sm:w-auto"
@@ -771,6 +821,16 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                   <RefreshCw className="w-4 h-4 animate-spin" />
                   <span>Menyimpan...</span>
                 </>
+              ) : isArchiveSession ? (
+                <>
+                  <Check className="w-4 h-4 text-slate-700" />
+                  <span>Simpan Catatan Arsip Saja (Tetap Tutup)</span>
+                </>
+              ) : isNewSession ? (
+                <>
+                  <Sparkles className="w-4 h-4" />
+                  <span>Terbitkan & Jadikan Sesi Aktif</span>
+                </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
@@ -778,6 +838,22 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                 </>
               )}
             </TactileButton>
+
+            {/* Tombol Khusus untuk Arsip: Jadikan Sesi Aktif dengan Konfirmasi */}
+            {isArchiveSession && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  setShowActivateConfirmModal(true);
+                }}
+                disabled={isLoading}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 border-2 border-amber-300 shadow-[0_2px_0_0_#f59e0b] active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                <Zap className="w-4 h-4 text-amber-600" />
+                <span>⚡ Jadikan Sesi Aktif di Portal Siswa</span>
+              </button>
+            )}
           </div>
         </form>
       </div>
@@ -944,6 +1020,67 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Ya, Kosongkan Sesi Ini</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Jadikan Sesi Aktif */}
+      {showActivateConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-slate-300 shadow-2xl max-w-md w-full p-6 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">⚡</span>
+                <h3 className="font-black text-slate-900 text-base">
+                  Jadikan Sesi Ini Aktif?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowActivateConfirmModal(false)}
+                className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 text-xs text-amber-900 space-y-2">
+              <p className="font-bold">
+                Kamu akan mengaktifkan sesi <span className="font-black">"{title}"</span> ({formatMeetingDateIndo(meetingDate)}) sebagai Sesi Aktif di Portal Siswa.
+              </p>
+              <p className="text-[11px] text-amber-800/80">
+                Sesi yang sedang berjalan saat ini akan dinonaktifkan (menjadi arsip). Adik kelas yang membuka beranda atau melakukan presensi akan diarahkan ke sesi ini dengan token <strong>{token}</strong>.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowActivateConfirmModal(false)}
+                disabled={isLoading}
+                className="px-4 py-2 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSaveMeeting(undefined, true)}
+                disabled={isLoading}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-amber-500 hover:bg-amber-600 text-white shadow-[0_3px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                {isLoading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Mengaktifkan...</span>
+                  </>
+                ) : (
+                  <>
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>Ya, Jadikan Sesi Aktif</span>
                   </>
                 )}
               </button>

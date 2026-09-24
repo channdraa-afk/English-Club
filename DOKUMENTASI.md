@@ -580,6 +580,13 @@
   - **Problem**: Siswi bernama Nabila Rizki Priyanto (X AKL 3) belum tercantum di daftar anggota resmi Angkatan 21, sehingga tidak dapat mengisi presensi mandiri pada pertemuan perdana Rabu, 23 September 2026.
   - **Solution / State**: Ditambahkan record baru ke tabel members (ID: ffa41033-3db5-420d-92a6-d90bb44d058b, generation: 21, role: member, status: active) dan dibuatkan entri presensi hadir retroaktif di tabel attendances (ID: 7f15d1ac-ebdd-4c03-9f9c-85098f8af9ce). Anggota X AKL 3 kini genap 11 orang dan total presensi pertemuan perdana terdata 86 siswa/pengurus (56 A21 + 30 A20).
 
+- [x] Proteksi Anti-Salah-Pencet Sesi Arsip & Pemisahan Tombol Aktivasi (`MeetingControl.tsx`):
+  - **Problem**: Saat pengurus membuka sesi lampau di menu Atur Sesi (misal untuk mengecek materi/idiom lama), menekan tombol "Simpan Perubahan" otomatis menyetel sesi lampau tersebut menjadi `is_active: true`, berisiko menimpa sesi berjalan saat ini di portal publik adik kelas.
+  - **Solution / State**:
+    1. *Badge Status Visual*: Header form menampilkan badge tegas: `🟢 [Sesi Aktif Saat Ini]`, `📁 [Arsip Pertemuan Lalu (Tutup)]`, atau `✨ [Mode Sesi Baru]`. Opsi dropdown juga diprefiks secara eksplisit (`🟢 [AKTIF]` vs `📁 [ARSIP]`).
+    2. *Pemisahan Aksi Simpan*: Untuk sesi arsip, tombol utama beralih menjadi `[ 💾 Simpan Catatan Arsip Saja (Tetap Tutup) ]` yang hanya memperbarui metadata tanpa mengubah status `is_active: false` dan tidak menimpa token mentor publik.
+    3. *Modal Konfirmasi Aktivasi*: Aktivasi sesi arsip ke publik dipisahkan ke tombol khusus `[ ⚡ Jadikan Sesi Aktif di Portal Siswa ]` dengan modal konfirmasi dua tahap (*Are you sure?*) sebelum menonaktifkan sesi lain.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
