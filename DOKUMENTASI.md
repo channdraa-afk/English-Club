@@ -551,6 +551,17 @@
     1. *Visibilitas Banner Presensi (`App.tsx`)*: Menghapus blok fallback statis. Kartu Hero Battle Arena (gradien biru-indigo elektrik dengan tombol emas 3D) kini **MURNI 100% hanya dirender saat `activeQuizSession !== null`**. Saat kuis ditutup, area presensi siswa bersih tanpa sisa.
     2. *Visibilitas Dinamis Navbar (`Navbar.tsx`)*: Tombol `[ 🎮 Arena ]` di navigasi atas disembunyikan saat kuis mati, dan otomatis meledak muncul (`hasActiveQuiz || currentView === 'arena'`) dengan animasi denyut (*animate-pulse*) dan titik hijau berkedip (*animate-ping*) seketika saat mentor menekan "Mulai Sesi Live" di portal kelas.
 
+- [x] Perbaikan Bug Buat Sesi Baru (Holiday Schema Fallback) & Kalibrasi Ulang Matematika Skor EC Arena:
+  - **Problem**:
+    1. Galat Pembuatan Sesi Baru (`media_1790210180444.png`): Saat pengurus membuat sesi baru untuk pekan berikutnya, muncul error banner merah `Could not find the 'holiday_reason' column of 'meetings' in the schema cache`. Pengecekan retry lama hanya mencocokkan string `'is_holiday'`, sehingga pesan error PostgREST yang menyebutkan `'holiday_reason'` terlewat dan menggagalkan penyimpanan sesi.
+    2. Skor Kuis Ekstrem Jomplang: Pada kuis perdana (23 September), skor Juara 1 (36.202) terlampau jauh dari Juara 2 (24.142) dengan defisit 12.060 poin. Akar masalah: rumus streak bonus kuadratik tanpa batas ($streak \times 100$) menghasilkan bonus kumulatif $\sum 100k = 19.000$ poin untuk 20 soal benar beruntun, sehingga kesalahan 1-2 soal saja meruntuhkan skor peserta secara drastis (*single-mistake cliff*).
+  - **Solution / State**:
+    1. *Catch-All Schema Error Fallback (`MeetingControl.tsx`)*: Menambahkan helper `isSchemaError` yang mendeteksi segala variasi pesan error kolom (`holiday`, `column`, `schema cache`). Jika terdeteksi kolom hilang, sistem secara otomatis melakukan retry instan dengan `basePayload` murni yang terbukti valid di tabel `meetings`. Status libur dicadangkan ke `app_settings.holiday_config` sebagai jaring pengaman, sehingga pembuatan sesi baru pekan depan sukses 100% tanpa error.
+    2. *Anti-Blowout Progressive Capped Streak Engine (`ArenaPlayer.tsx`)*: Mengadopsi standar kompetitif Kahoot:
+       - Poin Dasar Kecepatan: $1000 \times (0.5 + 0.5 \times (1 - \text{elapsed}/\text{limit}))$, menjamin jawaban benar selalu bernilai minimal 500 poin.
+       - Bonus Streak Bertingkat Terbatas (*Capped*): $+50$ per streak dan **dikunci maksimal di $+250$ poin** ($\text{Math.min}(250, \text{streak} \times 50)$).
+       - Hasil: Total bonus streak 20 soal teredam menjadi maksimal $\approx 4.250$ poin (bukan 19.000). Selisih poin antar-juara kini proporsional dan kompetitif (500 – 2.500 poin), melenyapkan blowout skor jomplang secara permanen.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

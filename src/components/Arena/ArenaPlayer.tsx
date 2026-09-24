@@ -342,10 +342,15 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
     if (isCorrect) {
       sound.playCorrect();
       setAnswerState('correct');
-      // Kahoot Formula: 1000 * (1 - (elapsed / (limit * 2))) + streak bonus
-      const speedFraction = Math.min(1, Math.max(0, elapsedSec / (timeLimit * 2)));
-      const basePoints = Math.round(1000 * (1 - speedFraction));
-      const streakBonus = streakRef.current * 100;
+      // Balanced Competitive Math (Anti-Blowout / Fair Scoring Engine):
+      // 1. Base Points: 500 to 1000 points based on speed (linear decay)
+      const timeFraction = Math.min(1, Math.max(0, elapsedSec / timeLimit));
+      const basePoints = Math.round(1000 * (0.5 + 0.5 * (1 - timeFraction)));
+
+      // 2. Progressive Capped Streak Bonus (Max +250 points):
+      // Rewards accuracy consistency without creating an insurmountable blowout
+      // Streak 0: 0, Streak 1: 50, Streak 2: 100, Streak 3: 150, Streak 4: 200, Streak 5+: 250
+      const streakBonus = Math.min(250, streakRef.current * 50);
       const totalForThisQ = basePoints + streakBonus;
 
       newScore = scoreRef.current + totalForThisQ;

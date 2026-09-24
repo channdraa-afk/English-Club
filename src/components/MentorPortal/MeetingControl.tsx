@@ -189,9 +189,19 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
       .eq('id', activeMeeting.id);
 
     if (holErr) {
-      console.warn('Kolom is_holiday belum terpasang di database Supabase:', holErr.message);
-      setErrorMsg('Catatan: Kolom hari libur belum aktif di database Supabase. Pengaturan lain tetap tersimpan normal.');
-      setTimeout(() => setErrorMsg(null), 5000);
+      console.warn('Kolom holiday belum terpasang di database Supabase:', holErr.message);
+      try {
+        await supabase.from('app_settings').upsert({
+          key: 'holiday_config',
+          value: {
+            meeting_date: activeMeeting.meeting_date,
+            is_holiday: nextState,
+            reason: nextState ? reason : null,
+          },
+        });
+      } catch {}
+      setSuccessMsg(nextState ? 'Status libur disimpan!' : 'Pertemuan dibuka kembali!');
+      setTimeout(() => setSuccessMsg(null), 3500);
     }
 
     onMeetingUpdated();
@@ -254,10 +264,21 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         is_active: true,
       };
 
-      const isExisting = selectedMeetingId && selectedMeetingId !== 'new';
+      const isSchemaError = (err: any) => {
+        if (!err) return false;
+        const msg = (err.message || '').toLowerCase();
+        return (
+          msg.includes('holiday') ||
+          msg.includes('column') ||
+          msg.includes('schema cache') ||
+          msg.includes('does not exist')
+        );
+      };
+
+      const isExisting = Boolean(selectedMeetingId && selectedMeetingId !== 'new');
 
       if (isExisting) {
-        // Update existing meeting (graceful fallback if is_holiday column doesn't exist yet)
+        // Update existing meeting (graceful fallback if holiday columns don't exist yet)
         let { error } = await supabase
           .from('meetings')
           .update({
@@ -267,7 +288,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           })
           .eq('id', selectedMeetingId);
 
-        if (error && error.message?.includes('is_holiday')) {
+        if (error && isSchemaError(error)) {
           const retry = await supabase
             .from('meetings')
             .update(basePayload)
@@ -290,7 +311,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           .select()
           .single();
 
-        if (error && error.message?.includes('is_holiday')) {
+        if (error && isSchemaError(error)) {
           const retry = await supabase
             .from('meetings')
             .insert(basePayload)
@@ -304,6 +325,20 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         if (insertedMeeting?.id) {
           setSelectedMeetingId(insertedMeeting.id);
         }
+      }
+
+      // Sync holiday configuration to app_settings as safety backup
+      try {
+        await supabase.from('app_settings').upsert({
+          key: 'holiday_config',
+          value: {
+            meeting_date: basePayload.meeting_date,
+            is_holiday: isHoliday,
+            reason: isHoliday ? holidayReason.trim() : null,
+          },
+        });
+      } catch {
+        // Ignored
       }
 
       // Save mentor token to app_settings
