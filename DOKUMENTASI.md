@@ -591,6 +591,10 @@
   - **Problem**: Dokumentasi panduan teknis permainan percakapan interaktif (*Speed Mingling*, *Two Truths and One Wish*, *Sentence Chain*) untuk persiapan eskul perdana 23 September belum terarsip di repositori.
   - **Solution / State**: Disusun modul panduan resmi berbobot tinggi untuk fasilitator A20 tertanggal 22 September 2026 yang merinci alur rundown 90 menit dan 5 prinsip emas mentor agar adik kelas bebas dari rasa cemas berbicara bahasa Inggris.
 
+- [x] Evaluasi Pertemuan Perdana & Modul Ajar Pekan #2 (`docs/EVALUASI_FIRST_GATHERING_23_SEP.md` & `docs/MODUL_PEKAN_2_OPINION_AND_THOUGHTS.md`):
+  - **Problem**: Rekapitulasi evaluasi pelaksanaan eskul perdana (23 Sep) serta bahan ajar pegangan mentor untuk pertemuan ke-2 (30 Sep) perlu diarsipkan secara terstruktur di repositori.
+  - **Solution / State**: Ditambahkan dokumen laporan evaluasi resmi (merangkum 86 peserta hadir & resolusi teknis kuis/presensi) serta modul ajar *Expressing Opinions, Agreement & Polite Disagreement* lengkap dengan skenario *Pair Roleplay* lintas jurusan untuk pegangan mengajar pengurus A20.
+
 ### 3.2. Roadmap Selanjutnya
 - [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
