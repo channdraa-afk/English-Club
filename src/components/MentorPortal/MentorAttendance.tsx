@@ -144,9 +144,10 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
         const { error: insErr } = await supabase.from('attendances').insert({
           meeting_id: targetMeeting.id,
           member_id: mentor.id,
-          status: 'present',
-          notes: 'Hadir (Bantu Absen Ketua)',
           feedback_rating: 'super_fun',
+          critique: null,
+          next_agenda_suggestion: null,
+          is_anonymous: false,
         });
         if (insErr) throw insErr;
       }
@@ -267,8 +268,6 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
       const { error } = await supabase.from('attendances').insert({
         meeting_id: activeMeeting.id,
         member_id: selectedMentor.id,
-        status: 'present',
-        notes: isSuperAdmin && !tokenInput.trim() ? 'Hadir (Bypass Ketua)' : 'Hadir',
         feedback_rating: mood,
         critique: issues.trim() || null,
         next_agenda_suggestion: suggestions.trim() || null,

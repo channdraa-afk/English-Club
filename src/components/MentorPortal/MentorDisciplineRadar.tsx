@@ -101,9 +101,10 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         const { error: insErr } = await supabase.from('attendances').insert({
           meeting_id: meeting.id,
           member_id: mentor.id,
-          status: 'present',
-          notes: 'Hadir (Bantu Absen Ketua)',
           feedback_rating: 'super_fun',
+          critique: null,
+          next_agenda_suggestion: null,
+          is_anonymous: false,
         });
         if (insErr) throw insErr;
       }
