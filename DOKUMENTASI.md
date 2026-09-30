@@ -595,10 +595,17 @@
   - **Problem**: Rekapitulasi evaluasi pelaksanaan eskul perdana (23 Sep) serta bahan ajar pegangan mentor untuk pertemuan ke-2 (30 Sep) perlu diarsipkan secara terstruktur di repositori.
   - **Solution / State**: Ditambahkan dokumen laporan evaluasi resmi (merangkum 86 peserta hadir & resolusi teknis kuis/presensi) serta modul ajar *Expressing Opinions, Agreement & Polite Disagreement* lengkap dengan skenario *Pair Roleplay* lintas jurusan untuk pegangan mengajar pengurus A20.
 
+- [x] Fitur Super Admin Bantu Absen Pengurus A20 Bebas Jam & Token (`MentorDisciplineRadar.tsx` & `MentorAttendance.tsx`):
+  - **Problem**: Adik kelas (A21) sudah memiliki fitur Bantu Absen dan 1-Click Toggle di Rekap Rapor, namun Pengurus A20 terkunci rapat setelah jam 18:00 WIB dan tidak memiliki tombol bantuan presensi jika ada pengurus (atau Ketua sendiri) yang kelupaan mengisi presensi mandiri karena fokus mengajar.
+  - **Solution / State**:
+    1. *1-Click Toggle Pil Tanggal di Radar Pengurus A20 (`MentorDisciplineRadar.tsx`)*: Khusus saat `isSuperAdmin === true`, pil tanggal pertemuan pada setiap kartu pengurus menjadi tombol taktil interaktif (*0ms Optimistic UI* + *Atomic Delete-Then-Insert*) untuk mencentang atau membatalkan kehadiran kapan saja.
+    2. *Bypass Jam 18:00 WIB & Panel Bantu Absen Cepat di Presensi A20 (`MentorAttendance.tsx`)*: Membuka kunci jam 18:00 WIB dan melewati validasi token khusus untuk Super Admin, dilengkapi panel pencarian cepat dan pemilih sesi pertemuan (`+ Hadirkan` / `✓ Hadir`) untuk membantu pengurus A20 yang lupa absen.
+
 ### 3.2. Roadmap Selanjutnya
-- [ ] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
-- [ ] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
+- [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
+- [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
+
 
 

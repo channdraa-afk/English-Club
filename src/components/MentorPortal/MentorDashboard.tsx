@@ -580,6 +580,8 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           members={members}
           meetings={officialMeetings}
           attendances={attendances}
+          isSuperAdmin={isSuperAdmin}
+          onAttendanceChanged={onAttendanceChanged}
         />
       )}
 
@@ -588,9 +590,11 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         <MentorAttendance
           members={members}
           activeMeeting={activeMeeting}
+          meetings={officialMeetings}
           attendances={attendances}
           mentorToken={mentorToken}
           isManualBypass={isManualBypass}
+          isSuperAdmin={isSuperAdmin}
           onAttendanceChanged={onAttendanceChanged}
         />
       )}

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { 
   ShieldAlert, 
   CheckCircle2, 
@@ -14,22 +14,28 @@ import {
   MessageSquare,
   Copy,
   Check,
-  Layers
+  Layers,
+  Zap
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
+import { supabase } from '../../lib/supabase';
 
 interface MentorDisciplineRadarProps {
   members: Member[];
   meetings: Meeting[];
   attendances: Attendance[];
+  isSuperAdmin?: boolean;
+  onAttendanceChanged?: () => void;
 }
 
 export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   members,
   meetings,
   attendances,
+  isSuperAdmin = false,
+  onAttendanceChanged,
 }) => {
   const currentMonthStr = new Date().toISOString().slice(0, 7);
   const [radarMode, setRadarMode] = useState<'monthly' | 'cumulative'>('monthly');
@@ -42,10 +48,75 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   const [waNotice, setWaNotice] = useState<string | null>(null);
   const [selectedMeetingIdForWA, setSelectedMeetingIdForWA] = useState<string>('');
 
+  // 0ms Optimistic UI state for Super Admin A20 attendance toggle
+  const [optimisticAttendance, setOptimisticAttendance] = useState<Record<string, boolean>>({});
+  const [assistToast, setAssistToast] = useState<string | null>(null);
+
   // Filter only Angkatan 20 active mentors (59 members)
   const a20Mentors = useMemo(() => {
     return members.filter((m) => m.generation === 20 && m.status === 'active');
   }, [members]);
+
+  // Helper to check if a mentor is present in a meeting (respecting 0ms optimistic state)
+  const isMentorPresentInMeeting = useCallback(
+    (meetingId: string, memberId: string) => {
+      const key = `${meetingId}_${memberId}`;
+      if (key in optimisticAttendance) {
+        return optimisticAttendance[key];
+      }
+      return attendances.some((a) => a.meeting_id === meetingId && a.member_id === memberId);
+    },
+    [attendances, optimisticAttendance]
+  );
+
+  // Super Admin 1-Click Toggle Attendance for A20 Mentor
+  const handleToggleMentorAttendance = async (mentor: Member, meeting: Meeting) => {
+    if (!isSuperAdmin) return;
+    const key = `${meeting.id}_${mentor.id}`;
+    const currentlyAttended = isMentorPresentInMeeting(meeting.id, mentor.id);
+    const nextState = !currentlyAttended;
+
+    // 0ms Optimistic Update
+    setOptimisticAttendance((prev) => ({ ...prev, [key]: nextState }));
+    if (nextState) {
+      sound.playSuccess();
+      setAssistToast(`✓ ${mentor.name} ditandai HADIR pada sesi ${meeting.meeting_date.slice(8)} (${meeting.title})`);
+    } else {
+      sound.playPop();
+      setAssistToast(`✗ Kehadiran ${mentor.name} pada sesi ${meeting.meeting_date.slice(8)} dibatalkan`);
+    }
+    setTimeout(() => setAssistToast(null), 3500);
+
+    try {
+      // Atomic delete existing attendance record for this meeting & member
+      const { error: delErr } = await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', meeting.id)
+        .eq('member_id', mentor.id);
+
+      if (delErr) throw delErr;
+
+      if (nextState) {
+        const { error: insErr } = await supabase.from('attendances').insert({
+          meeting_id: meeting.id,
+          member_id: mentor.id,
+          status: 'present',
+          notes: 'Hadir (Bantu Absen Ketua)',
+          feedback_rating: 'super_fun',
+        });
+        if (insErr) throw insErr;
+      }
+
+      if (onAttendanceChanged) onAttendanceChanged();
+    } catch (err: any) {
+      console.error('Failed to toggle mentor attendance:', err);
+      sound.playError();
+      // Rollback optimistic state
+      setOptimisticAttendance((prev) => ({ ...prev, [key]: currentlyAttended }));
+      setAssistToast(`⚠️ Gagal menyimpan perubahan: ${err.message || 'Error database'}`);
+    }
+  };
 
   // Available months from meetings
   const availableMonths = useMemo(() => {
@@ -87,11 +158,9 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   // 1. Compute evaluation per mentor for MONTHLY mode
   const monthlyEvaluations = useMemo(() => {
     return a20Mentors.map((mentor) => {
-      const attendedMeetings = effectiveMeetings.filter((meeting) => {
-        return attendances.some(
-          (a) => a.meeting_id === meeting.id && a.member_id === mentor.id
-        );
-      });
+      const attendedMeetings = effectiveMeetings.filter((meeting) =>
+        isMentorPresentInMeeting(meeting.id, mentor.id)
+      );
 
       const count = attendedMeetings.length;
 
@@ -126,7 +195,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         percent: effectiveMeetings.length > 0 ? Math.round((count / effectiveMeetings.length) * 100) : 100,
       };
     });
-  }, [a20Mentors, effectiveMeetings, attendances]);
+  }, [a20Mentors, effectiveMeetings, isMentorPresentInMeeting]);
 
   // 2. Compute evaluation per mentor for CUMULATIVE / TAHUNAN mode
   const cumulativeEvaluations = useMemo(() => {
@@ -135,11 +204,9 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
     const targetMeetings = Math.ceil(totalMeetings * 0.5);
 
     return a20Mentors.map((mentor) => {
-      const attendedMeetings = allHeldMeetings.filter((meeting) => {
-        return attendances.some(
-          (a) => a.meeting_id === meeting.id && a.member_id === mentor.id
-        );
-      });
+      const attendedMeetings = allHeldMeetings.filter((meeting) =>
+        isMentorPresentInMeeting(meeting.id, mentor.id)
+      );
 
       const count = attendedMeetings.length;
       const percent = totalMeetings > 0 ? Math.round((count / totalMeetings) * 100) : 100;
@@ -175,7 +242,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         percent,
       };
     });
-  }, [a20Mentors, allHeldMeetings, attendances]);
+  }, [a20Mentors, allHeldMeetings, isMentorPresentInMeeting]);
 
   // Active evaluations list based on selected mode
   const currentEvaluations = radarMode === 'monthly' ? monthlyEvaluations : cumulativeEvaluations;
@@ -264,9 +331,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
     const absentList: Member[] = [];
 
     a20Mentors.forEach((mentor) => {
-      const hasAttended = attendances.some(
-        (a) => a.meeting_id === meetingId && a.member_id === mentor.id
-      );
+      const hasAttended = isMentorPresentInMeeting(meetingId, mentor.id);
       if (hasAttended) {
         presentList.push(mentor);
       } else {
@@ -284,7 +349,7 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
       presentCount: presentList.length,
       absentCount: absentList.length,
     };
-  }, [activeMeetingForWA, a20Mentors, attendances]);
+  }, [activeMeetingForWA, a20Mentors, isMentorPresentInMeeting]);
 
   // 1-Click Copy Absent List for Selected Session / Date to WhatsApp for Kedis
   const handleCopyAbsentWA = () => {
@@ -866,6 +931,24 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
 
       {/* List of Mentors (Hidden in Print, replaced by Official Table) */}
       <div className="no-print space-y-2.5">
+        {isSuperAdmin && (
+          <div className="p-3.5 rounded-2xl bg-indigo-950 text-indigo-100 border-2 border-indigo-700 shadow-[0_4px_0_0_#312e81] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 text-xs font-bold">
+              <span className="p-1.5 rounded-xl bg-amber-400/20 text-amber-300 border border-amber-400/40 shrink-0">
+                <Zap className="w-4 h-4" />
+              </span>
+              <span>
+                <strong className="text-amber-300">Mode Bantu Absen A20 (Akses Ketua):</strong> Klik langsung tombol tanggal sesi (misal: <span className="px-1.5 py-0.5 rounded bg-slate-800 text-slate-200 font-black">+ Hadir 30</span>) pada kartu pengurus untuk mencentang / membatalkan kehadiran kapan saja.
+              </span>
+            </div>
+            {assistToast && (
+              <span className="px-3 py-1 rounded-xl bg-emerald-500 text-white text-xs font-black shrink-0 animate-fade-in">
+                {assistToast}
+              </span>
+            )}
+          </div>
+        )}
+
         {filteredList.length === 0 ? (
           <div className="text-center py-10 bg-white rounded-3xl border-2 border-dashed border-slate-300 p-6">
             <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
@@ -909,12 +992,35 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
                   {/* Attended meeting dates pills / info */}
                   {radarMode === 'monthly' ? (
                     <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                      <span className="text-[10px] font-bold text-slate-400">Kehadiran:</span>
+                      <span className="text-[10px] font-bold text-slate-400">
+                        {isSuperAdmin ? 'Klik Tanggal (Bantu Absen):' : 'Kehadiran:'}
+                      </span>
                       {effectiveMeetings.length === 0 ? (
                         <span className="text-[10px] text-slate-400 italic">Belum ada sesi di bulan ini</span>
                       ) : (
                         effectiveMeetings.map((m) => {
                           const hasAttended = attendedMeetings.some((am) => am.id === m.id);
+                          if (isSuperAdmin) {
+                            return (
+                              <button
+                                key={m.id}
+                                type="button"
+                                onClick={() => handleToggleMentorAttendance(mentor, m)}
+                                title={
+                                  hasAttended
+                                    ? `Klik untuk batalkan hadir ${mentor.name} di ${m.title} (${m.meeting_date})`
+                                    : `Klik untuk bantu hadirkan ${mentor.name} di ${m.title} (${m.meeting_date})`
+                                }
+                                className={`px-2 py-1 rounded-lg text-[11px] font-black flex items-center gap-1 transition-transform active:translate-y-[1px] cursor-pointer ${
+                                  hasAttended
+                                    ? 'bg-emerald-500 text-white border-2 border-emerald-700 shadow-[0_2px_0_0_#047857] hover:bg-emerald-600'
+                                    : 'bg-white text-slate-700 border-2 border-slate-300 shadow-[0_2px_0_0_#cbd5e1] hover:border-indigo-500 hover:text-indigo-700 hover:bg-indigo-50'
+                                }`}
+                              >
+                                {hasAttended ? `✓ Hadir Tgl ${m.meeting_date.slice(8)}` : `+ Hadir Tgl ${m.meeting_date.slice(8)}`}
+                              </button>
+                            );
+                          }
                           return (
                             <span
                               key={m.id}

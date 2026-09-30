@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { 
   Users, 
   Search, 
@@ -8,7 +8,9 @@ import {
   AlertCircle, 
   RefreshCw, 
   HeartHandshake,
-  Clock
+  Clock,
+  Zap,
+  Calendar
 } from 'lucide-react';
 import { Member, Meeting, Attendance } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -20,18 +22,22 @@ import confetti from 'canvas-confetti';
 interface MentorAttendanceProps {
   members: Member[];
   activeMeeting: Meeting | null;
+  meetings?: Meeting[];
   attendances: Attendance[];
   mentorToken?: string;
   isManualBypass?: boolean;
+  isSuperAdmin?: boolean;
   onAttendanceChanged: () => void;
 }
 
 export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   members,
   activeMeeting,
+  meetings = [],
   attendances,
   mentorToken = 'CREW20',
   isManualBypass = false,
+  isSuperAdmin = false,
   onAttendanceChanged,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,28 +52,113 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successRecorded, setSuccessRecorded] = useState(false);
 
+  // Super Admin Quick-Assist state
+  const [assistMeetingId, setAssistMeetingId] = useState<string>('');
+  const [assistSearch, setAssistSearch] = useState<string>('');
+  const [optimisticAssistMap, setOptimisticAssistMap] = useState<Record<string, boolean>>({});
+  const [assistToast, setAssistToast] = useState<string | null>(null);
+
   // Filter Angkatan 20 mentors (59 members)
   const a20Mentors = useMemo(() => {
     return members.filter((m) => m.generation === 20 && m.status === 'active');
   }, [members]);
 
-  const a20MemberIds = useMemo(() => {
-    return new Set(a20Mentors.map((m) => m.id));
-  }, [a20Mentors]);
+  // All valid non-holiday meetings for Super Admin Assist selector
+  const availableAssistMeetings = useMemo(() => {
+    const list = meetings.filter((m) => !m.is_holiday);
+    if (list.length === 0 && activeMeeting) return [activeMeeting];
+    return [...list].sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
+  }, [meetings, activeMeeting]);
+
+  const selectedAssistMeeting = useMemo(() => {
+    if (assistMeetingId) {
+      const found = availableAssistMeetings.find((m) => m.id === assistMeetingId);
+      if (found) return found;
+    }
+    return activeMeeting || availableAssistMeetings[0] || null;
+  }, [assistMeetingId, availableAssistMeetings, activeMeeting]);
+
+  const isMentorPresentInMeeting = useCallback(
+    (meetingId: string, memberId: string) => {
+      const key = `${meetingId}_${memberId}`;
+      if (key in optimisticAssistMap) {
+        return optimisticAssistMap[key];
+      }
+      return attendances.some((a) => a.meeting_id === meetingId && a.member_id === memberId);
+    },
+    [attendances, optimisticAssistMap]
+  );
 
   // Attendances for current meeting (strictly filtered to Angkatan 20 mentors)
-  const currentMeetingAttendances = useMemo(() => {
-    if (!activeMeeting) return [];
-    return attendances.filter((a) => a.meeting_id === activeMeeting.id);
-  }, [attendances, activeMeeting]);
-
   const attendedMentorSet = useMemo(() => {
+    if (!activeMeeting) return new Set<string>();
     return new Set(
-      currentMeetingAttendances
-        .filter((a) => a20MemberIds.has(a.member_id))
-        .map((a) => a.member_id)
+      a20Mentors
+        .filter((m) => isMentorPresentInMeeting(activeMeeting.id, m.id))
+        .map((m) => m.id)
     );
-  }, [currentMeetingAttendances, a20MemberIds]);
+  }, [activeMeeting, a20Mentors, isMentorPresentInMeeting]);
+
+  // Filtered mentors for Super Admin Quick-Assist list
+  const filteredAssistMentors = useMemo(() => {
+    const q = assistSearch.trim().toLowerCase();
+    return a20Mentors
+      .filter(
+        (m) =>
+          !q ||
+          m.name.toLowerCase().includes(q) ||
+          m.position.toLowerCase().includes(q) ||
+          m.class_name.toLowerCase().includes(q)
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [a20Mentors, assistSearch]);
+
+  // Super Admin 1-Click Assist Handler
+  const handleSuperAdminToggle = async (mentor: Member, targetMeeting: Meeting) => {
+    if (!isSuperAdmin) return;
+    const key = `${targetMeeting.id}_${mentor.id}`;
+    const currentlyAttended = isMentorPresentInMeeting(targetMeeting.id, mentor.id);
+    const nextState = !currentlyAttended;
+
+    // 0ms Optimistic Update
+    setOptimisticAssistMap((prev) => ({ ...prev, [key]: nextState }));
+    if (nextState) {
+      sound.playSuccess();
+      setAssistToast(`✓ ${mentor.name} berhasil dibantu HADIR di sesi ${targetMeeting.title}`);
+    } else {
+      sound.playPop();
+      setAssistToast(`✗ Kehadiran ${mentor.name} di sesi ${targetMeeting.title} dibatalkan`);
+    }
+    setTimeout(() => setAssistToast(null), 3500);
+
+    try {
+      const { error: delErr } = await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', targetMeeting.id)
+        .eq('member_id', mentor.id);
+
+      if (delErr) throw delErr;
+
+      if (nextState) {
+        const { error: insErr } = await supabase.from('attendances').insert({
+          meeting_id: targetMeeting.id,
+          member_id: mentor.id,
+          status: 'present',
+          notes: 'Hadir (Bantu Absen Ketua)',
+          feedback_rating: 'super_fun',
+        });
+        if (insErr) throw insErr;
+      }
+
+      onAttendanceChanged();
+    } catch (err: any) {
+      console.error('Error in Super Admin A20 assist:', err);
+      sound.playError();
+      setOptimisticAssistMap((prev) => ({ ...prev, [key]: currentlyAttended }));
+      setAssistToast(`⚠️ Gagal menyimpan: ${err.message || 'Database error'}`);
+    }
+  };
 
   // Live ticker to re-evaluate scheduleStatus every 10 seconds (e.g. at 15:40 and 18:00 WIB arrival)
   const [clockTick, setClockTick] = useState(0);
@@ -78,10 +169,10 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Schedule status specifically for mentors (active until 18:00 WIB)
+  // Schedule status specifically for mentors (active until 18:00 WIB, or bypassed for Super Admin)
   const scheduleStatus = useMemo(() => {
-    return getScheduleStatus(activeMeeting, Boolean(isManualBypass), 'mentor');
-  }, [activeMeeting, isManualBypass, clockTick]);
+    return getScheduleStatus(activeMeeting, Boolean(isManualBypass || isSuperAdmin), 'mentor');
+  }, [activeMeeting, isManualBypass, isSuperAdmin, clockTick]);
 
   // Autocomplete matching
   const searchResults = useMemo(() => {
@@ -118,7 +209,7 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
     e.preventDefault();
     setErrorMessage(null);
 
-    if (!scheduleStatus.isActive) {
+    if (!scheduleStatus.isActive && !isSuperAdmin) {
       sound.playError();
       setErrorMessage(scheduleStatus.statusText);
       return;
@@ -136,20 +227,23 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
       return;
     }
 
-    const cleanInput = tokenInput.trim().toUpperCase();
-    const cleanExpected = mentorToken.trim().toUpperCase();
+    // Only enforce token check if NOT Super Admin (or if Super Admin typed something wrong)
+    if (!isSuperAdmin) {
+      const cleanInput = tokenInput.trim().toUpperCase();
+      const cleanExpected = mentorToken.trim().toUpperCase();
 
-    // Check if mentor accidentally typed student token
-    if (cleanInput === activeMeeting.token.trim().toUpperCase() && cleanInput !== cleanExpected) {
-      sound.playError();
-      setErrorMessage('Ini token adik kelas! Masukkan Token Khusus Pengurus A20 yaa.');
-      return;
-    }
+      // Check if mentor accidentally typed student token
+      if (cleanInput === activeMeeting.token.trim().toUpperCase() && cleanInput !== cleanExpected) {
+        sound.playError();
+        setErrorMessage('Ini token adik kelas! Masukkan Token Khusus Pengurus A20 yaa.');
+        return;
+      }
 
-    if (cleanInput !== cleanExpected) {
-      sound.playError();
-      setErrorMessage('Token Khusus Pengurus salah! Tanyakan token ini ke Ketua / BPH.');
-      return;
+      if (cleanInput !== cleanExpected) {
+        sound.playError();
+        setErrorMessage('Token Khusus Pengurus salah! Tanyakan token ini ke Ketua / BPH.');
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -173,6 +267,8 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
       const { error } = await supabase.from('attendances').insert({
         meeting_id: activeMeeting.id,
         member_id: selectedMentor.id,
+        status: 'present',
+        notes: isSuperAdmin && !tokenInput.trim() ? 'Hadir (Bypass Ketua)' : 'Hadir',
         feedback_rating: mood,
         critique: issues.trim() || null,
         next_agenda_suggestion: suggestions.trim() || null,
@@ -348,19 +444,30 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
               <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">
                 2. Masukkan Token Khusus Pengurus
               </label>
-              <div className="relative flex items-center">
-                <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
-                <input
-                  type="text"
-                  value={tokenInput}
-                  onChange={(e) => setTokenInput(e.target.value)}
-                  placeholder="Token rahasia pengurus..."
-                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-black tracking-widest text-slate-900 uppercase focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
-                />
-              </div>
-              <p className="text-[11px] text-slate-400 font-bold mt-1">
-                * Tanyakan kode ini ke Ketua / BPH saat eskul berlangsung.
-              </p>
+              {isSuperAdmin ? (
+                <div className="p-3 rounded-2xl bg-indigo-50 border-2 border-indigo-300 text-indigo-950 text-xs font-bold flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-indigo-600 shrink-0" />
+                  <span>
+                    <strong>Akses Super Admin (Ketua) Aktif:</strong> Bebas batas jam 18:00 WIB &amp; otomatis melewati Token Pengurus.
+                  </span>
+                </div>
+              ) : (
+                <>
+                  <div className="relative flex items-center">
+                    <KeyRound className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
+                    <input
+                      type="text"
+                      value={tokenInput}
+                      onChange={(e) => setTokenInput(e.target.value)}
+                      placeholder="Token rahasia pengurus..."
+                      className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-sm font-black tracking-widest text-slate-900 uppercase focus:bg-white focus:border-indigo-500 focus:outline-none transition-colors"
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-400 font-bold mt-1">
+                    * Tanyakan kode ini ke Ketua / BPH saat eskul berlangsung.
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Step 3: Curhat & Evaluasi */}
@@ -368,7 +475,7 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
               <div>
                 <label className="block text-xs font-black text-slate-800 mb-1.5 flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-amber-500" />
-                  <span>3. Gimana Kondisi & Kelancaran Eskul Hari Ini?</span>
+                  <span>3. Gimana Kondisi &amp; Kelancaran Eskul Hari Ini?</span>
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -474,8 +581,8 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
             {/* Submit button */}
             <TactileButton
               type="submit"
-              disabled={isLoading || !tokenInput.trim() || !scheduleStatus.isActive}
-              variant={scheduleStatus.isActive ? 'brand' : 'slate'}
+              disabled={isLoading || (!isSuperAdmin && (!tokenInput.trim() || !scheduleStatus.isActive))}
+              variant={scheduleStatus.isActive || isSuperAdmin ? 'brand' : 'slate'}
               size="lg"
               className="w-full py-3 text-sm"
             >
@@ -485,12 +592,119 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
                 <CheckCircle2 className="w-4 h-4" />
               )}
               <span>
-                {!scheduleStatus.isActive ? scheduleStatus.statusText : 'KIRIM PRESENSI & EVALUASI'}
+                {!scheduleStatus.isActive && !isSuperAdmin ? scheduleStatus.statusText : 'KIRIM PRESENSI & EVALUASI'}
               </span>
             </TactileButton>
           </form>
         )}
       </div>
+
+      {/* Super Admin Quick-Assist Panel for Angkatan 20 */}
+      {isSuperAdmin && selectedAssistMeeting && (
+        <div className="bg-white rounded-3xl border-2 border-indigo-300 shadow-[0_6px_0_0_#a5b4fc] p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 rounded-2xl bg-indigo-100 text-indigo-700 border border-indigo-300 shrink-0">
+                <Zap className="w-5 h-5" />
+              </span>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-900 text-amber-300">
+                    Khusus Ketua / Super Admin
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 mt-0.5">
+                  Bantu Absen Cepat Pengurus Angkatan 20 (Bebas Jam &amp; Sesi)
+                </h3>
+              </div>
+            </div>
+
+            {assistToast && (
+              <span className="px-3 py-1.5 rounded-xl bg-emerald-500 text-white text-xs font-black shrink-0 animate-fade-in">
+                {assistToast}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Session Selector */}
+            <div>
+              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Pilih Sesi Pertemuan:</span>
+              </label>
+              <select
+                value={selectedAssistMeeting.id}
+                onChange={(e) => {
+                  sound.playPop();
+                  setAssistMeetingId(e.target.value);
+                }}
+                className="w-full px-3 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-black text-slate-900 focus:border-indigo-500 focus:outline-none"
+              >
+                {availableAssistMeetings.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.meeting_date} — {m.title} {m.is_active ? '(🟢 Sesi Aktif)' : '(📁 Arsip)'}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Quick Search Mentor */}
+            <div>
+              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1 flex items-center gap-1">
+                <Search className="w-3.5 h-3.5 text-indigo-600" />
+                <span>Cari Nama Pengurus A20:</span>
+              </label>
+              <input
+                type="text"
+                value={assistSearch}
+                onChange={(e) => setAssistSearch(e.target.value)}
+                placeholder="Ketik nama pengurus (misal: Chandra, Kevin, Prisa)..."
+                className="w-full px-3 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-500 focus:outline-none"
+              />
+            </div>
+          </div>
+
+          {/* Grid of Mentors with 1-Click Assist Button */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-80 overflow-y-auto pr-1 pt-1">
+            {filteredAssistMentors.map((mentor) => {
+              const isPresent = isMentorPresentInMeeting(selectedAssistMeeting.id, mentor.id);
+              return (
+                <div
+                  key={mentor.id}
+                  className={`p-2.5 rounded-2xl border-2 flex items-center justify-between gap-2 transition-colors ${
+                    isPresent
+                      ? 'bg-emerald-50/80 border-emerald-300'
+                      : 'bg-slate-50 border-slate-200 hover:border-indigo-300'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <span className="text-xs font-black text-slate-900 block truncate">
+                      {mentor.name}
+                    </span>
+                    <span className="text-[10px] font-bold text-slate-500 block truncate">
+                      {mentor.position} • {mentor.class_name}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleSuperAdminToggle(mentor, selectedAssistMeeting)}
+                    className={`px-2.5 py-1.5 rounded-xl text-[11px] font-black shrink-0 border-2 transition-transform active:translate-y-[1px] cursor-pointer ${
+                      isPresent
+                        ? 'bg-emerald-500 text-white border-emerald-700 shadow-[0_2px_0_0_#047857] hover:bg-rose-500 hover:border-rose-700'
+                        : 'bg-indigo-600 text-white border-indigo-800 shadow-[0_2px_0_0_#312e81] hover:bg-indigo-700'
+                    }`}
+                    title={isPresent ? 'Klik untuk batalkan hadir' : 'Klik untuk bantu hadirkan'}
+                  >
+                    {isPresent ? '✓ Hadir' : '+ Hadirkan'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* List of mentors who attended today */}
       <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-5 space-y-3">
