@@ -63,30 +63,34 @@ export const DEFAULT_BIG_EVENTS: BigEvent[] = [
 export const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
   {
     id: 'gal-1',
-    title: 'Speaking & Speech',
-    subtitle: 'Agenda Rutin Rabu',
+    title: 'First Gathering 2026',
+    subtitle: 'Pertemuan perdana perkenalan dan fun icebreaker bersama 86+ adik kelas A21.',
     imageUrl: '/logo.png',
+    postUrl: 'https://www.instagram.com/englishclubsvhs1pbg/',
     accentColor: 'blue',
   },
   {
     id: 'gal-2',
-    title: 'English Adventure',
-    subtitle: 'Outdoor Camp & Games',
+    title: 'Speaking & Roleplay Practice',
+    subtitle: 'Latihan percakapan bahasa Inggris dan skenario roleplay santai di kelas.',
     imageUrl: '/logo.png',
+    postUrl: 'https://www.instagram.com/englishclubsvhs1pbg/',
     accentColor: 'emerald',
   },
   {
     id: 'gal-3',
-    title: 'English Expression',
-    subtitle: 'Panggung Seni Bakat',
+    title: 'English Adventure Camp',
+    subtitle: 'Kegiatan luar ruangan, team building, dan bonding seru lintas angkatan.',
     imageUrl: '/logo.png',
+    postUrl: 'https://www.instagram.com/englishclubsvhs1pbg/',
     accentColor: 'amber',
   },
   {
     id: 'gal-4',
-    title: 'Dies Natalis 2006',
-    subtitle: 'Ulang Tahun 23 Maret',
+    title: 'Dies Natalis EC SMEGA',
+    subtitle: 'Peringatan hari lahir berdirinya English Club SMKN 1 Purbalingga sejak 2006.',
     imageUrl: '/logo.png',
+    postUrl: 'https://www.instagram.com/englishclubsvhs1pbg/',
     accentColor: 'rose',
   },
 ];
@@ -231,11 +235,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     title: string;
     subtitle: string;
     imageUrl: string;
+    postUrl: string;
     accentColor: NonNullable<GalleryItem['accentColor']>;
   }>({
     title: '',
     subtitle: '',
     imageUrl: '',
+    postUrl: '',
     accentColor: 'blue',
   });
 
@@ -311,6 +317,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       title: '',
       subtitle: '',
       imageUrl: '',
+      postUrl: 'https://www.instagram.com/englishclubsvhs1pbg/',
       accentColor: 'blue',
     });
     setIsGalleryModalOpen(true);
@@ -322,6 +329,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       title: item.title,
       subtitle: item.subtitle,
       imageUrl: item.imageUrl || '',
+      postUrl: item.postUrl || 'https://www.instagram.com/englishclubsvhs1pbg/',
       accentColor: item.accentColor || 'blue',
     });
     setIsGalleryModalOpen(true);
@@ -923,13 +931,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* ================= 7. GALLERY & INSTAGRAM SHOWCASE ================= */}
-      <section id="galeri" className="py-14 bg-slate-50">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-8">
+      <section id="galeri" className="py-14 bg-slate-50 border-t-2 border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-8">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
-            <div className="space-y-1">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-purple-100 via-pink-100 to-amber-100 border border-pink-200 text-pink-900 text-xs font-black">
+                <Instagram className="w-3.5 h-3.5 text-pink-600" />
+                <span>Instagram Feed @englishclubsvhs1pbg</span>
+              </div>
               <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-                Momen Seru @englishclubsvhs1pbg
+                Dokumentasi &amp; Momen Kegiatan
               </h2>
+              <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xl">
+                Keseruan latihan speaking, fun games, outbond, dan agenda akbar English Club SMKN 1 Purbalingga. Klik postingan untuk melihat keseruan di aplikasi Instagram!
+              </p>
             </div>
             
             <div className="flex items-center gap-2 flex-wrap">
@@ -940,10 +955,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                     sound.playPop();
                     handleOpenAddGallery();
                   }}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black border border-blue-700 shadow-[0_3px_0_0_#1d4ed8] active:translate-y-0.5 transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black border-2 border-blue-800 shadow-[0_3px_0_0_#1d4ed8] active:translate-y-0.5 transition-all cursor-pointer min-h-[44px]"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Tambah Foto / Momen</span>
+                  <span>Tambah Postingan / Momen</span>
                 </button>
               )}
 
@@ -952,66 +967,132 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 target="_blank"
                 rel="noreferrer"
                 onClick={() => sound.playPop()}
-                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-2xl bg-gradient-to-r from-purple-600 to-rose-600 text-white text-xs font-black border border-rose-700 shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer w-fit"
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 via-pink-600 to-rose-600 hover:from-purple-500 hover:to-rose-500 text-white text-xs font-black border-2 border-rose-800 shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer min-h-[44px]"
               >
                 <Instagram className="w-4 h-4" />
-                <span>Kunjungi Instagram Resmi</span>
-                <ExternalLink className="w-3 h-3 ml-0.5" />
+                <span>Follow @englishclubsvhs1pbg</span>
+                <ExternalLink className="w-3.5 h-3.5 ml-0.5" />
               </a>
             </div>
           </div>
 
-          {/* Tactile Photo Highlights Cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-            {galleryList.map((item) => (
-              <div 
-                key={item.id} 
-                className="relative p-3 bg-white rounded-2xl border-2 border-slate-200 shadow-sm space-y-2 text-center group hover:border-slate-300 transition-all"
-              >
-                {/* Super Admin Control Buttons */}
-                {isSuperAdmin && (
-                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/95 backdrop-blur p-1 rounded-lg shadow-sm border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sound.playPop();
-                        handleEditGallery(item);
-                      }}
-                      className="p-1 rounded text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
-                      title="Edit Foto & Teks"
-                    >
-                      <Edit3 className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        sound.playPop();
-                        handleDeleteGallery(item.id);
-                      }}
-                      className="p-1 rounded text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                      title="Hapus Momen"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                )}
+          {/* Instagram Feed Grid (2 Cols on Mobile, 4 Cols on Desktop) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {galleryList.map((item) => {
+              const targetPostUrl = item.postUrl?.trim() || 'https://www.instagram.com/englishclubsvhs1pbg/';
+              return (
+                <div 
+                  key={item.id} 
+                  className="relative flex flex-col bg-white rounded-3xl border-2 border-slate-200 hover:border-slate-300 shadow-[0_4px_0_0_#e2e8f0] overflow-hidden group transition-all"
+                >
+                  {/* Super Admin Edit Controls */}
+                  {isSuperAdmin && (
+                    <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1 bg-white/95 backdrop-blur-md p-1 rounded-xl shadow-md border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playPop();
+                          handleEditGallery(item);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                        title="Edit Foto & Link IG"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sound.playPop();
+                          handleDeleteGallery(item.id);
+                        }}
+                        className="p-1.5 rounded-lg text-slate-600 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                        title="Hapus Momen"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
 
-                <div className="aspect-square rounded-xl overflow-hidden bg-white border border-slate-200 flex items-center justify-center relative shadow-inner p-4">
-                  <img
-                    src={item.imageUrl || '/logo.png'}
-                    alt={item.title}
-                    className={`w-full h-full ${(!item.imageUrl || item.imageUrl === '/logo.png') ? 'object-contain' : 'object-cover'} transition-transform duration-300 group-hover:scale-105`}
-                    onError={(e) => {
-                      const img = e.target as HTMLImageElement;
-                      img.src = '/logo.png';
-                      img.className = 'w-full h-full object-contain transition-transform duration-300 group-hover:scale-105';
-                    }}
-                  />
+                  {/* Instagram-Style Post Header */}
+                  <div className="p-3 flex items-center gap-2 border-b border-slate-100 bg-slate-50/50">
+                    <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-purple-600 p-[1.5px] shrink-0">
+                      <div className="w-full h-full rounded-full bg-white p-[1px] overflow-hidden">
+                        <img src="/logo.png" alt="EC Logo" className="w-full h-full object-contain" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <a 
+                        href="https://www.instagram.com/englishclubsvhs1pbg/" 
+                        target="_blank" 
+                        rel="noreferrer"
+                        className="text-[11px] font-black text-slate-800 hover:text-blue-600 truncate block leading-tight"
+                      >
+                        englishclubsvhs1pbg
+                      </a>
+                      <span className="text-[9px] font-bold text-slate-400 block truncate leading-tight">
+                        SMK Negeri 1 Purbalingga
+                      </span>
+                    </div>
+                    <Instagram className="w-3.5 h-3.5 text-pink-500 shrink-0" />
+                  </div>
+
+                  {/* Photo Canvas */}
+                  <a
+                    href={targetPostUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={() => sound.playPop()}
+                    className="block aspect-square w-full bg-slate-100 overflow-hidden relative group/img cursor-pointer"
+                    title={`Buka postingan ${item.title} di Instagram`}
+                  >
+                    <img
+                      src={item.imageUrl || '/logo.png'}
+                      alt={item.title}
+                      className={`w-full h-full ${(!item.imageUrl || item.imageUrl === '/logo.png') ? 'object-contain p-6' : 'object-cover'} transition-transform duration-500 group-hover/img:scale-105`}
+                      onError={(e) => {
+                        const img = e.target as HTMLImageElement;
+                        img.src = '/logo.png';
+                        img.className = 'w-full h-full object-contain p-6 transition-transform duration-500 group-hover/img:scale-105';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-slate-900/10 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center">
+                      <span className="px-3 py-1.5 rounded-full bg-black/75 text-white text-[10px] font-black backdrop-blur-sm flex items-center gap-1">
+                        <Instagram className="w-3 h-3 text-pink-400" />
+                        <span>Lihat di IG ↗</span>
+                      </span>
+                    </div>
+                  </a>
+
+                  {/* Caption & Content */}
+                  <div className="p-3.5 flex-1 flex flex-col justify-between space-y-3">
+                    <div className="space-y-1">
+                      <h4 className="text-xs font-black text-slate-900 leading-snug line-clamp-1">
+                        {item.title}
+                      </h4>
+                      <p className="text-[11px] font-bold text-slate-500 leading-relaxed line-clamp-2">
+                        {item.subtitle}
+                      </p>
+                      <span className="text-[10px] font-black text-blue-600 block pt-0.5">
+                        #ECSMEGA #EnglishClub
+                      </span>
+                    </div>
+
+                    {/* Direct Instagram Action Button */}
+                    <a
+                      href={targetPostUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => sound.playPop()}
+                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-slate-50 hover:bg-pink-50 hover:text-pink-700 text-slate-700 border-2 border-slate-200 hover:border-pink-300 text-[11px] font-black transition-all active:translate-y-0.5 cursor-pointer"
+                    >
+                      <Instagram className="w-3.5 h-3.5 text-pink-600" />
+                      <span>Buka di Instagram</span>
+                      <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-pink-600" />
+                    </a>
+                  </div>
                 </div>
-                <p className="text-xs font-black text-slate-800 line-clamp-1">{item.title}</p>
-                <span className="text-[10px] font-bold text-slate-400 block line-clamp-1">{item.subtitle}</span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </section>
@@ -1355,6 +1436,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 />
                 <p className="text-[10px] font-bold text-slate-400">
                   Kosongkan jika ingin menggunakan ikon placeholder gradien.
+                </p>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-black text-slate-700">Link Postingan Instagram (URL)</label>
+                <input
+                  type="url"
+                  value={galleryForm.postUrl || ''}
+                  onChange={(e) => setGalleryForm({ ...galleryForm, postUrl: e.target.value })}
+                  placeholder="https://www.instagram.com/p/... (Opsional)"
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 focus:border-blue-500 font-bold text-xs outline-hidden transition-all"
+                />
+                <p className="text-[10px] font-bold text-slate-400">
+                  Pengunjung yang mengklik tombol akan langsung diarahkan ke postingan Instagram ini.
                 </p>
               </div>
 

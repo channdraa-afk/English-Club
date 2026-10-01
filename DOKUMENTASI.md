@@ -635,6 +635,12 @@
     1. *Pola 2-Pill Anchor + Clean Archive Dropdown*: Mengunci baris pemilih sesi di `LiveMonitorA21.tsx` dan `AgendaVault.tsx` maksimal 2 tombol taktil (`[ 🟢 Sesi Aktif ]` dan `[ 📄 Pekan Lalu ]`) ditambah dropdown terdedikasi untuk arsip yang lebih lampau. Jika sesi dari arsip dipilih, dropdown otomatis menyala (*amber active state*) dengan bayangan 3D.
     2. *Alur Eskul 3 Babak*: Mengganti kartu ke-3 Quick-Action Hub di `MentorDashboard.tsx` menjadi **Kotak Saran Adik (Evaluasi)** (`agenda_a21`), melengkapi siklus kerja mingguan pengurus: Presensi Sendiri (Awal) ➔ Dampingi Adik (Selama) ➔ Evaluasi Respon (Akhir/Briefing).
 
+- [x] Instagram Feed Showcase & Direct Post Links (`LandingPage.tsx`, `database.ts`):
+  - **Problem**: Seksi galeri di halaman awal hanya menampilkan logo default `/logo.png` dan tombol link generik ke luar, sehingga website terasa sepi dan belum menampilkan atmosfer kegiatan eskul nyata.
+  - **Solution / State**:
+    1. *Desain Kartu Bergaya Instagram Asli (Solusi A)*: Mengubah seksi galeri menjadi Instagram Feed Showcase taktil 4-kolom. Tiap kartu memiliki header akun (`@englishclubsvhs1pbg` + lokasi SMK Negeri 1 Purbalingga), kanvas foto beresolusi jernih dengan hover overlay `[ Lihat di IG ↗ ]`, caption judul & subteks seru, serta tombol 3D langsung ke postingan spesifik Instagram.
+    2. *Dukungan Direct URL (`postUrl`)*: Menambahkan field `postUrl` pada antarmuka `GalleryItem` dan modal input Super Admin, memungkinkan Chandra menautkan postingan Instagram asli secara fleksibel tanpa risiko kedaluwarsa token Meta API.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

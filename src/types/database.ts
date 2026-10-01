@@ -86,6 +86,7 @@ export interface GalleryItem {
   title: string;
   subtitle: string;
   imageUrl?: string;
+  postUrl?: string;
   accentColor?: 'blue' | 'emerald' | 'amber' | 'rose' | 'purple' | 'indigo';
 }
 
