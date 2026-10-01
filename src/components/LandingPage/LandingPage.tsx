@@ -21,12 +21,20 @@ import {
   Lock,
   X,
   Gamepad2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Volume2,
+  Shuffle,
+  ChevronDown,
+  CheckCircle2,
+  MapPin,
+  Star,
+  HelpCircle
 } from 'lucide-react';
 import { Meeting, BigEvent, GalleryItem } from '../../types/database';
 import { sound } from '../../lib/audio';
 import { getScheduleStatus } from '../../lib/schedule';
 import { supabase } from '../../lib/supabase';
+import { IDIOMS_BANK } from '../../data/idioms';
 import confetti from 'canvas-confetti';
 
 export const DEFAULT_BIG_EVENTS: BigEvent[] = [
@@ -251,6 +259,67 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     id: string;
     title: string;
   } | null>(null);
+
+  // Daily Idiom State (Defaults to calendar-based idiom, with shuffle support)
+  const initialIdiomIndex = React.useMemo(() => {
+    const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 86400000);
+    return Math.abs(dayOfYear) % IDIOMS_BANK.length;
+  }, []);
+
+  const [currentIdiomIndex, setCurrentIdiomIndex] = useState(initialIdiomIndex);
+  const currentIdiom = IDIOMS_BANK[currentIdiomIndex] || IDIOMS_BANK[0];
+  const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+
+  // Web Speech API Native Pronunciation
+  const handleSpeakIdiom = () => {
+    sound.playPop();
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(currentIdiom.word);
+      utterance.lang = 'en-US';
+      utterance.rate = 0.88;
+      setIsPlayingAudio(true);
+      utterance.onend = () => setIsPlayingAudio(false);
+      utterance.onerror = () => setIsPlayingAudio(false);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const handleShuffleIdiom = () => {
+    sound.playPop();
+    let nextIdx = Math.floor(Math.random() * IDIOMS_BANK.length);
+    if (nextIdx === currentIdiomIndex) {
+      nextIdx = (nextIdx + 1) % IDIOMS_BANK.length;
+    }
+    setCurrentIdiomIndex(nextIdx);
+  };
+
+  // FAQ Accordion State (open question index, first item open by default)
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(0);
+
+  const FAQ_ITEMS = [
+    {
+      q: 'Kak, kalau bahasa Inggriskuku masih belepotan / pemula banget boleh ikut?',
+      a: 'Boleh banget dan sangat dipersilakan! Di English Club SMEGA tidak ada yang bakal menghakimi atau menertawakan kesalahan grammar. Prinsip utama kami: keberanian bicara adalah langkah pertama menuju kefasihan. Kakak-kakak mentor Angkatan 20 akan membimbingmu dengan santai dan ramah!',
+    },
+    {
+      q: 'Apakah ada seleksi masuk atau tes wawancara untuk bergabung?',
+      a: 'Sama sekali tidak ada seleksi! Siapa pun siswa SMKN 1 Purbalingga (dari jurusan apa pun) yang memiliki niat dan kemauan untuk belajar bahasa Inggris langsung diterima menjadi keluarga besar EC SMEGA dengan tangan terbuka.',
+    },
+    {
+      q: 'Eskulnya bayar uang kas mingguan nggak kak?',
+      a: 'Kegiatan rutin mingguan setiap hari Rabu 100% bebas biaya (gratis). Iuran partisipasi hanya berlaku untuk agenda akbar outbond tahunan (seperti English Adventure) yang dirapatkan dan disepakati bersama secara transparan.',
+    },
+    {
+      q: 'Gimana kalau pas hari Rabu ada jam tambahan pelajaran atau remedial sekolah?',
+      a: 'Tenang saja, pembelajaran akademik sekolah tetap menjadi prioritas nomor satu. Kamu cukup mengabari mentor pendamping kelompokmu atau menyerahkan surat keterangan izin/remedial ke Kak Chandra dan pengurus A20.',
+    },
+  ];
+
+  const toggleFaq = (idx: number) => {
+    sound.playPop();
+    setOpenFaqIndex((prev) => (prev === idx ? null : idx));
+  };
 
   // Event Handlers
   const handleOpenAddEvent = () => {
@@ -677,6 +746,125 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </p>
             </div>
           </div>
+
+          {/* ================= 3B. DYNAMIC TWIN SPOTLIGHT: UPCOMING GATHERING & WORD OF THE DAY ================= */}
+          <div className="pt-8 grid grid-cols-1 md:grid-cols-2 gap-4 text-left max-w-4xl mx-auto">
+            {/* Card 1: Upcoming Gathering Card */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-white border-2 border-indigo-200 hover:border-indigo-300 shadow-[0_4px_0_0_#c7d2fe] space-y-4 flex flex-col justify-between transition-all">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-800 text-[10px] font-black uppercase">
+                    <Calendar className="w-3.5 h-3.5 text-indigo-600" />
+                    <span>Jadwal Pertemuan Eskul</span>
+                  </span>
+                  <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
+                    Rabu • 15:40 - 17:30 WIB
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-base sm:text-lg font-black text-slate-900 leading-tight">
+                    {activeMeeting?.title || 'Speaking & Communicative Practice'}
+                  </h3>
+                  <p className="text-xs font-bold text-slate-500 flex items-center gap-1.5 pt-0.5">
+                    <MapPin className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+                    <span>SMK Negeri 1 Purbalingga (Ruang Kelas &amp; Teori)</span>
+                  </p>
+                </div>
+
+                {/* Checklist Persiapan */}
+                <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-1.5">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Yang Perlu Disiapkan Adik Kelas:</p>
+                  <ul className="text-xs font-bold text-slate-700 space-y-1">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Bawa smartphone untuk presensi online &amp; kuis live</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Buku catatan &amp; alat tulis pendukung</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Keberanian bicara tanpa rasa takut salah grammar!</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  onOpenAttendance();
+                }}
+                className="w-full py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black border-2 border-indigo-800 shadow-[0_3px_0_0_#3730a3] active:translate-y-0.5 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-yellow-300" />
+                <span>Buka Petunjuk &amp; Presensi Sesi</span>
+              </button>
+            </div>
+
+            {/* Card 2: Word & Idiom of the Day */}
+            <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-50/90 via-orange-50/60 to-amber-100/50 border-2 border-amber-300 hover:border-amber-400 shadow-[0_4px_0_0_#fcd34d] space-y-4 flex flex-col justify-between transition-all">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-200/80 border border-amber-400 text-amber-950 text-[10px] font-black uppercase">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+                    <span>Word &amp; Idiom of the Day</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleShuffleIdiom}
+                    className="p-1.5 rounded-xl bg-white hover:bg-amber-100 text-amber-900 border border-amber-300 shadow-xs transition-all active:translate-y-0.5 cursor-pointer flex items-center gap-1 text-[10px] font-black"
+                    title="Acak kata lain"
+                  >
+                    <Shuffle className="w-3 h-3 text-amber-700" />
+                    <span>Acak</span>
+                  </button>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-xl sm:text-2xl font-black text-amber-950 italic tracking-tight">
+                      "{currentIdiom.word}"
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={handleSpeakIdiom}
+                      className={`p-1.5 rounded-xl border transition-all active:translate-y-0.5 cursor-pointer flex items-center gap-1 ${
+                        isPlayingAudio
+                          ? 'bg-emerald-500 text-white border-emerald-600 animate-pulse'
+                          : 'bg-white hover:bg-amber-100 text-amber-800 border-amber-300 shadow-xs'
+                      }`}
+                      title="Dengarkan pengucapan native speaker"
+                    >
+                      <Volume2 className="w-4 h-4" />
+                      <span className="text-[10px] font-black">Pronounce</span>
+                    </button>
+                  </div>
+
+                  <p className="text-xs font-bold text-amber-900 leading-relaxed">
+                    {currentIdiom.meaning}
+                  </p>
+                </div>
+
+                {/* Example sentence */}
+                <div className="p-3 rounded-2xl bg-white/80 border border-amber-200/80 space-y-1">
+                  <span className="text-[10px] font-black text-amber-800 uppercase tracking-wider block">Contoh Kalimat:</span>
+                  <p className="text-xs font-bold italic text-slate-800 leading-relaxed">
+                    "{currentIdiom.example}"
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between text-[11px] font-bold text-amber-800/80 pt-1">
+                <span>Kategori: <strong className="capitalize text-amber-950">{currentIdiom.category}</strong></span>
+                <span className="text-[10px] font-extrabold text-amber-700">Otomatis Berganti Tiap Hari ☀️</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -832,6 +1020,82 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Operasional</span>
               <span className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl bg-white border-2 border-slate-200 shadow-sm">Sie Kurikulum</span>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ================= 5B. HALL OF FAME: BINTANG KEAKTIFAN A21 ================= */}
+      <section className="py-14 bg-gradient-to-b from-slate-50 to-white border-t-2 border-slate-200">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-8">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 border border-amber-300 text-amber-950 text-xs font-black">
+              <Star className="w-3.5 h-3.5 text-amber-600 fill-amber-500" />
+              <span>Hall of Fame &amp; Apresiasi Angkatan 21</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Bintang Prestasi &amp; Keaktifan Pekan Ini
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-xl mx-auto">
+              Apresiasi untuk adik-adik kelas Angkatan 21 yang paling berani bicara, aktif di kelompok, dan konsisten hadir mengasah kemampuan bahasa Inggris.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                title: 'Top Speaking Star',
+                role: 'Paling Aktif Berbicara',
+                desc: 'Selalu berani menyuarakan opini dan percaya diri dalam sesi conversation.',
+                badgeColor: 'bg-blue-100 text-blue-800 border-blue-300',
+                icon: '🎙️',
+                accent: 'border-blue-300 shadow-[0_4px_0_0_#93c5fd]',
+              },
+              {
+                title: 'Word Quiz Master',
+                role: 'Ketangkasan Kuis Tertinggi',
+                desc: 'Peraih skor tertinggi dan ketelitian vocabulary terbaik di kuis EC Arena.',
+                badgeColor: 'bg-amber-100 text-amber-900 border-amber-300',
+                icon: '⚡',
+                accent: 'border-amber-300 shadow-[0_4px_0_0_#fde68a]',
+              },
+              {
+                title: 'Full Attendance Hero',
+                role: '100% Kehadiran Konsisten',
+                desc: 'Selalu hadir tepat waktu dan tidak pernah melewatkan satu sesi eskul pun.',
+                badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+                icon: '🛡️',
+                accent: 'border-emerald-300 shadow-[0_4px_0_0_#a7f3d0]',
+              },
+              {
+                title: 'Best Team Player',
+                role: 'Kolaborasi & Icebreaker',
+                desc: 'Mencairkan suasana kelompok dan membantu teman sekelas lebih percaya diri.',
+                badgeColor: 'bg-purple-100 text-purple-800 border-purple-300',
+                icon: '🤝',
+                accent: 'border-purple-300 shadow-[0_4px_0_0_#d8b4fe]',
+              },
+            ].map((card, idx) => (
+              <div
+                key={idx}
+                className={`p-5 rounded-3xl bg-white border-2 ${card.accent} space-y-3 flex flex-col justify-between transition-all`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{card.icon}</span>
+                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-lg border ${card.badgeColor}`}>
+                      A21 Star
+                    </span>
+                  </div>
+                  <h4 className="font-black text-base text-slate-900 leading-snug">{card.title}</h4>
+                  <p className="text-[11px] font-black text-slate-600">{card.role}</p>
+                  <p className="text-xs font-bold text-slate-500 leading-relaxed">{card.desc}</p>
+                </div>
+                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] font-black text-slate-400">
+                  <span>Dinilai Oleh: Kakak Mentor A20</span>
+                  <span className="text-amber-500 font-extrabold">⭐ Active</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -1090,6 +1354,65 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       <ExternalLink className="w-3 h-3 text-slate-400 group-hover:text-pink-600" />
                     </a>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ================= 7B. FAQ ACCORDION TAKTIL ================= */}
+      <section id="faq" className="py-14 bg-white border-t-2 border-slate-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-8">
+          <div className="text-center space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 border border-slate-300 text-slate-800 text-xs font-black">
+              <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
+              <span>Tanya Jawab Santai Seputar Eskul</span>
+            </div>
+            <h2 className="text-2xl sm:text-4xl font-black text-slate-900 tracking-tight">
+              Pertanyaan yang Sering Ditanyakan
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-slate-500 max-w-lg mx-auto">
+              Jawaban lengkap dan transparan untuk pertanyaan-pertanyaan yang paling sering dipikirkan adik kelas.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {FAQ_ITEMS.map((item, idx) => {
+              const isOpen = openFaqIndex === idx;
+              return (
+                <div
+                  key={idx}
+                  className={`rounded-2xl border-2 transition-all overflow-hidden ${
+                    isOpen
+                      ? 'bg-slate-50 border-blue-400 shadow-[0_3px_0_0_#93c5fd]'
+                      : 'bg-white border-slate-200 hover:border-slate-300 shadow-sm'
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleFaq(idx)}
+                    className="w-full p-4 sm:p-5 text-left flex items-center justify-between gap-3 cursor-pointer"
+                  >
+                    <span className="text-xs sm:text-sm font-black text-slate-900 leading-snug">
+                      {item.q}
+                    </span>
+                    <div
+                      className={`p-1.5 rounded-xl border transition-transform duration-300 shrink-0 ${
+                        isOpen
+                          ? 'bg-blue-600 text-white border-blue-700 rotate-180'
+                          : 'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </div>
+                  </button>
+
+                  {isOpen && (
+                    <div className="px-4 pb-4 sm:px-5 sm:pb-5 pt-0 text-xs sm:text-sm font-bold text-slate-600 leading-relaxed border-t border-slate-100 animate-fade-in">
+                      {item.a}
+                    </div>
+                  )}
                 </div>
               );
             })}

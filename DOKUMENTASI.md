@@ -641,6 +641,14 @@
     1. *Desain Kartu Bergaya Instagram Asli (Solusi A)*: Mengubah seksi galeri menjadi Instagram Feed Showcase taktil 4-kolom. Tiap kartu memiliki header akun (`@englishclubsvhs1pbg` + lokasi SMK Negeri 1 Purbalingga), kanvas foto beresolusi jernih dengan hover overlay `[ Lihat di IG ↗ ]`, caption judul & subteks seru, serta tombol 3D langsung ke postingan spesifik Instagram.
     2. *Dukungan Direct URL (`postUrl`)*: Menambahkan field `postUrl` pada antarmuka `GalleryItem` dan modal input Super Admin, memungkinkan Chandra menautkan postingan Instagram asli secara fleksibel tanpa risiko kedaluwarsa token Meta API.
 
+- [x] Revitalisasi Beranda Interaktif (Upcoming Gathering, Daily Idiom Audio, A21 Hall of Fame, & Tactile FAQ Accordion):
+  - **Problem**: Halaman depan website (`LandingPage.tsx`) terasa sepi dan pasif di luar jam eskul, belum menampilkan agenda pertemuan terdekat, belum ada fitur latihan interaktif harian, belum ada apresiasi anggota aktif Angkatan 21, dan belum menjawab keraguan/kekhawatiran calon anggota baru.
+  - **Solution / State**:
+    1. *Kartu Pertemuan Terdekat (Upcoming Gathering Spotlight)*: Menampilkan kartu countdown/pengumuman sesi eskul hari Rabu terdekat lengkap dengan topik materi, lokasi ruangan, checklist perlengkapan, dan tombol pintas ke presensi.
+    2. *Word & Idiom of the Day Widget*: Menampilkan idiom harian otomatis dari bank data lokal (`src/data/idioms.ts`), dilengkapi tombol audio pelafalan berbasis Web Speech API native browser (`window.speechSynthesis`), terjemahan Indonesia, contoh kalimat, dan tombol taktil `[ 🎲 Acak ]` untuk mempelajari idiom lain.
+    3. *Hall of Fame & Apresiasi Angkatan 21*: Seksi panggung apresiasi untuk siswa A21 teraktif dengan badge bintang bakat dan kutipan semangat, memotivasi keaktifan adik kelas.
+    4. *FAQ Accordion Taktil (Zero-Maintenance)*: Seksi tanya-jawab interaktif bertema 3D Duolingo yang mengklarifikasi keraguan adik kelas (bebas rasa takut salah grammar, tanpa seleksi masuk, gratis tanpa pungutan kas, dan toleransi remedial/pelajaran sekolah) tanpa membebani pengurus dengan beban operasional forum.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
