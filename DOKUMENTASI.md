@@ -601,6 +601,21 @@
     1. *1-Click Toggle Pil Tanggal di Radar Pengurus A20 (`MentorDisciplineRadar.tsx`)*: Khusus saat `isSuperAdmin === true`, pil tanggal pertemuan pada setiap kartu pengurus menjadi tombol taktil interaktif (*0ms Optimistic UI* + *Atomic Delete-Then-Insert*) untuk mencentang atau membatalkan kehadiran kapan saja.
     2. *Bypass Jam 18:00 WIB & Panel Bantu Absen Cepat di Presensi A20 (`MentorAttendance.tsx`)*: Membuka kunci jam 18:00 WIB dan melewati validasi token khusus untuk Super Admin, dilengkapi panel pencarian cepat dan pemilih sesi pertemuan (`+ Hadirkan` / `✓ Hadir`) untuk membantu pengurus A20 yang lupa absen.
 
+- [x] Streamline UX Mentor Portal, Auto-Remember Pengurus, Selector Sesi Lampau (Izin Kamis/Jumat), & Quick-Action Hub:
+  - **Problem**: 
+    1. Pengurus non-IT kebingungan dengan 10+ tab di dashboard dan istilah teknis/asing.
+    2. Surat izin fisik adik kelas A21 sering diserahkan pada hari Kamis atau Jumat setelah hari Rabu eskul. Ketika Chandra sudah membuat sesi baru untuk pekan depan, mentor tidak bisa lagi memasukkan status izin ke sesi lampau karena sistem mengunci pada sesi aktif saat ini saja, membebani Chandra sebagai satu-satunya admin.
+    3. Mentor harus mengetik ulang atau mencari nama mereka di dropdown pengurus setiap kali ingin mengisi presensi mandiri mingguan.
+    4. Terdapat duplikasi fungsional antara tab Monitor Live A21 dan Bantu Absen A21.
+    5. Counter `membersCount.a21` di landing page menghitung anggota non-aktif (menampilkan 104 alih-alih 103 anggota aktif).
+  - **Solution / State**:
+    1. *Quick-Action Hub*: 3 kartu taktil 3D besar di bagian teratas portal pengurus (`[ 🙋‍♂️ Presensi Pengurus ]`, `[ 🤝 Pantau & Bantu Absen Adik ]`, dan `[ 🎮 Kuis EC Arena ]`) untuk akses instan tugas rutin tanpa perlu menjelajahi puluhan tab.
+    2. *Unified A21 Cockpit (`LiveMonitorA21.tsx`)*: Menggabungkan monitoring live dan tombol aksi cepat (`[ ⚡ Hadir ]`, `[ 📄 Izin Surat ]`, `[ ✗ Batal ]`) langsung di kartu siswa. Tab redundant `helper_a21` dieliminasi.
+    3. *Session Selector Dropdown*: Selector sesi pertemuan taktil di hero card `LiveMonitorA21`. Mentor bebas beralih ke sesi Rabu kemarin kapan saja (misal: Kamis/Jumat) untuk menginput surat izin fisik adik kelas tanpa memengaruhi sesi aktif saat ini dan tanpa perlu merepotkan Chandra.
+    4. *Auto-Remember Mentor Nama (`MentorAttendance.tsx`)*: Mengingat ID pengurus via `safeStorage ('ec_saved_mentor_id')`. Saat pengurus membuka portal di pekan berikutnya, nama mereka sudah otomatis terpilih, cukup masukkan token dan klik kirim.
+    5. *Penyederhanaan Bahasa Tab*: Mengganti istilah asing/kaku menjadi bahasa sekolah membumi (misal: *Presensi Pengurus*, *Pantau & Bantu Absen Adik*, *Buku Rapor (Sekretaris)*, *Kelola Master Siswa*, *Kotak Saran Adik*).
+    6. *Active Member Filter (`App.tsx`)*: Menambahkan kondisi `&& m.status === 'active'` pada counter A21 sehingga menampilkan angka riil **103 Anggota A21**.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

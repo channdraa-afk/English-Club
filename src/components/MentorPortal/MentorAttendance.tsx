@@ -17,6 +17,7 @@ import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { supabase } from '../../lib/supabase';
 import { getScheduleStatus } from '../../lib/schedule';
+import { safeStorage } from '../../lib/storage';
 import confetti from 'canvas-confetti';
 
 interface MentorAttendanceProps {
@@ -41,7 +42,24 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   onAttendanceChanged,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMentor, setSelectedMentor] = useState<Member | null>(null);
+  const [selectedMentor, setSelectedMentor] = useState<Member | null>(() => {
+    const savedId = safeStorage.get('ec_saved_mentor_id');
+    if (savedId && members.length > 0) {
+      return members.find((m) => m.id === savedId) || null;
+    }
+    return null;
+  });
+
+  // Re-sync saved mentor once members are fetched
+  useEffect(() => {
+    if (!selectedMentor && members.length > 0) {
+      const savedId = safeStorage.get('ec_saved_mentor_id');
+      if (savedId) {
+        const found = members.find((m) => m.id === savedId);
+        if (found) setSelectedMentor(found);
+      }
+    }
+  }, [members, selectedMentor]);
   const [tokenInput, setTokenInput] = useState('');
   const [mood, setMood] = useState<'super_fun' | 'okay' | 'boring'>('super_fun');
   const [issues, setIssues] = useState('');
@@ -193,6 +211,7 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   const handleSelectMentor = (m: Member) => {
     sound.playPop();
     setSelectedMentor(m);
+    safeStorage.set('ec_saved_mentor_id', m.id);
     setSearchQuery('');
     setErrorMessage(null);
     setSuccessRecorded(false);
@@ -201,6 +220,7 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   const handleResetMentor = () => {
     sound.playPop();
     setSelectedMentor(null);
+    safeStorage.remove('ec_saved_mentor_id');
     setSearchQuery('');
     setSuccessRecorded(false);
   };
@@ -278,6 +298,7 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
 
       sound.playSuccess();
       setSuccessRecorded(true);
+      safeStorage.set('ec_saved_mentor_id', selectedMentor.id);
       setTokenInput('');
       setIssues('');
       setSuggestions('');

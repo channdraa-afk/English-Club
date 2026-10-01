@@ -13,7 +13,6 @@ import {
   Lock, 
   ChevronLeft, 
   ChevronRight, 
-  HandHeart, 
   Radio, 
   Layers,
   HeartHandshake,
@@ -27,7 +26,6 @@ import { Member, Meeting, Attendance, Registration, TalentStar } from '../../typ
 import { MeetingControl } from './MeetingControl';
 import { ReportRecap } from './ReportRecap';
 import { MentorAttendance } from './MentorAttendance';
-import { HelperAttendanceA21 } from './HelperAttendanceA21';
 import { LiveMonitorA21 } from './LiveMonitorA21';
 import { TalentScoutA21 } from './TalentScoutA21';
 import { AgendaVault } from './AgendaVault';
@@ -152,15 +150,16 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     );
     if (saved) {
       if ((saved as any) === 'agenda') return 'agenda_a21';
+      if ((saved as any) === 'helper_a21') return 'live_monitor';
       if (isSuperAdmin || allowedRegular.includes(saved)) {
         return saved;
       }
     }
-    return isSuperAdmin ? 'session' : 'live_monitor';
+    return isSuperAdmin ? 'session' : 'mentor_attendance';
   });
 
   const [currentCategory, setCurrentCategory] = useState<'general' | 'a21' | 'a20' | 'all'>(() => {
-    return getTabCategory(activeTab);
+    return isSuperAdmin ? 'general' : 'a20';
   });
 
   const setActiveTab = (tab: TabId) => {
@@ -226,24 +225,23 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
   const allTabs: TabItem[] = [
     // --- 🌐 UMUM (SISTEM & PUSAT) ---
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'general', superOnly: true },
-    { id: 'roster_manager', label: 'Kelola Master Anggota', icon: UserCog, category: 'general', superOnly: true },
+    { id: 'roster_manager', label: 'Kelola Master Siswa', icon: UserCog, category: 'general', superOnly: true },
     { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
     { id: 'data_vault', label: 'Brankas Reset & Backup', icon: Database, category: 'general', superOnly: true },
 
     // --- 🎒 OPERASIONAL A21 (ADIK KELAS) ---
-    { id: 'quiz', label: 'EC Arena (Kuis Live)', icon: Gamepad2, category: 'a21', superOnly: false },
-    { id: 'live_monitor', label: 'Monitor Live A21', icon: Radio, category: 'a21', superOnly: false },
-    { id: 'talent_scout', label: 'Radar Bibit Lomba', icon: Star, category: 'a21', superOnly: false },
-    { id: 'helper_a21', label: 'Bantu Absen A21', icon: HandHeart, category: 'a21', superOnly: false },
-    { id: 'recap', label: 'Rekap Rapor Bulanan', icon: FileSpreadsheet, category: 'a21', superOnly: false },
-    { id: 'agenda_a21', label: 'Suara & Masukan Adik', icon: Sparkles, category: 'a21', superOnly: false },
+    { id: 'live_monitor', label: 'Pantau & Bantu Absen Adik', icon: Radio, category: 'a21', superOnly: false },
+    { id: 'quiz', label: 'Kuis EC Arena', icon: Gamepad2, category: 'a21', superOnly: false },
+    { id: 'talent_scout', label: 'Penilaian Bakat Lomba', icon: Star, category: 'a21', superOnly: false },
+    { id: 'recap', label: 'Buku Rapor (Sekretaris)', icon: FileSpreadsheet, category: 'a21', superOnly: false },
+    { id: 'agenda_a21', label: 'Kotak Saran Adik', icon: Sparkles, category: 'a21', superOnly: false },
 
     // --- 🛡️ INTERNAL A20 (PENGURUS) ---
-    { id: 'admin_docs', label: 'Administrasi & Surat (.docx)', icon: FileText, category: 'a20', superOnly: false },
-    { id: 'mentor_attendance', label: 'Presensi Mandiri A20', icon: Users, category: 'a20', superOnly: false },
-    { id: 'radar', label: 'Radar & Rekap Presensi A20', icon: ShieldAlert, category: 'a20', superOnly: false },
+    { id: 'mentor_attendance', label: 'Presensi Pengurus', icon: Users, category: 'a20', superOnly: false },
+    { id: 'admin_docs', label: 'Surat Peminjaman (.docx)', icon: FileText, category: 'a20', superOnly: false },
+    { id: 'radar', label: 'Kehadiran Pengurus (Kedis)', icon: ShieldAlert, category: 'a20', superOnly: false },
     { id: 'structure', label: 'Struktur Pengurus A20', icon: Award, category: 'a20', superOnly: false },
-    { id: 'agenda_a20', label: 'Curhat & Evaluasi A20', icon: HeartHandshake, category: 'a20', superOnly: true },
+    { id: 'agenda_a20', label: 'Curhat Internal A20', icon: HeartHandshake, category: 'a20', superOnly: true },
   ];
 
   // Filter tabs for display
@@ -359,6 +357,84 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
             <span>Logout</span>
           </button>
         </div>
+      </div>
+
+      {/* 🚀 QUICK-ACTION HUB (3 AKSES UTAMA PENGURUS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {/* 1. Presensi Pengurus */}
+        <button
+          onClick={() => {
+            sound.playPop();
+            setCurrentCategory('a20');
+            setActiveTab('mentor_attendance');
+          }}
+          className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+            activeTab === 'mentor_attendance'
+              ? 'bg-indigo-50 border-indigo-500 shadow-[0_2px_0_0_#6366f1]'
+              : 'bg-white border-indigo-100 hover:border-indigo-300 shadow-[0_4px_0_0_#e0e7ff] hover:bg-indigo-50/40'
+          }`}
+        >
+          <div className="w-11 h-11 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Users className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-black text-slate-800">Presensi Pengurus</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-indigo-100 text-indigo-700">Wajib</span>
+            </div>
+            <p className="text-[11px] font-bold text-slate-500 truncate">Absen kehadiranmu tiap eskul</p>
+          </div>
+        </button>
+
+        {/* 2. Pantau & Bantu Absen Adik */}
+        <button
+          onClick={() => {
+            sound.playPop();
+            setCurrentCategory('a21');
+            setActiveTab('live_monitor');
+          }}
+          className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+            activeTab === 'live_monitor' || activeTab === 'helper_a21'
+              ? 'bg-emerald-50 border-emerald-500 shadow-[0_2px_0_0_#10b981]'
+              : 'bg-white border-emerald-100 hover:border-emerald-300 shadow-[0_4px_0_0_#d1fae5] hover:bg-emerald-50/40'
+          }`}
+        >
+          <div className="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Radio className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-black text-slate-800">Pantau & Bantu Adik</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700">Aktif</span>
+            </div>
+            <p className="text-[11px] font-bold text-slate-500 truncate">Live presensi & input surat izin</p>
+          </div>
+        </button>
+
+        {/* 3. Kuis EC Arena */}
+        <button
+          onClick={() => {
+            sound.playPop();
+            setCurrentCategory('a21');
+            setActiveTab('quiz');
+          }}
+          className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+            activeTab === 'quiz'
+              ? 'bg-amber-50 border-amber-500 shadow-[0_2px_0_0_#f59e0b]'
+              : 'bg-white border-amber-100 hover:border-amber-300 shadow-[0_4px_0_0_#fef3c7] hover:bg-amber-50/40'
+          }`}
+        >
+          <div className="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Gamepad2 className="w-5 h-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-black text-slate-800">Kuis EC Arena</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800">Game</span>
+            </div>
+            <p className="text-[11px] font-bold text-slate-500 truncate">Game interaktif & kuis kelas</p>
+          </div>
+        </button>
       </div>
 
       {/* Smart Category Switcher (Available to ALL Mentors & SuperAdmin) */}
@@ -501,13 +577,15 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       </div>
 
       {/* Active Tab Views */}
-      {/* Live Monitor A21 (Accessible by ALL Mentors & SuperAdmin) */}
-      {activeTab === 'live_monitor' && (
+      {/* Live Monitor & Bantu Absen A21 (Unified Cockpit - Accessible by ALL Mentors & SuperAdmin) */}
+      {(activeTab === 'live_monitor' || activeTab === 'helper_a21') && (
         <LiveMonitorA21
           members={members}
           activeMeeting={activeMeeting}
           attendances={attendances}
           talentStars={talentStars}
+          meetings={officialMeetings}
+          onAttendanceChanged={onAttendanceChanged}
         />
       )}
 
@@ -520,16 +598,6 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           onAddStar={onAddTalentStar}
           onRemoveStar={onRemoveTalentStar}
           activeMeeting={activeMeeting}
-        />
-      )}
-
-      {/* Bantu Absen Adik Kelas (Accessible by ALL Mentors & SuperAdmin) */}
-      {activeTab === 'helper_a21' && (
-        <HelperAttendanceA21
-          members={members}
-          activeMeeting={activeMeeting}
-          attendances={attendances}
-          onAttendanceChanged={onAttendanceChanged}
         />
       )}
 

@@ -570,8 +570,8 @@ export const App: React.FC = () => {
             window.location.hash = '#arena';
           }}
           membersCount={{
-            a21: members.filter((m) => m.generation === 21).length || 103,
-            a20: members.filter((m) => m.generation === 20).length || 59,
+            a21: members.filter((m) => m.generation === 21 && m.status === 'active').length || 103,
+            a20: members.filter((m) => m.generation === 20 && m.status === 'active').length || 59,
           }}
           isRegistrationOpen={isRegistrationOpen}
           isSuperAdmin={isSuperAdmin}

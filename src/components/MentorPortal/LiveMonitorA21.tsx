@@ -9,30 +9,59 @@ import {
   FileText, 
   MessageSquare, 
   Copy, 
-  Check 
+  Check,
+  Zap,
+  Calendar,
+  X
 } from 'lucide-react';
 import { Member, Meeting, Attendance, TalentStar } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
+import { supabase } from '../../lib/supabase';
 
 interface LiveMonitorA21Props {
   members: Member[];
   activeMeeting: Meeting | null;
+  meetings?: Meeting[];
   attendances: Attendance[];
   talentStars?: TalentStar[];
+  onAttendanceChanged?: () => void;
 }
 
 export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   members,
   activeMeeting,
+  meetings = [],
   attendances,
   talentStars = [],
+  onAttendanceChanged,
 }) => {
   const [activeSubTab, setActiveSubTab] = useState<'absent' | 'present' | 'permit' | 'all'>('absent');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [copiedWA, setCopiedWA] = useState(false);
   const [waNotice, setWaNotice] = useState<string | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+
+  // Available meetings sorted descending by date
+  const availableMeetings = useMemo(() => {
+    const list = meetings.filter((m) => !m.is_holiday);
+    if (list.length === 0 && activeMeeting) return [activeMeeting];
+    return [...list].sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
+  }, [meetings, activeMeeting]);
+
+  const [selectedMeetingId, setSelectedMeetingId] = useState<string>(() => {
+    return activeMeeting?.id || (availableMeetings.length > 0 ? availableMeetings[0].id : '');
+  });
+
+  // Target meeting for monitoring & quick-assist
+  const targetMeeting = useMemo(() => {
+    if (selectedMeetingId) {
+      const found = availableMeetings.find((m) => m.id === selectedMeetingId);
+      if (found) return found;
+    }
+    return activeMeeting || availableMeetings[0] || null;
+  }, [selectedMeetingId, availableMeetings, activeMeeting]);
 
   // 0ms Optimistic UI State for instant responsiveness
   const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
@@ -46,11 +75,11 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     return members.filter((m) => m.generation === 21 && m.status === 'active');
   }, [members]);
 
-  // Current meeting attendances
+  // Target meeting attendances
   const currentAttendances = useMemo(() => {
-    if (!activeMeeting) return [];
-    return optimisticAttendances.filter((a) => a.meeting_id === activeMeeting.id);
-  }, [optimisticAttendances, activeMeeting]);
+    if (!targetMeeting) return [];
+    return optimisticAttendances.filter((a) => a.meeting_id === targetMeeting.id);
+  }, [optimisticAttendances, targetMeeting]);
 
   const attendedMap = useMemo(() => {
     const map = new Map<string, Attendance>();
@@ -59,6 +88,106 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     });
     return map;
   }, [currentAttendances]);
+
+  // Handle Quick Assist (Hadir & Izin Surat Fisik) - 0ms Optimistic UI
+  const handleQuickAssist = async (student: Member, status: 'present' | 'permit') => {
+    if (!targetMeeting) {
+      sound.playError();
+      setWaNotice('Belum ada sesi pertemuan yang dipilih!');
+      setTimeout(() => setWaNotice(null), 3000);
+      return;
+    }
+
+    sound.playSuccess();
+    setActionLoadingId(student.id);
+
+    const prev = [...optimisticAttendances];
+    const filtered = prev.filter(
+      (a) => !(a.meeting_id === targetMeeting.id && a.member_id === student.id)
+    );
+
+    const newRecord: Attendance = {
+      id: `optimistic_${Date.now()}_${student.id}`,
+      meeting_id: targetMeeting.id,
+      member_id: student.id,
+      submitted_at: new Date().toISOString(),
+      feedback_rating: 'okay',
+      critique: status === 'permit' ? 'IZIN_SURAT_FISIK' : undefined,
+      next_agenda_suggestion: status === 'permit' ? 'Izin Resmi (Menyerahkan Surat Fisik)' : undefined,
+      is_anonymous: false,
+    };
+
+    setOptimisticAttendances([newRecord, ...filtered]);
+    setWaNotice(
+      status === 'permit'
+        ? `✓ ${student.name} (${student.class_name}) dicatat Izin (Surat Fisik)!`
+        : `✓ ${student.name} (${student.class_name}) berhasil dicatat Hadir!`
+    );
+    setTimeout(() => setWaNotice(null), 3500);
+
+    try {
+      const { error: delErr } = await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', targetMeeting.id)
+        .eq('member_id', student.id);
+
+      if (delErr) throw delErr;
+
+      const { error: insErr } = await supabase.from('attendances').insert({
+        meeting_id: targetMeeting.id,
+        member_id: student.id,
+        submitted_at: new Date().toISOString(),
+        feedback_rating: 'okay',
+        critique: status === 'permit' ? 'IZIN_SURAT_FISIK' : null,
+        next_agenda_suggestion: status === 'permit' ? 'Izin Resmi (Menyerahkan Surat Fisik)' : null,
+        is_anonymous: false,
+      });
+
+      if (insErr) throw insErr;
+      if (onAttendanceChanged) onAttendanceChanged();
+    } catch (err: any) {
+      console.error('Error assisting attendance:', err);
+      sound.playError();
+      setOptimisticAttendances(prev);
+      setWaNotice(`⚠️ Gagal menyimpan ke database: ${err?.message || 'Error'}`);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Handle Cancel Assist (Batal Presensi / Kembali ke Alpa)
+  const handleCancelAssist = async (student: Member) => {
+    if (!targetMeeting) return;
+    sound.playPop();
+    setActionLoadingId(student.id);
+
+    const prev = [...optimisticAttendances];
+    const filtered = prev.filter(
+      (a) => !(a.meeting_id === targetMeeting.id && a.member_id === student.id)
+    );
+    setOptimisticAttendances(filtered);
+    setWaNotice(`Status kehadiran ${student.name} telah dibatalkan.`);
+    setTimeout(() => setWaNotice(null), 3000);
+
+    try {
+      const { error } = await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', targetMeeting.id)
+        .eq('member_id', student.id);
+
+      if (error) throw error;
+      if (onAttendanceChanged) onAttendanceChanged();
+    } catch (err: any) {
+      console.error('Error canceling attendance:', err);
+      sound.playError();
+      setOptimisticAttendances(prev);
+      setWaNotice(`⚠️ Gagal membatalkan: ${err?.message || 'Error'}`);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const starsByMemberId = useMemo(() => {
     const map = new Map<string, number>();
@@ -145,9 +274,9 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
       return;
     }
 
-    const meetingTitle = activeMeeting ? activeMeeting.title : 'Sesi Pertemuan English Club';
-    const meetingDate = activeMeeting?.meeting_date 
-      ? new Date(activeMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    const meetingTitle = targetMeeting ? targetMeeting.title : 'Sesi Pertemuan English Club';
+    const meetingDate = targetMeeting?.meeting_date 
+      ? new Date(targetMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
       : 'Hari Ini';
 
     let text = `📢 *DAFTAR SISWA BELUM HADIR / ALPA — ENGLISH CLUB SMEGA*\n`;
@@ -170,19 +299,45 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
 
   return (
     <div className="space-y-6">
-      {/* Hero Live Counter Card */}
+      {/* Hero Live Counter Card with Session Selector */}
       <div className="p-6 rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-700 to-slate-900 text-white border-2 border-blue-900 shadow-[0_6px_0_0_#1e3a8a] space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <span className="text-[10px] font-black uppercase tracking-wider text-blue-200 bg-blue-900/60 px-2.5 py-0.5 rounded-md border border-blue-500/40">
-              Live Monitoring Sesi Eskul
-            </span>
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-wider text-blue-200 bg-blue-900/60 px-2.5 py-0.5 rounded-md border border-blue-500/40">
+                Cockpit Terpadu A21
+              </span>
+              <span className="text-[10px] font-black text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/40">
+                Pantau &amp; Bantu Absen / Izin
+              </span>
+            </div>
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
               Presensi Angkatan 21 (Adik Kelas)
             </h2>
-            <p className="text-xs font-bold text-blue-100">
-              {activeMeeting ? activeMeeting.title : 'Belum Ada Sesi Pertemuan'}
-            </p>
+
+            {/* Session Selector Dropdown */}
+            {availableMeetings.length > 0 && (
+              <div className="pt-1 flex flex-wrap items-center gap-2">
+                <span className="text-[11px] font-black text-blue-200 flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Sesi:</span>
+                </span>
+                <select
+                  value={targetMeeting?.id || ''}
+                  onChange={(e) => {
+                    sound.playPop();
+                    setSelectedMeetingId(e.target.value);
+                  }}
+                  className="bg-blue-950/90 text-white text-xs font-black py-1.5 px-3 rounded-xl border border-blue-400/50 focus:outline-none cursor-pointer shadow-sm"
+                >
+                  {availableMeetings.map((m) => (
+                    <option key={m.id} value={m.id} className="bg-slate-900 text-white">
+                      {m.title} ({new Date(m.meeting_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}) {m.id === activeMeeting?.id ? '• Sesi Aktif 🟢' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Big Circular/Number Stats */}
@@ -451,23 +606,82 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
                   )}
                 </div>
 
-                {/* Status Badge (Pure Read-Only Indicator) */}
-                <div className="shrink-0 self-end sm:self-center">
+                {/* Status & Quick 1-Click Action Buttons */}
+                <div className="shrink-0 flex items-center gap-1.5 self-end sm:self-center">
                   {isPresent ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black">
-                      <UserCheck className="w-3.5 h-3.5" />
-                      <span>Hadir</span>
-                    </span>
+                    <>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black">
+                        <UserCheck className="w-3.5 h-3.5" />
+                        <span>Hadir</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAssist(student, 'permit')}
+                        disabled={actionLoadingId === student.id}
+                        title="Ubah status jadi Izin (Surat Fisik)"
+                        className="px-2 py-1 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 text-[11px] font-black transition-all cursor-pointer shadow-sm active:translate-y-[1px]"
+                      >
+                        📄 Jadi Izin
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCancelAssist(student)}
+                        disabled={actionLoadingId === student.id}
+                        title="Batalkan presensi (kembalikan ke belum hadir)"
+                        className="p-1 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 border border-slate-200 text-xs transition-all cursor-pointer active:translate-y-[1px]"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   ) : isPermit ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 text-xs font-black">
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>Izin Resmi</span>
-                    </span>
+                    <>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-100 text-amber-800 border border-amber-300 text-xs font-black">
+                        <FileText className="w-3.5 h-3.5" />
+                        <span>Izin (Surat)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleQuickAssist(student, 'present')}
+                        disabled={actionLoadingId === student.id}
+                        title="Ubah status jadi Hadir"
+                        className="px-2 py-1 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-black transition-all cursor-pointer shadow-sm active:translate-y-[1px]"
+                      >
+                        ⚡ Jadi Hadir
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleCancelAssist(student)}
+                        disabled={actionLoadingId === student.id}
+                        title="Batalkan status izin (kembalikan ke belum hadir)"
+                        className="p-1 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-700 border border-slate-200 text-xs transition-all cursor-pointer active:translate-y-[1px]"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
                   ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs font-bold">
-                      <UserX className="w-3.5 h-3.5 text-rose-500" />
-                      <span>Belum Hadir</span>
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <TactileButton
+                        variant="emerald"
+                        size="sm"
+                        onClick={() => handleQuickAssist(student, 'present')}
+                        disabled={actionLoadingId === student.id}
+                        className="py-1 px-2.5 text-[11px] font-black"
+                      >
+                        <Zap className="w-3 h-3" />
+                        <span>Hadir</span>
+                      </TactileButton>
+
+                      <TactileButton
+                        variant="amber"
+                        size="sm"
+                        onClick={() => handleQuickAssist(student, 'permit')}
+                        disabled={actionLoadingId === student.id}
+                        className="py-1 px-2.5 text-[11px] font-black"
+                      >
+                        <FileText className="w-3 h-3" />
+                        <span>Izin Surat</span>
+                      </TactileButton>
+                    </div>
                   )}
                 </div>
               </div>
