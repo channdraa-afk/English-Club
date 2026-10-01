@@ -63,6 +63,19 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
     return activeMeeting || availableMeetings[0] || null;
   }, [selectedMeetingId, availableMeetings, activeMeeting]);
 
+  // Scalable 2-Pill Anchor: Primary (Active/Latest), Previous (Last Week), and Older Archives
+  const { primaryMeeting, previousMeeting, olderMeetings } = useMemo(() => {
+    const active = activeMeeting || (availableMeetings.length > 0 ? availableMeetings[0] : null);
+    const remaining = availableMeetings.filter((m) => m.id !== active?.id);
+    const prev = remaining.length > 0 ? remaining[0] : null;
+    const older = remaining.slice(1);
+    return { primaryMeeting: active, previousMeeting: prev, olderMeetings: older };
+  }, [activeMeeting, availableMeetings]);
+
+  const isOlderSelected = useMemo(() => {
+    return olderMeetings.some((m) => m.id === targetMeeting?.id);
+  }, [olderMeetings, targetMeeting]);
+
   // 0ms Optimistic UI State for instant responsiveness
   const [optimisticAttendances, setOptimisticAttendances] = useState<Attendance[]>(attendances);
 
@@ -384,62 +397,84 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
           </div>
         </div>
 
-        {/* 1-Tap Pills */}
+        {/* 1-Tap Pills & Scalable Archive Dropdown */}
         <div className="flex items-center gap-2 flex-wrap">
-          {activeMeeting && (
+          {primaryMeeting && (
             <button
               type="button"
               onClick={() => {
                 sound.playPop();
-                setSelectedMeetingId(activeMeeting.id);
+                setSelectedMeetingId(primaryMeeting.id);
               }}
-              className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
-                targetMeeting?.id === activeMeeting.id
+              className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 min-h-[44px] ${
+                targetMeeting?.id === primaryMeeting.id
                   ? 'bg-emerald-600 text-white shadow-[0_3px_0_0_#047857]'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-200 shadow-[0_2px_0_0_#a7f3d0]'
               }`}
             >
-              <span>🟢 Sesi Aktif ({new Date(activeMeeting.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})</span>
+              <span>
+                {primaryMeeting.is_active ? '🟢 Sesi Aktif' : '📁 Sesi Terbaru'} (
+                {new Date(primaryMeeting.meeting_date).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+                )
+              </span>
             </button>
           )}
 
-          {/* Past meetings (e.g. Wednesday yesterday) */}
-          {availableMeetings
-            .filter((m) => m.id !== activeMeeting?.id)
-            .slice(0, 2)
-            .map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  sound.playPop();
-                  setSelectedMeetingId(m.id);
+          {previousMeeting && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                setSelectedMeetingId(previousMeeting.id);
+              }}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 min-h-[44px] ${
+                targetMeeting?.id === previousMeeting.id
+                  ? 'bg-amber-500 text-white shadow-[0_3px_0_0_#b45309]'
+                  : 'bg-amber-50/70 hover:bg-amber-100 text-amber-900 border-2 border-amber-200 shadow-[0_2px_0_0_#fde68a]'
+              }`}
+            >
+              <span>
+                📄 Pekan Lalu (
+                {new Date(previousMeeting.meeting_date).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+                )
+              </span>
+            </button>
+          )}
+
+          {/* Clean Dropdown for Older Meetings */}
+          {olderMeetings.length > 0 && (
+            <div
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border-2 transition-all min-h-[44px] ${
+                isOlderSelected
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-[0_3px_0_0_#b45309]'
+                  : 'bg-slate-50 text-slate-700 border-slate-300 hover:border-slate-400 shadow-[0_2px_0_0_#e2e8f0]'
+              }`}
+            >
+              <Calendar className={`w-4 h-4 shrink-0 ${isOlderSelected ? 'text-white' : 'text-slate-500'}`} />
+              <select
+                value={isOlderSelected ? targetMeeting?.id : ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    sound.playPop();
+                    setSelectedMeetingId(e.target.value);
+                  }
                 }}
-                className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
-                  targetMeeting?.id === m.id
-                    ? 'bg-amber-500 text-white shadow-[0_3px_0_0_#b45309]'
-                    : 'bg-amber-50/70 hover:bg-amber-100 text-amber-900 border-2 border-amber-200 shadow-[0_2px_0_0_#fde68a]'
+                className={`bg-transparent text-xs sm:text-sm font-black focus:outline-none cursor-pointer max-w-[210px] truncate ${
+                  isOlderSelected ? 'text-white font-black' : 'text-slate-800'
                 }`}
               >
-                <span>📄 Sesi Kemarin ({new Date(m.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})</span>
-              </button>
-            ))}
-
-          {/* Dropdown if more than 3 meetings */}
-          {availableMeetings.length > 3 && (
-            <div className="flex items-center gap-1.5 bg-slate-50 border-2 border-slate-300 rounded-2xl px-3 py-2">
-              <span className="text-[10px] font-black uppercase text-slate-500">Arsip Lain:</span>
-              <select
-                value={targetMeeting?.id || ''}
-                onChange={(e) => {
-                  sound.playPop();
-                  setSelectedMeetingId(e.target.value);
-                }}
-                className="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer max-w-[200px] truncate"
-              >
-                {availableMeetings.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.title} ({m.meeting_date})
+                <option value="" disabled className="text-slate-900 bg-white">
+                  📁 Arsip Sesi Lainnya ({olderMeetings.length})...
+                </option>
+                {olderMeetings.map((m) => (
+                  <option key={m.id} value={m.id} className="text-slate-900 bg-white">
+                    {m.title} ({new Date(m.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})
                   </option>
                 ))}
               </select>

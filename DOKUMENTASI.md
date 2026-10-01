@@ -626,6 +626,15 @@
     2. *Interactive 3D Pushable KPI Cards*: Mengubah seluruh kartu ringkasan di Kotak Saran, Radar Kedisiplinan, dan Kelola Master Siswa menjadi tombol filter taktil 3D (`button`). Mengklik kartu *Boring* langsung mengisolasi masukan kritis, dan mengklik kartu *Kritis* di radar langsung menampilkan daftar pengurus 0 kehadiran secara instan (0ms).
     3. *Touch Target >= 44px & Bilah Taktil*: Menghadirkan bilah pemilih bulan terdedikasi di `MentorDisciplineRadar`, bilah sesi lampau di `LiveMonitorA21`, serta memperbesar seluruh kontrol filter/dropdown di `ReportRecap`, `TalentScoutA21`, dan `MeetingControl` menjadi >= 44px dengan border-2 dan font tebal ramah layar sentuh.
 
+- [x] Selector Sesi Skalabel 2-Pill Anchor & Quick-Action Kotak Saran (`LiveMonitorA21.tsx`, `AgendaVault.tsx`, `MentorDashboard.tsx`):
+  - **Problem**: 
+    1. Tombol pil sesi bertambah terus setiap pertemuan baru dibuat, berisiko meluap (*button overflow*) dan merusak tampilan saat semester memasuki belasan sesi.
+    2. Label "Sesi Kemarin" tertera pada semua sesi lampau, padahal pertemuan terjadi sepekan sekali (bukan kemarin).
+    3. Kartu ke-3 Quick-Action Hub menampilkan game "Kuis EC Arena", padahal kuis hanya dioperasikan sesekali di proyektor kelas, bukan kebutuhan rutin harian pengurus di HP.
+  - **Solution / State**:
+    1. *Pola 2-Pill Anchor + Clean Archive Dropdown*: Mengunci baris pemilih sesi di `LiveMonitorA21.tsx` dan `AgendaVault.tsx` maksimal 2 tombol taktil (`[ 🟢 Sesi Aktif ]` dan `[ 📄 Pekan Lalu ]`) ditambah dropdown terdedikasi untuk arsip yang lebih lampau. Jika sesi dari arsip dipilih, dropdown otomatis menyala (*amber active state*) dengan bayangan 3D.
+    2. *Alur Eskul 3 Babak*: Mengganti kartu ke-3 Quick-Action Hub di `MentorDashboard.tsx` menjadi **Kotak Saran Adik (Evaluasi)** (`agenda_a21`), melengkapi siklus kerja mingguan pengurus: Presensi Sendiri (Awal) ➔ Dampingi Adik (Selama) ➔ Evaluasi Respon (Akhir/Briefing).
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

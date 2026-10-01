@@ -411,28 +411,28 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           </div>
         </button>
 
-        {/* 3. Kuis EC Arena */}
+        {/* 3. Kotak Saran Adik (Evaluasi) */}
         <button
           onClick={() => {
             sound.playPop();
             setCurrentCategory('a21');
-            setActiveTab('quiz');
+            setActiveTab('agenda_a21');
           }}
           className={`flex items-center gap-3 p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
-            activeTab === 'quiz'
+            activeTab === 'agenda_a21'
               ? 'bg-amber-50 border-amber-500 shadow-[0_2px_0_0_#f59e0b]'
               : 'bg-white border-amber-100 hover:border-amber-300 shadow-[0_4px_0_0_#fef3c7] hover:bg-amber-50/40'
           }`}
         >
           <div className="w-11 h-11 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-sm">
-            <Gamepad2 className="w-5 h-5" />
+            <Sparkles className="w-5 h-5" />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-xs font-black text-slate-800">Kuis EC Arena</span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800">Game</span>
+              <span className="text-xs font-black text-slate-800">Kotak Saran Adik</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-800">Evaluasi</span>
             </div>
-            <p className="text-[11px] font-bold text-slate-500 truncate">Game interaktif & kuis kelas</p>
+            <p className="text-[11px] font-bold text-slate-500 truncate">Cek respon & curhat materi eskul</p>
           </div>
         </button>
       </div>

@@ -38,10 +38,23 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
     return [...list].sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
   }, [meetings, activeMeeting]);
 
+  // Scalable 2-Pill Anchor: Primary (Active/Latest), Previous (Last Week), and Older Archives
+  const { primaryMeeting, previousMeeting, olderMeetings } = useMemo(() => {
+    const active = activeMeeting || (availableMeetings.length > 0 ? availableMeetings[0] : null);
+    const remaining = availableMeetings.filter((m) => m.id !== active?.id);
+    const prev = remaining.length > 0 ? remaining[0] : null;
+    const older = remaining.slice(1);
+    return { primaryMeeting: active, previousMeeting: prev, olderMeetings: older };
+  }, [activeMeeting, availableMeetings]);
+
   // Session selector state: defaults to active meeting or the newest meeting
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>(() => {
     return activeMeeting?.id || (availableMeetings.length > 0 ? availableMeetings[0].id : 'all');
   });
+
+  const isOlderSelected = useMemo(() => {
+    return olderMeetings.some((m) => m.id === selectedMeetingId);
+  }, [olderMeetings, selectedMeetingId]);
 
   // Selected rating filter: 'all' | 'super_fun' | 'okay' | 'boring'
   const [selectedRating, setSelectedRating] = useState<'all' | 'super_fun' | 'okay' | 'boring'>('all');
@@ -207,45 +220,55 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* 1. Sesi Aktif */}
-          {activeMeeting && (
+          {/* 1. Sesi Aktif / Sesi Terbaru */}
+          {primaryMeeting && (
             <button
               type="button"
               onClick={() => {
                 sound.playPop();
-                setSelectedMeetingId(activeMeeting.id);
+                setSelectedMeetingId(primaryMeeting.id);
               }}
-              className={`px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
-                selectedMeetingId === activeMeeting.id
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 min-h-[44px] ${
+                selectedMeetingId === primaryMeeting.id
                   ? 'bg-emerald-600 text-white shadow-[0_3px_0_0_#047857]'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-200'
               }`}
             >
-              <span>🟢 Sesi Aktif ({new Date(activeMeeting.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})</span>
+              <span>
+                {primaryMeeting.is_active ? '🟢 Sesi Aktif' : '📁 Sesi Terbaru'} (
+                {new Date(primaryMeeting.meeting_date).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+                )
+              </span>
             </button>
           )}
 
-          {/* 2. Sesi-sesi lain (terbaru) */}
-          {availableMeetings
-            .filter((m) => m.id !== activeMeeting?.id)
-            .slice(0, 3)
-            .map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => {
-                  sound.playPop();
-                  setSelectedMeetingId(m.id);
-                }}
-                className={`px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
-                  selectedMeetingId === m.id
-                    ? 'bg-blue-600 text-white shadow-[0_3px_0_0_#1e3a8a]'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-slate-200'
-                }`}
-              >
-                <span>📁 {m.title.length > 22 ? m.title.slice(0, 22) + '...' : m.title} ({new Date(m.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})</span>
-              </button>
-            ))}
+          {/* 2. Sesi Pekan Lalu */}
+          {previousMeeting && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                setSelectedMeetingId(previousMeeting.id);
+              }}
+              className={`px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 min-h-[44px] ${
+                selectedMeetingId === previousMeeting.id
+                  ? 'bg-amber-500 text-white shadow-[0_3px_0_0_#b45309]'
+                  : 'bg-amber-50/70 hover:bg-amber-100 text-amber-900 border-2 border-amber-200 shadow-[0_2px_0_0_#fde68a]'
+              }`}
+            >
+              <span>
+                📄 Pekan Lalu (
+                {new Date(previousMeeting.meeting_date).toLocaleDateString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                })}
+                )
+              </span>
+            </button>
+          )}
 
           {/* 3. Opsi Semua Sesi (Kumulatif) */}
           <button
@@ -254,7 +277,7 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
               sound.playPop();
               setSelectedMeetingId('all');
             }}
-            className={`px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
+            className={`px-3.5 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 min-h-[44px] ${
               selectedMeetingId === 'all'
                 ? 'bg-indigo-900 text-white shadow-[0_3px_0_0_#1e1b4b]'
                 : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-slate-200'
@@ -263,23 +286,38 @@ export const AgendaVault: React.FC<AgendaVaultProps> = ({
             <span>🌐 Semua Sesi (Gabungan)</span>
           </button>
 
-          {/* 4. Dropdown jika sesi lebih dari 4 */}
-          {availableMeetings.length > 4 && (
-            <select
-              value={selectedMeetingId}
-              onChange={(e) => {
-                sound.playPop();
-                setSelectedMeetingId(e.target.value);
-              }}
-              className="bg-white border-2 border-slate-300 text-slate-800 text-xs font-black py-2 px-3 rounded-2xl focus:outline-none cursor-pointer shadow-sm"
+          {/* 4. Dropdown Arsip Sesi Lainnya */}
+          {olderMeetings.length > 0 && (
+            <div
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border-2 transition-all min-h-[44px] ${
+                isOlderSelected
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-[0_3px_0_0_#b45309]'
+                  : 'bg-slate-50 text-slate-700 border-slate-300 hover:border-slate-400 shadow-[0_2px_0_0_#e2e8f0]'
+              }`}
             >
-              <option value="" disabled>Pilih Arsip Sesi Lainnya...</option>
-              {availableMeetings.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.title} ({m.meeting_date})
+              <Calendar className={`w-4 h-4 shrink-0 ${isOlderSelected ? 'text-white' : 'text-slate-500'}`} />
+              <select
+                value={isOlderSelected ? selectedMeetingId : ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    sound.playPop();
+                    setSelectedMeetingId(e.target.value);
+                  }
+                }}
+                className={`bg-transparent text-xs sm:text-sm font-black focus:outline-none cursor-pointer max-w-[210px] truncate ${
+                  isOlderSelected ? 'text-white font-black' : 'text-slate-800'
+                }`}
+              >
+                <option value="" disabled className="text-slate-900 bg-white">
+                  📁 Arsip Sesi Lainnya ({olderMeetings.length})...
                 </option>
-              ))}
-            </select>
+                {olderMeetings.map((m) => (
+                  <option key={m.id} value={m.id} className="text-slate-900 bg-white">
+                    {m.title} ({new Date(m.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})
+                  </option>
+                ))}
+              </select>
+            </div>
           )}
         </div>
       </div>
