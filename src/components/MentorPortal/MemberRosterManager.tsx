@@ -256,34 +256,78 @@ export const MemberRosterManager: React.FC<MemberRosterManagerProps> = ({
           </TactileButton>
         </div>
 
-        {/* 2. Stats Grid */}
+        {/* 2. Interactive Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t-2 border-slate-100">
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setActiveTab('a21');
+            }}
+            className={`p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              activeTab === 'a21'
+                ? 'bg-emerald-50 border-emerald-500 shadow-[0_2px_0_0_#10b981]'
+                : 'bg-slate-50 border-slate-200 hover:border-emerald-300 shadow-[0_4px_0_0_#e2e8f0]'
+            }`}
+          >
             <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Adik Kelas (A21)</p>
             <p className="text-xl sm:text-2xl font-black text-emerald-600">{stats.a21Active} <span className="text-xs font-bold text-slate-400">Aktif</span></p>
-          </div>
+          </button>
 
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setActiveTab('a20');
+            }}
+            className={`p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              activeTab === 'a20'
+                ? 'bg-blue-50 border-blue-500 shadow-[0_2px_0_0_#3b82f6]'
+                : 'bg-slate-50 border-slate-200 hover:border-blue-300 shadow-[0_4px_0_0_#e2e8f0]'
+            }`}
+          >
             <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Pengurus (A20)</p>
             <p className="text-xl sm:text-2xl font-black text-blue-600">{stats.a20Active} <span className="text-xs font-bold text-slate-400">Aktif</span></p>
-          </div>
+          </button>
 
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setActiveTab('inactive');
+            }}
+            className={`p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              activeTab === 'inactive'
+                ? 'bg-rose-50 border-rose-500 shadow-[0_2px_0_0_#f43f5e]'
+                : 'bg-slate-50 border-slate-200 hover:border-rose-300 shadow-[0_4px_0_0_#e2e8f0]'
+            }`}
+          >
             <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Nonaktif / Keluar</p>
             <p className="text-xl sm:text-2xl font-black text-rose-500">{stats.inactive} <span className="text-xs font-bold text-slate-400">Arsip</span></p>
-          </div>
+          </button>
 
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-1">
-            <p className="text-[11px] font-black uppercase tracking-wider text-slate-500">Total Database</p>
-            <p className="text-xl sm:text-2xl font-black text-slate-900">{stats.total} <span className="text-xs font-bold text-slate-400">Jiwa</span></p>
-          </div>
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setActiveTab('all');
+            }}
+            className={`p-3.5 rounded-2xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              activeTab === 'all'
+                ? 'bg-slate-900 border-slate-950 text-white shadow-[0_2px_0_0_#0f172a]'
+                : 'bg-slate-50 border-slate-200 hover:border-slate-400 shadow-[0_4px_0_0_#e2e8f0]'
+            }`}
+          >
+            <p className={`text-[11px] font-black uppercase tracking-wider ${activeTab === 'all' ? 'text-slate-300' : 'text-slate-500'}`}>Total Database</p>
+            <p className={`text-xl sm:text-2xl font-black ${activeTab === 'all' ? 'text-white' : 'text-slate-900'}`}>{stats.total} <span className="text-xs font-bold opacity-60">Jiwa</span></p>
+          </button>
         </div>
       </div>
 
       {/* 3. Filter Tabs & Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         {/* Filter Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-x-auto">
+        <div className="flex items-center gap-1.5 p-1 bg-white rounded-2xl border-2 border-slate-200 shadow-sm overflow-x-auto min-h-[44px]">
           {[
             { id: 'all', label: `Semua Aktif (${stats.a21Active + stats.a20Active})` },
             { id: 'a21', label: `Adik A21 (${stats.a21Active})` },
@@ -296,7 +340,7 @@ export const MemberRosterManager: React.FC<MemberRosterManagerProps> = ({
                 sound.playPop();
                 setActiveTab(tab.id as any);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer whitespace-nowrap min-h-[40px] flex items-center ${
                 activeTab === tab.id
                   ? 'bg-slate-900 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
@@ -309,13 +353,13 @@ export const MemberRosterManager: React.FC<MemberRosterManagerProps> = ({
 
         {/* Search */}
         <div className="relative flex-1 max-w-xs">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Cari nama atau kelas..."
-            className="w-full pl-9 pr-3 py-2 bg-white border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:outline-none focus:border-amber-500 shadow-sm"
+            className="w-full pl-10 pr-3.5 py-2.5 bg-white border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-900 focus:outline-none focus:border-amber-500 shadow-sm min-h-[44px]"
           />
         </div>
       </div>

@@ -382,7 +382,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
                 sound.playPop();
                 setSelectedMeetingId(e.target.value);
               }}
-              className="w-full px-3 py-2 rounded-xl bg-slate-50 border-2 border-slate-200 text-xs font-black text-slate-800 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 text-xs sm:text-sm font-black text-slate-800 focus:outline-none focus:border-amber-500 transition-colors min-h-[44px]"
             >
               {meetings.map((m) => (
                 <option key={m.id} value={m.id}>
@@ -403,7 +403,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
               placeholder="Cari nama adik kelas atau kelas..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 text-xs font-black text-slate-800 focus:outline-none focus:border-amber-500 placeholder:text-slate-400 transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 text-xs sm:text-sm font-black text-slate-800 focus:outline-none focus:border-amber-500 placeholder:text-slate-400 transition-colors min-h-[44px]"
             />
           </div>
 
@@ -412,7 +412,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
             <select
               value={selectedClass}
               onChange={(e) => setSelectedClass(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 text-xs font-black text-slate-700 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 text-xs sm:text-sm font-black text-slate-700 focus:outline-none focus:border-amber-500 transition-colors min-h-[44px]"
             >
               <option value="ALL">Semua Kelas ({a21Members.length})</option>
               {classList.map((cls) => (
@@ -426,7 +426,7 @@ export const TalentScoutA21: React.FC<TalentScoutA21Props> = ({
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full px-3 py-2.5 rounded-xl bg-slate-50 border-2 border-slate-200 text-xs font-black text-slate-700 focus:outline-none focus:border-amber-500 transition-colors"
+              className="w-full px-3.5 py-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 text-xs sm:text-sm font-black text-slate-700 focus:outline-none focus:border-amber-500 transition-colors min-h-[44px]"
             >
               <option value="stars_desc">⭐ Bintang Terbanyak</option>
               <option value="name_asc">🔤 Nama (A - Z)</option>

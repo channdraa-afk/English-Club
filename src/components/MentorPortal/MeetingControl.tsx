@@ -601,13 +601,13 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
           <div className="flex flex-wrap items-center gap-2">
             {meetings.length > 0 && (
-              <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-1.5 rounded-2xl border border-slate-300">
-                <Calendar className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
-                <span className="text-[10px] font-black text-slate-500 uppercase">Pilih:</span>
+              <div className="flex items-center gap-2 bg-slate-100 px-3.5 py-2 rounded-2xl border-2 border-slate-300 min-h-[44px]">
+                <Calendar className="w-4 h-4 text-indigo-600 shrink-0" />
+                <span className="text-xs font-black text-slate-500 uppercase">Sesi:</span>
                 <select
                   value={selectedMeetingId}
                   onChange={(e) => handleSelectMeeting(e.target.value)}
-                  className="bg-transparent text-xs font-black text-slate-800 focus:outline-none cursor-pointer max-w-[220px] truncate"
+                  className="bg-transparent text-xs sm:text-sm font-black text-slate-800 focus:outline-none cursor-pointer max-w-[240px] truncate"
                 >
                   {meetings.map((m) => {
                     const isMActive = m.id === activeMeeting?.id;
@@ -627,10 +627,10 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
             <button
               type="button"
               onClick={handleStartNewSession}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl font-black text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_2px_0_0_#3730a3] active:translate-y-0.5 transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-[0_3px_0_0_#3730a3] active:translate-y-0.5 transition-all cursor-pointer min-h-[44px]"
               title="Buka sesi baru untuk pertemuan hari Rabu berikutnya"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4" />
               <span>➕ Buka Sesi Baru Pekan Depan</span>
             </button>
           </div>

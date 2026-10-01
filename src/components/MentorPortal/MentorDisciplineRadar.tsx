@@ -627,24 +627,13 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
             </div>
           </div>
 
-          {/* Month Selector (Only in monthly mode) */}
+          {/* Month Indicator in Header */}
           {radarMode === 'monthly' && (
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-300 shrink-0" />
-              <select
-                value={selectedMonth}
-                onChange={(e) => {
-                  sound.playPop();
-                  setSelectedMonth(e.target.value);
-                }}
-                className="bg-indigo-900/80 text-white border-2 border-indigo-400 rounded-2xl px-3 py-1.5 text-xs font-black focus:outline-none focus:ring-2 focus:ring-indigo-300"
-              >
-                {availableMonths.map((m) => (
-                  <option key={m} value={m} className="bg-slate-900 text-white">
-                    {formatMonthTitle(m)}
-                  </option>
-                ))}
-              </select>
+              <span className="text-xs font-black text-amber-300 bg-indigo-950/80 px-3.5 py-1.5 rounded-2xl border border-indigo-400/40 shadow-sm flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-indigo-300 shrink-0" />
+                <span>Bulan: {formatMonthTitle(selectedMonth)}</span>
+              </span>
             </div>
           )}
         </div>
@@ -681,6 +670,71 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
         </div>
       </div>
 
+      {/* 🍂 BILAH PEMILIH BULAN TAKTIL (UNTUK KEDIS) */}
+      {radarMode === 'monthly' && (
+        <div className="no-print bg-white p-4 sm:p-5 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap border-b border-slate-100 pb-2.5">
+            <div className="flex items-center gap-2">
+              <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0">
+                <Calendar className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Pilih Bulan Periode Evaluasi Kedisiplinan
+                </h4>
+                <p className="text-[11px] font-bold text-slate-500">
+                  Target kuota shift: minimal 2x kehadiran per bulan aktif
+                </p>
+              </div>
+            </div>
+
+            <span className="text-xs font-black text-indigo-900 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-xl">
+              📅 Periode Aktif: {formatMonthTitle(selectedMonth)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {availableMonths.slice(0, 3).map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  setSelectedMonth(m);
+                }}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
+                  selectedMonth === m
+                    ? 'bg-indigo-900 text-white shadow-[0_3px_0_0_#1e1b4b]'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-2 border-slate-200 shadow-[0_2px_0_0_#cbd5e1]'
+                }`}
+              >
+                <span>📅 {formatMonthTitle(m)}</span>
+              </button>
+            ))}
+
+            {availableMonths.length > 3 && (
+              <div className="flex items-center gap-1.5 bg-slate-50 border-2 border-slate-300 rounded-2xl px-3 py-2">
+                <span className="text-[10px] font-black uppercase text-slate-500">Bulan Lain:</span>
+                <select
+                  value={selectedMonth}
+                  onChange={(e) => {
+                    sound.playPop();
+                    setSelectedMonth(e.target.value);
+                  }}
+                  className="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer"
+                >
+                  {availableMonths.map((m) => (
+                    <option key={m} value={m}>
+                      {formatMonthTitle(m)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* WhatsApp Broadcast Banner for Kedis (Per Minggu / Per Tanggal Sesi) */}
       <div className="no-print p-4 rounded-3xl bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-emerald-500/10 border-2 border-emerald-300 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 shadow-sm">
         <div className="flex items-start sm:items-center gap-3">
@@ -711,15 +765,16 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
           {/* Meeting Selector for WA */}
           {availableMeetingsForWA.length > 0 && (
-            <div className="flex items-center gap-1.5 bg-white border-2 border-emerald-300 rounded-2xl px-2.5 py-1.5 shadow-sm">
-              <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-2 bg-white border-2 border-emerald-400 rounded-2xl px-3 py-2 shadow-sm min-h-[44px]">
+              <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span className="text-[10px] font-black uppercase text-emerald-800 shrink-0">Sesi Evaluasi:</span>
               <select
                 value={activeMeetingForWA?.id || ''}
                 onChange={(e) => {
                   sound.playPop();
                   setSelectedMeetingIdForWA(e.target.value);
                 }}
-                className="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer max-w-[210px] truncate"
+                className="bg-transparent text-slate-900 text-xs sm:text-sm font-black focus:outline-none cursor-pointer max-w-[240px] truncate"
               >
                 {availableMeetingsForWA.map((m) => {
                   const dateStr = m.meeting_date
@@ -744,7 +799,7 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
             onClick={handleCopyAbsentWA}
             variant="brand"
             size="sm"
-            className="py-2 px-4 text-xs font-black shrink-0 justify-center"
+            className="py-2.5 px-4 text-xs font-black shrink-0 justify-center min-h-[44px]"
             disabled={!activeMeetingForWA || sessionAttendanceStats.absentCount === 0}
           >
             {copiedWA ? (
@@ -768,70 +823,133 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
         </div>
       )}
 
-      {/* KPI Cards Grid (Hidden in Print) */}
-      <div className="no-print grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Safe / Disciplined */}
-        <div className="p-4 rounded-3xl bg-emerald-50 border-2 border-emerald-300 shadow-[0_4px_0_0_#86efac] space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
-              Aman / Disiplin
-            </span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-emerald-950">
-            {stats.safeCount} <span className="text-xs font-bold text-emerald-700">/ {stats.total}</span>
-          </div>
-          <p className="text-[10px] font-extrabold text-emerald-700">
-            {stats.complianceRate}% Memenuhi Kuota ({radarMode === 'monthly' ? '≥2x' : '≥50%'})
-          </p>
+      {/* KPI Cards Grid (Interactive 1-Click Status Filter) */}
+      <div className="no-print space-y-1.5">
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+            Klik Kartu Untuk Menyaring Status Pengurus:
+          </span>
+          {selectedStatus !== 'all' && (
+            <button
+              onClick={() => {
+                sound.playPop();
+                setSelectedStatus('all');
+              }}
+              className="text-[11px] font-black text-indigo-600 hover:text-indigo-800 hover:underline cursor-pointer"
+            >
+              Reset ke Semua Pengurus ({stats.total})
+            </button>
+          )}
         </div>
 
-        {/* Overachievers */}
-        <div className="p-4 rounded-3xl bg-amber-50 border-2 border-amber-300 shadow-[0_4px_0_0_#fde047] space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
-              Super Dedikasi
-            </span>
-            <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-amber-950">
-            {stats.overachieverCount} <span className="text-xs font-bold text-amber-700">Orang</span>
-          </div>
-          <p className="text-[10px] font-extrabold text-amber-700">
-            {radarMode === 'monthly' ? 'Hadir Lebih dari Kuota (>2x)' : 'Kehadiran Prima (≥75%)'}
-          </p>
-        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Safe / Disciplined */}
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setSelectedStatus(selectedStatus === 'safe' ? 'all' : 'safe');
+            }}
+            className={`p-4 rounded-3xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              selectedStatus === 'safe'
+                ? 'bg-emerald-100 border-emerald-600 shadow-[0_2px_0_0_#059669] ring-2 ring-emerald-400'
+                : 'bg-emerald-50 border-emerald-300 shadow-[0_4px_0_0_#86efac] hover:border-emerald-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-800">
+                Aman / Disiplin
+              </span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-emerald-950">
+              {stats.safeCount} <span className="text-xs font-bold text-emerald-700">/ {stats.total}</span>
+            </div>
+            <p className="text-[10px] font-extrabold text-emerald-700">
+              {stats.complianceRate}% Memenuhi Kuota ({radarMode === 'monthly' ? '≥2x' : '≥50%'})
+            </p>
+          </button>
 
-        {/* Warning (1x / <50%) */}
-        <div className="p-4 rounded-3xl bg-yellow-50 border-2 border-yellow-300 shadow-[0_4px_0_0_#fef08a] space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-yellow-800">
-              {radarMode === 'monthly' ? 'Kurang 1 Sesi' : 'Di Bawah Kuota'}
-            </span>
-            <AlertTriangle className="w-4 h-4 text-yellow-600" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-yellow-950">
-            {stats.warningCount} <span className="text-xs font-bold text-yellow-700">Orang</span>
-          </div>
-          <p className="text-[10px] font-extrabold text-yellow-700">
-            {radarMode === 'monthly' ? 'Baru Hadir 1x (Perlu 1x Lagi)' : 'Kehadiran di Bawah 50%'}
-          </p>
-        </div>
+          {/* Overachievers */}
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setSelectedStatus(selectedStatus === 'safe' ? 'all' : 'safe');
+            }}
+            className={`p-4 rounded-3xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              selectedStatus === 'safe'
+                ? 'bg-amber-100 border-amber-600 shadow-[0_2px_0_0_#d97706]'
+                : 'bg-amber-50 border-amber-300 shadow-[0_4px_0_0_#fde047] hover:border-amber-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-amber-800">
+                Super Dedikasi
+              </span>
+              <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-amber-950">
+              {stats.overachieverCount} <span className="text-xs font-bold text-amber-700">Orang</span>
+            </div>
+            <p className="text-[10px] font-extrabold text-amber-700">
+              {radarMode === 'monthly' ? 'Hadir Lebih dari Kuota (>2x)' : 'Kehadiran Prima (≥75%)'}
+            </p>
+          </button>
 
-        {/* Critical (0x) */}
-        <div className="p-4 rounded-3xl bg-rose-50 border-2 border-rose-300 shadow-[0_4px_0_0_#fca5a5] space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] font-black uppercase tracking-wider text-rose-800">
-              Kritis / 0 Hadir
-            </span>
-            <ShieldAlert className="w-4 h-4 text-rose-600" />
-          </div>
-          <div className="text-2xl sm:text-3xl font-black text-rose-950">
-            {stats.criticalCount} <span className="text-xs font-bold text-rose-700">Orang</span>
-          </div>
-          <p className="text-[10px] font-extrabold text-rose-700">
-            Belum Bertugas Sama Sekali
-          </p>
+          {/* Warning (1x / <50%) */}
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setSelectedStatus(selectedStatus === 'warning' ? 'all' : 'warning');
+            }}
+            className={`p-4 rounded-3xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              selectedStatus === 'warning'
+                ? 'bg-yellow-100 border-yellow-600 shadow-[0_2px_0_0_#ca8a04] ring-2 ring-yellow-400'
+                : 'bg-yellow-50 border-yellow-300 shadow-[0_4px_0_0_#fef08a] hover:border-yellow-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-yellow-800">
+                {radarMode === 'monthly' ? 'Kurang 1 Sesi' : 'Di Bawah Kuota'}
+              </span>
+              <AlertTriangle className="w-4 h-4 text-yellow-600" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-yellow-950">
+              {stats.warningCount} <span className="text-xs font-bold text-yellow-700">Orang</span>
+            </div>
+            <p className="text-[10px] font-extrabold text-yellow-700">
+              {radarMode === 'monthly' ? 'Baru Hadir 1x (Perlu 1x Lagi)' : 'Kehadiran di Bawah 50%'}
+            </p>
+          </button>
+
+          {/* Critical (0x) */}
+          <button
+            type="button"
+            onClick={() => {
+              sound.playPop();
+              setSelectedStatus(selectedStatus === 'critical' ? 'all' : 'critical');
+            }}
+            className={`p-4 rounded-3xl border-2 text-left transition-all active:translate-y-1 cursor-pointer ${
+              selectedStatus === 'critical'
+                ? 'bg-rose-100 border-rose-600 shadow-[0_2px_0_0_#e11d48] ring-2 ring-rose-400'
+                : 'bg-rose-50 border-rose-300 shadow-[0_4px_0_0_#fca5a5] hover:border-rose-400'
+            }`}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-wider text-rose-800">
+                Kritis / 0 Hadir
+              </span>
+              <ShieldAlert className="w-4 h-4 text-rose-600" />
+            </div>
+            <div className="text-2xl sm:text-3xl font-black text-rose-950">
+              {stats.criticalCount} <span className="text-xs font-bold text-rose-700">Orang</span>
+            </div>
+            <p className="text-[10px] font-extrabold text-rose-700">
+              Klik untuk Filter Pengurus Kritis
+            </p>
+          </button>
         </div>
       </div>
 

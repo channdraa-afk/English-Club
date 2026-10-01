@@ -14,7 +14,8 @@ import {
   Copy,
   Check,
   Layers,
-  Lock
+  Lock,
+  Users
 } from 'lucide-react';
 import { Member, Meeting, Attendance, TalentStar } from '../../types/database';
 import { TactileButton } from '../TactileButton';
@@ -697,7 +698,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               <select
                 value={selectedMeetingId}
                 onChange={(e) => setSelectedMeetingId(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                className="px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-black text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none min-h-[44px]"
               >
                 {meetings.map((m) => (
                   <option key={m.id} value={m.id}>
@@ -709,7 +710,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                className="px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-black text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none min-h-[44px]"
               >
                 <option value="all">Semua Kelas ({a21Students.length} Siswa)</option>
                 {classList.map((cls) => (
@@ -719,14 +720,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                 ))}
               </select>
 
-              <div className="relative flex items-center">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+              <div className="relative flex items-center min-h-[44px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                 <input
                   type="text"
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
                   placeholder="Cari nama adik kelas..."
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>
@@ -943,8 +944,9 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
           {/* Filter Bar (Hidden in Print) */}
           <div className="no-print grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                Pilih Bulan
+              <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Calendar className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Pilih Bulan Periode:</span>
               </label>
               <select
                 value={selectedMonth}
@@ -952,7 +954,7 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                   sound.playPop();
                   setSelectedMonth(e.target.value);
                 }}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-black text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none min-h-[44px]"
               >
                 {availableMonths.map((m) => (
                   <option key={m} value={m}>
@@ -963,13 +965,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                Filter Kelas
+              <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Filter Kelas:</span>
               </label>
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-black text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none min-h-[44px]"
               >
                 <option value="all">Semua Kelas ({a21Students.length} Siswa)</option>
                 {classList.map((cls) => (
@@ -1112,13 +1115,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
           {/* Filter Bar (Hidden in Print) */}
           <div className="no-print grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                Filter Kelas
+              <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Users className="w-3.5 h-3.5 text-blue-600" />
+                <span>Filter Kelas:</span>
               </label>
               <select
                 value={selectedClass}
                 onChange={(e) => setSelectedClass(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-black text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none min-h-[44px]"
               >
                 <option value="all">Semua Kelas ({a21Students.length} Siswa)</option>
                 {classList.map((cls) => (
@@ -1130,17 +1134,18 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                Cari Siswa
+              <label className="block text-[11px] font-black text-slate-600 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                <Search className="w-3.5 h-3.5 text-blue-600" />
+                <span>Cari Siswa:</span>
               </label>
-              <div className="relative flex items-center">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 pointer-events-none" />
+              <div className="relative flex items-center min-h-[44px]">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none" />
                 <input
                   type="text"
                   value={searchName}
                   onChange={(e) => setSearchName(e.target.value)}
                   placeholder="Cari nama adik kelas..."
-                  className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none"
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs sm:text-sm font-bold text-slate-800 focus:bg-white focus:border-blue-500 focus:outline-none min-h-[44px]"
                 />
               </div>
             </div>

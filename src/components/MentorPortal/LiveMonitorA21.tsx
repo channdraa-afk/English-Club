@@ -315,29 +315,11 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
               Presensi Angkatan 21 (Adik Kelas)
             </h2>
 
-            {/* Session Selector Dropdown */}
-            {availableMeetings.length > 0 && (
-              <div className="pt-1 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-black text-blue-200 flex items-center gap-1">
-                  <Calendar className="w-3.5 h-3.5 text-amber-300" />
-                  <span>Sesi:</span>
-                </span>
-                <select
-                  value={targetMeeting?.id || ''}
-                  onChange={(e) => {
-                    sound.playPop();
-                    setSelectedMeetingId(e.target.value);
-                  }}
-                  className="bg-blue-950/90 text-white text-xs font-black py-1.5 px-3 rounded-xl border border-blue-400/50 focus:outline-none cursor-pointer shadow-sm"
-                >
-                  {availableMeetings.map((m) => (
-                    <option key={m.id} value={m.id} className="bg-slate-900 text-white">
-                      {m.title} ({new Date(m.meeting_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' })}) {m.id === activeMeeting?.id ? '• Sesi Aktif 🟢' : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
+            <div className="pt-0.5 flex items-center gap-2">
+              <span className="text-xs font-extrabold text-blue-200">
+                📅 Sesi Dipantau: <strong className="text-amber-300">{targetMeeting?.title}</strong> ({targetMeeting?.meeting_date ? new Date(targetMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'})
+              </span>
+            </div>
           </div>
 
           {/* Big Circular/Number Stats */}
@@ -365,6 +347,116 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
             <span>🔴 Belum Hadir: {absentCount}</span>
           </div>
         </div>
+      </div>
+
+      {/* 📅 BILAH KONTROL SESI TAKTIL (1-TAP SESI AKTIF VS SESI KEMARIN) */}
+      <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
+          <div className="flex items-center gap-2">
+            <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600 border border-indigo-200 shrink-0">
+              <Calendar className="w-4 h-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider">
+                  Target Sesi Presensi &amp; Izin
+                </h4>
+                {targetMeeting?.id === activeMeeting?.id ? (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    🟢 Sesi Berjalan (Live)
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
+                    📁 Sesi Lampau (Bisa Catat Izin Fisik)
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] font-bold text-slate-500">
+                Aksi Hadir &amp; Izin yang kamu klik di bawah akan tersimpan ke pertemuan ini.
+              </p>
+            </div>
+          </div>
+
+          <div className="text-right">
+            <span className="text-xs font-black text-slate-700 bg-slate-100 px-3 py-1 rounded-xl">
+              {targetMeeting?.title}
+            </span>
+          </div>
+        </div>
+
+        {/* 1-Tap Pills */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {activeMeeting && (
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                setSelectedMeetingId(activeMeeting.id);
+              }}
+              className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
+                targetMeeting?.id === activeMeeting.id
+                  ? 'bg-emerald-600 text-white shadow-[0_3px_0_0_#047857]'
+                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-200 shadow-[0_2px_0_0_#a7f3d0]'
+              }`}
+            >
+              <span>🟢 Sesi Aktif ({new Date(activeMeeting.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})</span>
+            </button>
+          )}
+
+          {/* Past meetings (e.g. Wednesday yesterday) */}
+          {availableMeetings
+            .filter((m) => m.id !== activeMeeting?.id)
+            .slice(0, 2)
+            .map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  setSelectedMeetingId(m.id);
+                }}
+                className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 ${
+                  targetMeeting?.id === m.id
+                    ? 'bg-amber-500 text-white shadow-[0_3px_0_0_#b45309]'
+                    : 'bg-amber-50/70 hover:bg-amber-100 text-amber-900 border-2 border-amber-200 shadow-[0_2px_0_0_#fde68a]'
+                }`}
+              >
+                <span>📄 Sesi Kemarin ({new Date(m.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})</span>
+              </button>
+            ))}
+
+          {/* Dropdown if more than 3 meetings */}
+          {availableMeetings.length > 3 && (
+            <div className="flex items-center gap-1.5 bg-slate-50 border-2 border-slate-300 rounded-2xl px-3 py-2">
+              <span className="text-[10px] font-black uppercase text-slate-500">Arsip Lain:</span>
+              <select
+                value={targetMeeting?.id || ''}
+                onChange={(e) => {
+                  sound.playPop();
+                  setSelectedMeetingId(e.target.value);
+                }}
+                className="bg-transparent text-slate-800 text-xs font-black focus:outline-none cursor-pointer max-w-[200px] truncate"
+              >
+                {availableMeetings.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.title} ({m.meeting_date})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+        </div>
+
+        {/* Warning Toast if viewing a past meeting */}
+        {targetMeeting?.id !== activeMeeting?.id && (
+          <div className="p-3 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 text-xs font-bold flex items-center gap-2">
+            <span className="text-base shrink-0">📂</span>
+            <span>
+              <strong>Mode Input Izin Sesi Lampau:</strong> Kamu sedang membuka pertemuan <u>{targetMeeting?.title}</u>. 
+              Gunakan tombol <strong>[ 📄 Izin Surat ]</strong> pada adik kelas di bawah untuk menginput surat izin fisik yang terlambat dikumpulkan!
+            </span>
+          </div>
+        )}
       </div>
 
       {/* 1-Click WhatsApp Broadcast Bar for Absent Students */}

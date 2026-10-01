@@ -616,6 +616,16 @@
     5. *Penyederhanaan Bahasa Tab*: Mengganti istilah asing/kaku menjadi bahasa sekolah membumi (misal: *Presensi Pengurus*, *Pantau & Bantu Absen Adik*, *Buku Rapor (Sekretaris)*, *Kelola Master Siswa*, *Kotak Saran Adik*).
     6. *Active Member Filter (`App.tsx`)*: Menambahkan kondisi `&& m.status === 'active'` pada counter A21 sehingga menampilkan angka riil **103 Anggota A21**.
 
+- [x] Overhaul Ergonomi Total Mentor Portal (Saran Per-Sesi, Kartu Taktil Interaktif, & Selector Touch-Target >= 44px):
+  - **Problem**: 
+    1. Kotak Saran (`AgendaVault.tsx`) tidak memfilter data berdasarkan `meeting_id`, sehingga seluruh 110 curhat/feedback adik kelas sepanjang semester bercampur aduk dalam satu layar dan sulit dievaluasi per pertemuan.
+    2. Kartu ringkasan (seperti *Super Fun*, *Okay*, *Boring* di Kotak Saran, *Aman*, *Peringatan*, *Kritis* di Radar Kedisiplinan, serta statistik di Kelola Master Siswa) berstatus elemen pasif (`div`), padahal mentor secara naluriah ingin mengkliknya untuk menyaring data dengan cepat.
+    3. Komponen pemilih sesi, bulan, kelas, dan pengurutan di `LiveMonitorA21`, `MentorDisciplineRadar`, `ReportRecap`, `TalentScoutA21`, dan `MeetingControl` berukuran terlalu sempit (sub-44px dan `text-xs`), menyulitkan pengurus saat mengakses portal lewat HP.
+  - **Solution / State**:
+    1. *Scoped Feedback Per-Sesi*: `AgendaVault.tsx` menerima prop `meetings` dan menyaring masukan berdasarkan `selectedMeetingId` aktif/terbaru secara default, dilengkapi tombol pil 1-tap (`[ 🟢 Sesi Aktif ]`, `[ 📁 Sesi Terbaru ]`, `[ 🌐 Semua Sesi (Kumulatif) ]`).
+    2. *Interactive 3D Pushable KPI Cards*: Mengubah seluruh kartu ringkasan di Kotak Saran, Radar Kedisiplinan, dan Kelola Master Siswa menjadi tombol filter taktil 3D (`button`). Mengklik kartu *Boring* langsung mengisolasi masukan kritis, dan mengklik kartu *Kritis* di radar langsung menampilkan daftar pengurus 0 kehadiran secara instan (0ms).
+    3. *Touch Target >= 44px & Bilah Taktil*: Menghadirkan bilah pemilih bulan terdedikasi di `MentorDisciplineRadar`, bilah sesi lampau di `LiveMonitorA21`, serta memperbesar seluruh kontrol filter/dropdown di `ReportRecap`, `TalentScoutA21`, dan `MeetingControl` menjadi >= 44px dengan border-2 dan font tebal ramah layar sentuh.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
