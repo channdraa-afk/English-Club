@@ -647,7 +647,7 @@
     1. *Kartu Pertemuan Terdekat (Upcoming Gathering Spotlight)*: Menampilkan kartu countdown/pengumuman sesi eskul hari Rabu terdekat lengkap dengan topik materi, lokasi ruangan, checklist perlengkapan, dan tombol pintas ke presensi.
     2. *Word & Idiom of the Day Widget*: Menampilkan idiom harian otomatis dari bank data lokal (`src/data/idioms.ts`), dilengkapi tombol audio pelafalan berbasis Web Speech API native browser (`window.speechSynthesis`), terjemahan Indonesia, contoh kalimat, dan tombol taktil `[ 🎲 Acak ]` untuk mempelajari idiom lain.
     3. *Hall of Fame & Apresiasi Angkatan 21*: Seksi panggung apresiasi untuk siswa A21 teraktif dengan badge bintang bakat dan kutipan semangat, memotivasi keaktifan adik kelas.
-    4. *FAQ Accordion Taktil (Zero-Maintenance)*: Seksi tanya-jawab interaktif bertema 3D Duolingo yang mengklarifikasi keraguan adik kelas (bebas rasa takut salah grammar, tanpa seleksi masuk, gratis tanpa pungutan kas, dan toleransi remedial/pelajaran sekolah) tanpa membebani pengurus dengan beban operasional forum.
+    4. *FAQ Accordion Taktil (Zero-Maintenance)*: Seksi tanya-jawab interaktif bertema 3D Duolingo yang mengklarifikasi keraguan adik kelas (bebas rasa takut salah grammar, tanpa seleksi masuk, transparansi iuran kas santai Rp2.000/minggu untuk modul & hadiah kuis, serta toleransi remedial/pelajaran sekolah) tanpa membebani pengurus dengan beban operasional forum.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).

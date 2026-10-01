@@ -308,7 +308,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
     },
     {
       q: 'Eskulnya bayar uang kas mingguan nggak kak?',
-      a: 'Kegiatan rutin mingguan setiap hari Rabu 100% bebas biaya (gratis). Iuran partisipasi hanya berlaku untuk agenda akbar outbond tahunan (seperti English Adventure) yang dirapatkan dan disepakati bersama secara transparan.',
+      a: 'Ada uang kas santai sebesar Rp2.000 per minggu yang dikelola oleh Bendahara. Uang kas ini digunakan sepenuhnya untuk operasional belajar kita bersama—seperti fotokopi lembar materi/modul latihan, hadiah seru untuk pemenang fun games & kuis EC Arena, serta kebutuhan sarana belajar eskul lainnya secara transparan!',
     },
     {
       q: 'Gimana kalau pas hari Rabu ada jam tambahan pelajaran atau remedial sekolah?',
