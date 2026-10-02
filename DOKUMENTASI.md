@@ -649,6 +649,14 @@
     3. *Hall of Fame & Apresiasi Angkatan 21*: Seksi panggung apresiasi untuk siswa A21 teraktif dengan badge bintang bakat dan kutipan semangat, memotivasi keaktifan adik kelas.
     4. *FAQ Accordion Taktil (Zero-Maintenance)*: Seksi tanya-jawab interaktif bertema 3D Duolingo yang mengklarifikasi keraguan adik kelas (bebas rasa takut salah grammar, tanpa seleksi masuk, transparansi iuran kas santai Rp2.000/minggu untuk modul & hadiah kuis, serta toleransi remedial/pelajaran sekolah) tanpa membebani pengurus dengan beban operasional forum.
 
+- [x] Perbaikan Audio Pelafalan Idiom (Chromium V8 GC Guard & Dual-Engine Fallback):
+  - **Problem**: Tombol `[ 🔊 Pronounce ]` pada kartu Word of the Day di beranda tidak bersuara di Google Chrome/Edge akibat V8 Garbage Collection menyapu objek `SpeechSynthesisUtterance` lokal sebelum audio selesai diputar (Chromium Issue #338372), serta adanya race condition pembatalan antrean `cancel()`.
+  - **Solution / State**:
+    1. *V8 Garbage Collection Guard*: Mengunci instans utterance ke `activeUtteranceRef` dan `window.__ec_active_utterance` agar tidak di-purge oleh JavaScript engine.
+    2. *Queue Normalization & Micro-Delay*: Memanggil `speechSynthesis.resume()` jika status browser `paused`, serta menyisipkan jeda 60ms setelah `cancel()` agar antrean lama bersih tanpa mematikan utterance baru.
+    3. *Pre-warming Voice Registry*: Mengaitkan listener `voiceschanged` saat mount dan memilih suara native `en-US` / `en-*`.
+    4. *Dual-Engine HTML5 Audio Fallback*: Jika Web Speech API gagal, melempar error, atau tidak kunjung mulai dalam 400ms, sistem secara otomatis beralih ke HTML5 Audio stream via Google TTS audio.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

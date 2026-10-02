@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, 
   Calendar, 
@@ -269,19 +269,135 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   const [currentIdiomIndex, setCurrentIdiomIndex] = useState(initialIdiomIndex);
   const currentIdiom = IDIOMS_BANK[currentIdiomIndex] || IDIOMS_BANK[0];
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
+  const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  const fallbackAudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // Web Speech API Native Pronunciation
+  // Pre-load voices on component mount
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      const onVoicesChanged = () => {
+        window.speechSynthesis.getVoices();
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+      return () => {
+        window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+        if (fallbackAudioRef.current) {
+          fallbackAudioRef.current.pause();
+          fallbackAudioRef.current = null;
+        }
+      };
+    }
+  }, []);
+
+  // Web Speech API Native Pronunciation with Chromium V8 GC Guard & Audio Fallback
   const handleSpeakIdiom = () => {
     sound.playPop();
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(currentIdiom.word);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.88;
-      setIsPlayingAudio(true);
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-      window.speechSynthesis.speak(utterance);
+
+    if (typeof window === 'undefined') return;
+
+    const cleanText = currentIdiom.word.replace(/["']/g, '').trim();
+
+    // Fallback: HTML5 Audio stream via Google TTS if Web Speech API fails
+    const triggerAudioFallback = () => {
+      try {
+        if (fallbackAudioRef.current) {
+          fallbackAudioRef.current.pause();
+          fallbackAudioRef.current = null;
+        }
+        const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=en&q=${encodeURIComponent(cleanText)}`;
+        const audio = new Audio(audioUrl);
+        fallbackAudioRef.current = audio;
+        setIsPlayingAudio(true);
+        audio.onended = () => {
+          setIsPlayingAudio(false);
+          fallbackAudioRef.current = null;
+        };
+        audio.onerror = () => {
+          setIsPlayingAudio(false);
+          fallbackAudioRef.current = null;
+        };
+        audio.play().catch(() => {
+          setIsPlayingAudio(false);
+          fallbackAudioRef.current = null;
+        });
+      } catch {
+        setIsPlayingAudio(false);
+      }
+    };
+
+    if ('speechSynthesis' in window) {
+      try {
+        // 1. Unstick Chromium paused state
+        if (window.speechSynthesis.paused) {
+          window.speechSynthesis.resume();
+        }
+
+        // 2. Clear old queue
+        window.speechSynthesis.cancel();
+
+        // 3. Micro-delay (60ms) to allow Chrome async cancellation to finish cleanly
+        setTimeout(() => {
+          try {
+            const utterance = new SpeechSynthesisUtterance(cleanText);
+
+            // Crucial: Keep strong references so V8 garbage collector doesn't abort speech
+            activeUtteranceRef.current = utterance;
+            (window as any).__ec_active_utterance = utterance;
+
+            utterance.lang = 'en-US';
+            utterance.rate = 0.88;
+            utterance.pitch = 1.0;
+
+            // Pick English voice if available
+            const voices = window.speechSynthesis.getVoices();
+            const enVoice =
+              voices.find((v) => v.lang === 'en-US') ||
+              voices.find((v) => v.lang.startsWith('en')) ||
+              null;
+            if (enVoice) {
+              utterance.voice = enVoice;
+            }
+
+            let hasStarted = false;
+
+            utterance.onstart = () => {
+              hasStarted = true;
+              setIsPlayingAudio(true);
+            };
+
+            utterance.onend = () => {
+              setIsPlayingAudio(false);
+              activeUtteranceRef.current = null;
+            };
+
+            utterance.onerror = (e) => {
+              if (e.error === 'canceled' || e.error === 'interrupted') {
+                setIsPlayingAudio(false);
+                return;
+              }
+              setIsPlayingAudio(false);
+              activeUtteranceRef.current = null;
+              triggerAudioFallback();
+            };
+
+            // Guardrail: If speech synthesis fails to start within 400ms, trigger audio fallback
+            setTimeout(() => {
+              if (!hasStarted && !window.speechSynthesis.speaking) {
+                triggerAudioFallback();
+              }
+            }, 400);
+
+            window.speechSynthesis.speak(utterance);
+          } catch {
+            triggerAudioFallback();
+          }
+        }, 60);
+      } catch {
+        triggerAudioFallback();
+      }
+    } else {
+      triggerAudioFallback();
     }
   };
 
