@@ -709,6 +709,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       {activeTab === 'approvals' && isSuperAdmin && (
         <RegistrationApprovals
           registrations={registrations}
+          members={members}
           onRefreshRegistrations={onRefreshRegistrations}
           onMemberAdded={onMemberAdded}
         />

@@ -657,6 +657,13 @@
     3. *Pre-warming Voice Registry*: Mengaitkan listener `voiceschanged` saat mount dan memilih suara native `en-US` / `en-*`.
     4. *Dual-Engine HTML5 Audio Fallback*: Jika Web Speech API gagal, melempar error, atau tidak kunjung mulai dalam 400ms, sistem secara otomatis beralih ke HTML5 Audio stream via Google TTS audio.
 
+- [x] Pembersihan Kevin Duplikat & Penguatan ACC Pendaftaran (Duplicate Radar & Review Modal):
+  - **Problem**: Nama Kevin Ibrahim Al Barr muncul dobel di Live Monitor setelah tombol ACC pendaftaran ditekan, akibat tombol ACC lama langsung mengeksekusi `insert` tanpa validasi. Selain itu, pendaftar yang memasukkan nama typo atau huruf kecil dapat mencemari master data rapor.
+  - **Solution / State**:
+    1. *Database Cleanup*: Menghapus baris duplikat Kevin (`dd1eb1e7-...`), mengembalikan master data anggota aktif A21 menjadi steril (101 siswa aktif + 5 inaktif = 106 total).
+    2. *Duplicate Radar*: `RegistrationApprovals.tsx` otomatis mencocokkan nama pendaftar dengan tabel `members`. Jika nama sudah terdaftar, muncul badge peringatan oranye dan tombol berganti menjadi `[ 🔗 Tandai Sudah Terdaftar (Anti-Dobel) ]` yang hanya mengubah status pendaftaran ke `approved` tanpa `insert` ganda.
+    3. *Review & Edit Modal Pra-ACC*: Mengganti insert otomatis dengan modal taktil 3D. Chandra dapat memeriksa dan mengoreksi nama lengkap siswa (memperbaiki typo/huruf kapital) serta memilih kelas resmi SMKN 1 Purbalingga sebelum diterbitkan resmi ke database.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
