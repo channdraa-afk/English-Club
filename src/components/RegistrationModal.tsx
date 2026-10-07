@@ -31,6 +31,18 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
       return;
     }
 
+    // Anti-spam cooldown check (60 detik per peranti)
+    const lastSubKey = 'ec_last_registration_time';
+    const lastSubTime = parseInt(localStorage.getItem(lastSubKey) || '0', 10);
+    const now = Date.now();
+    const cooldownMs = 60 * 1000;
+    if (now - lastSubTime < cooldownMs) {
+      const remainingSec = Math.ceil((cooldownMs - (now - lastSubTime)) / 1000);
+      sound.playError();
+      setErrorMsg(`Mohon tunggu ${remainingSec} detik sebelum mengirim pendaftaran lagi yaa!`);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -44,6 +56,7 @@ export const RegistrationModal: React.FC<RegistrationModalProps> = ({ isOpen, on
 
       if (error) throw error;
 
+      localStorage.setItem(lastSubKey, String(Date.now()));
       sound.playSuccess();
       setIsSuccess(true);
       setIsLoading(false);
