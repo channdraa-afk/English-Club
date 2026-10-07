@@ -465,17 +465,26 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
       'Status Dedikasi',
     ];
 
+    const sanitizeCSV = (val: string | number): string => {
+      const str = String(val ?? '');
+      const escaped = str.replace(/"/g, '""');
+      if (/^[=+\-@\t\r]/.test(escaped)) {
+        return `"'${escaped}"`;
+      }
+      return `"${escaped}"`;
+    };
+
     const rows = filteredList.map((item, idx) => {
       return [
         idx + 1,
-        `"${item.mentor.name.replace(/"/g, '""')}"`,
-        `"${item.mentor.class_name}"`,
-        `"${item.mentor.position.replace(/"/g, '""')}"`,
+        sanitizeCSV(item.mentor.name),
+        sanitizeCSV(item.mentor.class_name),
+        sanitizeCSV(item.mentor.position),
         `${allHeldMeetings.length} Sesi`,
         `${item.count} Sesi`,
         `${item.target} Sesi`,
         `"${item.percent}%"`,
-        `"${item.statusLabel}"`,
+        sanitizeCSV(item.statusLabel),
       ].join(';');
     });
 

@@ -456,6 +456,16 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
     window.print();
   };
 
+  // Helper sanitasi CSV Formula Injection (mencegah eksekusi rumus =, +, -, @ pada MS Excel / Google Sheets)
+  const sanitizeCSV = (val: string | number): string => {
+    const str = String(val ?? '');
+    const escaped = str.replace(/"/g, '""');
+    if (/^[=+\-@\t\r]/.test(escaped)) {
+      return `"'${escaped}"`;
+    }
+    return `"${escaped}"`;
+  };
+
   // Export Monthly CSV (Format Semicolon ; dan UTF-8 BOM untuk Excel Windows Indonesia)
   const handleExportMonthlyCSV = () => {
     sound.playPop();
@@ -476,8 +486,8 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
 
       return [
         `"${idx + 1}"`,
-        `"${r.member.name}"`,
-        `"${r.member.class_name}"`,
+        sanitizeCSV(r.member.name),
+        sanitizeCSV(r.member.class_name),
         ...datesData,
         `"${r.presentCount}"`,
         `"${r.permitCount}"`,
@@ -505,14 +515,14 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
 
     const rows = cumulativeMatrixRows.map((r, idx) => [
       `"${idx + 1}"`,
-      `"${r.member.name}"`,
-      `"${r.member.class_name}"`,
+      sanitizeCSV(r.member.name),
+      sanitizeCSV(r.member.class_name),
       `"${r.totalMeetings}"`,
       `"${r.presentCount}"`,
       `"${r.permitCount}"`,
       `"${r.absentCount}"`,
       `"${r.percent}%"`,
-      `"${r.grade}"`,
+      sanitizeCSV(r.grade),
     ]);
 
     const csvContent = '\uFEFF' + [headers.join(';'), ...rows.map((e) => e.join(';'))].join('\r\n');
