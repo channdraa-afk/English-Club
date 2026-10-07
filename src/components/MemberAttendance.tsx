@@ -99,16 +99,49 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
       return;
     }
 
-    if (cleanToken !== activeMeeting.token.trim().toUpperCase()) {
-      sound.playError();
-      setErrorMessage('Token salah! Pastikan kamu menyalin huruf yang ada di papan tulis dengan benar.');
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      // 1. Check if already attended
+      // 1. Prioritaskan Server-Side RPC (Token diperiksa di dalam Postgres tanpa membocorkan ke client)
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('submit_student_attendance', {
+        p_meeting_id: activeMeeting.id,
+        p_member_id: selectedMember.id,
+        p_token_input: cleanToken,
+        p_feedback_rating: rating,
+        p_critique: critique.trim() || null,
+        p_next_agenda: nextAgenda.trim() || null,
+        p_is_anonymous: isAnonymous,
+      });
+
+      if (!rpcErr && rpcRes) {
+        if (!rpcRes.success) {
+          sound.playError();
+          setErrorMessage(rpcRes.message || 'Token salah atau presensi gagal.');
+          setIsLoading(false);
+          return;
+        }
+        // Sukses via RPC!
+        sound.playCelebration();
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: ['#10b981', '#3b82f6', '#f59e0b'],
+        });
+        onAttendanceSuccess(selectedMember, activeMeeting);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Fallback mode (jika RPC belum di-apply di SQL editor)
+      if (activeMeeting.token && cleanToken !== activeMeeting.token.trim().toUpperCase()) {
+        sound.playError();
+        setErrorMessage('Token salah! Pastikan kamu menyalin huruf yang ada di papan tulis dengan benar.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 3. Check if already attended
       const { data: existing, error: checkError } = await supabase
         .from('attendances')
         .select('id')
@@ -125,7 +158,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
         return;
       }
 
-      // 2. Insert attendance
+      // 4. Insert attendance
       const { error: insertError } = await supabase.from('attendances').insert({
         meeting_id: activeMeeting.id,
         member_id: selectedMember.id,
