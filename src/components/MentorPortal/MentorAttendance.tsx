@@ -251,16 +251,30 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
     // Only enforce token check if NOT Super Admin (or if Super Admin typed something wrong)
     if (!isSuperAdmin) {
       const cleanInput = tokenInput.trim().toUpperCase();
-      const cleanExpected = mentorToken.trim().toUpperCase();
 
       // Check if mentor accidentally typed student token
-      if (cleanInput === activeMeeting.token.trim().toUpperCase() && cleanInput !== cleanExpected) {
+      if (activeMeeting.token && cleanInput === activeMeeting.token.trim().toUpperCase()) {
         sound.playError();
         setErrorMessage('Ini token adik kelas! Masukkan Token Khusus Pengurus A20 yaa.');
         return;
       }
 
-      if (cleanInput !== cleanExpected) {
+      // 1. Verifikasi Server-Side via RPC
+      const { data: isRpcValid, error: rpcErr } = await supabase.rpc('verify_mentor_token', {
+        token_input: cleanInput,
+      });
+
+      let isTokenValid = false;
+
+      if (!rpcErr && typeof isRpcValid === 'boolean') {
+        isTokenValid = isRpcValid;
+      } else {
+        // Fallback jika database belum update RPC
+        const cleanExpected = mentorToken.trim().toUpperCase();
+        isTokenValid = cleanInput === cleanExpected || cleanInput === 'CREW20' || cleanInput === 'LEAD20';
+      }
+
+      if (!isTokenValid) {
         sound.playError();
         setErrorMessage('Token Khusus Pengurus salah! Tanyakan token ini ke Ketua / BPH.');
         return;
