@@ -672,7 +672,7 @@
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
-- [ ] Menjalankan skrip `supabase/fortress_security_hardening.sql` di SQL Editor Supabase untuk mengaktifkan RPC dan mengunci tabel secrets di cloud.
+- [x] Menjalankan skrip `supabase/fortress_security_hardening.sql` di SQL Editor Supabase untuk mengaktifkan RPC dan mengunci tabel secrets di cloud.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
 
