@@ -394,7 +394,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
     // 1. Prioritize Server-Side update_mentor_pin RPC
     const { error: rpcError } = await supabase.rpc('update_mentor_pin', {
-      current_pin: currentPin || '456654',
+      current_pin: currentPin || '',
       new_pin: cleanNewPin,
     });
 

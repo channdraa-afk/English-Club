@@ -42,8 +42,6 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
         // Fallback if RPC migration hasn't been executed yet or currentPin prop is supplied
         if (currentPin && cleanInput === currentPin.trim()) {
           isValid = true;
-        } else if (cleanInput === '456654' || cleanInput === '123321') {
-          isValid = true;
         }
       }
 

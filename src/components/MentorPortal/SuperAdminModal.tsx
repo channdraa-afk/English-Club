@@ -69,8 +69,8 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
         isAuthenticated = true;
         sessionToken = rpcRes.session_token || ('ec_sess_' + Date.now());
       } else {
-        // Fallback offline / pra-migrasi: sandi baru default dan sandi lama
-        if (cleanPass === 'smega2026fortressmaster' || cleanPass === 'helloworldimchandra') {
+        // Fallback jika database belum menjalankan SQL hardening baru:
+        if (cleanPass === 'smega2026fortressmaster') {
           isAuthenticated = true;
           sessionToken = 'ec_fallback_sig_' + Date.now();
         }
