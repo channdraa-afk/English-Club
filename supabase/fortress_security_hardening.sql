@@ -27,7 +27,7 @@ CREATE POLICY "Deny all public access to system_secrets" ON system_secrets
 INSERT INTO system_secrets (key, secret_hash) VALUES
     ('mentor_pin_hash', encode(digest('ec_mentor_salt_2026_456654', 'sha256'), 'hex')),
     ('mentor_token_hash', encode(digest('ec_mentor_token_salt_2026_CREW20', 'sha256'), 'hex')),
-    ('superadmin_master_hash', encode(digest('ec_smega_vault_2026_smega2026fortressmaster', 'sha256'), 'hex'))
+    ('superadmin_master_hash', encode(digest('ec_smega_vault_2026_whoischandra', 'sha256'), 'hex'))
 ON CONFLICT (key) DO UPDATE SET secret_hash = EXCLUDED.secret_hash, updated_at = NOW();
 
 -- 4. Hapus key sensitif dari app_settings publik agar tidak muncul di Network DevTools (F12)
