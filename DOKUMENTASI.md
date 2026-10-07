@@ -657,18 +657,25 @@
     3. *Pre-warming Voice Registry*: Mengaitkan listener `voiceschanged` saat mount dan memilih suara native `en-US` / `en-*`.
     4. *Dual-Engine HTML5 Audio Fallback*: Jika Web Speech API gagal, melempar error, atau tidak kunjung mulai dalam 400ms, sistem secara otomatis beralih ke HTML5 Audio stream via Google TTS audio.
 
-- [x] Pembersihan Kevin Duplikat & Penguatan ACC Pendaftaran (Duplicate Radar & Review Modal):
-  - **Problem**: Nama Kevin Ibrahim Al Barr muncul dobel di Live Monitor setelah tombol ACC pendaftaran ditekan, akibat tombol ACC lama langsung mengeksekusi `insert` tanpa validasi. Selain itu, pendaftar yang memasukkan nama typo atau huruf kecil dapat mencemari master data rapor.
+- [x] Fortress Security Hardening V2 (Zero-Knowledge Client & Server-Side RPC Migration):
+  - **Problem**: 
+    1. Teman Chandra melakukan uji penetrasi via DevTools (F12) dan menemukan kebocoran kredensial di Network Tab: PIN Mentor (`456654`) dan Token Pengurus (`CREW20`) bocor dalam query `SELECT * FROM app_settings`, serta Token Papan Tulis bocor dalam `SELECT * FROM meetings`.
+    2. Salt dan hash Super Admin (`SUPERADMIN_HASH` & `SUPERADMIN_SALT`) terekspos di bundle JavaScript frontend dan commit Git lama, memungkinkan reverse-engineering kata sandi lama (`helloworldimchandra`) via offline dictionary brute-force.
+    3. Verifikasi Super Admin hanya mengandalkan perbandingan nilai statis di `localStorage`, rentan terhadap pengambilalihan hak akses (`privilege escalation`) hanya dengan menyuntikkan hash via console browser.
   - **Solution / State**:
-    1. *Database Cleanup*: Menghapus baris duplikat Kevin (`dd1eb1e7-...`), mengembalikan master data anggota aktif A21 menjadi steril (101 siswa aktif + 5 inaktif = 106 total).
-    2. *Duplicate Radar*: `RegistrationApprovals.tsx` otomatis mencocokkan nama pendaftar dengan tabel `members`. Jika nama sudah terdaftar, muncul badge peringatan oranye dan tombol berganti menjadi `[ 🔗 Tandai Sudah Terdaftar (Anti-Dobel) ]` yang hanya mengubah status pendaftaran ke `approved` tanpa `insert` ganda.
-    3. *Review & Edit Modal Pra-ACC*: Mengganti insert otomatis dengan modal taktil 3D. Chandra dapat memeriksa dan mengoreksi nama lengkap siswa (memperbaiki typo/huruf kapital) serta memilih kelas resmi SMKN 1 Purbalingga sebelum diterbitkan resmi ke database.
+    1. *Purge Kredensial Client-Side*: Menghapus 100% konstanta `SUPERADMIN_HASH`, `SUPERADMIN_SALT`, rumus hash, dan fallback plaintext dari seluruh berkas kode frontend (`SuperAdminModal.tsx`, `MentorLogin.tsx`, `MeetingControl.tsx`, `App.tsx`). Hasil audit scan pada bundle kompilasi `dist/assets/*.js` menghasilkan 0 leak.
+    2. *PostgreSQL Fortress RPC*: Seluruh verifikasi dipindahkan ke server database via Stored Procedures PostgreSQL berhak `SECURITY DEFINER` (`supabase/fortress_security_hardening.sql`): `verify_mentor_pin`, `update_mentor_pin`, `verify_mentor_token`, `submit_student_attendance`, dan `verify_superadmin_master`. Browser hanya mengirim input dan menerima status Boolean/Signed Token tanpa pernah mengetahui rahasia aslinya.
+    3. *Tabel Terisolasi & RLS Lockdown*: Memindahkan seluruh kredensial hash ke tabel terisolasi `system_secrets` dengan RLS deny-all untuk publik (`USING (false)`), serta memblokir pembacaan key sensitif pada tabel `app_settings`.
+    4. *Ephemeral Session Token*: Hak akses Super Admin kini diikat ke ephemeral session token bertanda tangan kriptografis dengan masa kedaluwarsa 6 jam di `sessionStorage` (bukan persistent plaintext hash di `localStorage`).
+    5. *Rotasi Kredensial*: Memutus kata sandi lama dan menerapkan master password baru yang dilindungi di PostgreSQL.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
+- [ ] Menjalankan skrip `supabase/fortress_security_hardening.sql` di SQL Editor Supabase untuk mengaktifkan RPC dan mengunci tabel secrets di cloud.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
+
 
 
 
