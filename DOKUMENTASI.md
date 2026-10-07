@@ -669,6 +669,16 @@
     4. *Ephemeral Session Token*: Hak akses Super Admin kini diikat ke ephemeral session token bertanda tangan kriptografis dengan masa kedaluwarsa 6 jam di `sessionStorage` (bukan persistent plaintext hash di `localStorage`).
     5. *Rotasi Kredensial*: Memutus kata sandi lama dan menerapkan master password baru yang dilindungi di PostgreSQL.
 
+- [x] Sanitasi CSV Formula Injection, Anti-Spam Pendaftaran, & Pembersihan Berkas Duplikat:
+  - **Problem**:
+    1. Ekspor CSV di `ReportRecap.tsx` dan `MentorDisciplineRadar.tsx` membungkus nama siswa/mentor secara mentah. Jika terdapat input yang diawali karakter formula spreadsheet (`=`, `+`, `-`, `@`), Microsoft Excel atau Google Sheets akan mengeksekusi rumus tersebut secara otomatis saat file dibuka (*CSV Formula / DDE Injection*).
+    2. Endpoint formulir pendaftaran calon anggota baru (`RegistrationModal.tsx`) tidak memiliki jeda penahan, memungkinkan pengguna iseng mengirim spam data pendaftaran fiktif berulang kali dalam waktu singkat.
+    3. Terdapat berkas kurikulum duplikat `arsip-data/KURIKULUM_AGREE_DISAGREE_20_SOAL.md` yang identik dengan berkas di `docs/`.
+  - **Solution / State**:
+    1. *CSV Sanitizer Guard*: Menerapkan helper `sanitizeCSV()` pada seluruh ekspor data CSV di `ReportRecap.tsx` dan `MentorDisciplineRadar.tsx`. Setiap sel yang berawalan karakter formula `=`, `+`, `-`, atau `@` secara otomatis diprefiks tanda kutip tunggal (`'`) agar terbaca murni sebagai teks string di Excel.
+    2. *Anti-Spam Cooldown*: Memasang proteksi jeda pengiriman 60 detik berbasis `localStorage` di `RegistrationModal.tsx` yang secara otomatis memblokir pengiriman ganda dan menampilkan sisa detik hitung mundur.
+    3. *Clean Repo*: Menghapus berkas duplikat di `arsip-data/`, memverifikasi build produksi 0 error (`npm run build`).
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
