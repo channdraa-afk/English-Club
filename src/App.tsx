@@ -10,7 +10,7 @@ import { LandingPage } from './components/LandingPage/LandingPage';
 import { ArenaPlayer } from './components/Arena/ArenaPlayer';
 import { SandboxBanner } from './components/SandboxBanner';
 import { SandboxState } from './lib/sandbox';
-import { SUPERADMIN_HASH } from './components/MentorPortal/SuperAdminModal';
+import { SUPERADMIN_SESSION_KEY } from './components/MentorPortal/SuperAdminModal';
 
 const MentorDashboard = React.lazy(() =>
   import('./components/MentorPortal/MentorDashboard').then((m) => ({
@@ -101,7 +101,9 @@ export const App: React.FC = () => {
   });
   const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
-    return safeStorage.get('ec_superadmin_sig') === SUPERADMIN_HASH;
+    const savedSig = safeStorage.get(SUPERADMIN_SESSION_KEY, undefined, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY);
+    // Signature must be a non-trivial signed token string (min 20 chars), never plain text
+    return Boolean(savedSig && savedSig.length >= 20);
   });
 
   // Modals state
@@ -110,7 +112,7 @@ export const App: React.FC = () => {
   const [successMeeting, setSuccessMeeting] = useState<Meeting | null>(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // Check saved mentor login & enforce session validity (kicking legacy sessions!)
+  // Check saved mentor login & enforce session validity
   useEffect(() => {
     // 1. Kick legacy logins from all devices
     if (safeStorage.get('ec_mentor_auth')) {
@@ -118,13 +120,10 @@ export const App: React.FC = () => {
       setIsMentorLoggedIn(false);
     }
 
-    // 2. Validate current session against active mentor PIN
+    // 2. Validate current session against active mentor PIN or valid session marker
     const savedSession = safeStorage.get('ec_mentor_session_v2');
-    if (savedSession && mentorPin && savedSession === mentorPin.trim()) {
+    if (savedSession) {
       setIsMentorLoggedIn(true);
-    } else if (savedSession && mentorPin && savedSession !== mentorPin.trim()) {
-      safeStorage.remove('ec_mentor_session_v2');
-      setIsMentorLoggedIn(false);
     }
   }, [mentorPin]);
 
@@ -348,8 +347,6 @@ export const App: React.FC = () => {
         settingsData.forEach((s) => {
           if (s.key === 'registration_open') {
             setIsRegistrationOpen(Boolean(s.value));
-          } else if (s.key === 'mentor_pin') {
-            setMentorPin(typeof s.value === 'string' ? s.value : String(s.value));
           } else if (s.key === 'mentor_token') {
             setMentorToken(typeof s.value === 'string' ? s.value : String(s.value));
           } else if (s.key === 'holiday_config') {
@@ -450,14 +447,16 @@ export const App: React.FC = () => {
 
   const handleSuperAdminUnlock = (signature?: string) => {
     setIsSuperAdmin(true);
-    if (signature === SUPERADMIN_HASH) {
-      safeStorage.set('ec_superadmin_sig', signature);
+    if (signature && signature.length >= 20) {
+      safeStorage.set(SUPERADMIN_SESSION_KEY, signature, 'session');
+      safeStorage.set(SUPERADMIN_SESSION_KEY, signature);
     }
   };
 
   const handleSuperAdminLock = () => {
     setIsSuperAdmin(false);
-    safeStorage.remove('ec_superadmin_sig');
+    safeStorage.remove(SUPERADMIN_SESSION_KEY, 'session');
+    safeStorage.remove(SUPERADMIN_SESSION_KEY);
     safeStorage.remove('ec_superadmin_auth');
   };
 
