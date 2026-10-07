@@ -101,7 +101,7 @@ export const App: React.FC = () => {
   });
   const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
-    const savedSig = safeStorage.get(SUPERADMIN_SESSION_KEY, undefined, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY);
+    const savedSig = safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY);
     // Signature must be a non-trivial signed token string (min 20 chars), never plain text
     return Boolean(savedSig && savedSig.length >= 20);
   });

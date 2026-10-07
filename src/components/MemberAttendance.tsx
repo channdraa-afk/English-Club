@@ -5,6 +5,7 @@ import { TactileButton } from './TactileButton';
 import { sound } from '../lib/audio';
 import { supabase } from '../lib/supabase';
 import { getScheduleStatus } from '../lib/schedule';
+import confetti from 'canvas-confetti';
 
 interface MemberAttendanceProps {
   members: Member[];
@@ -121,7 +122,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
           return;
         }
         // Sukses via RPC!
-        sound.playCelebration();
+        sound.playSuccess();
         confetti({
           particleCount: 80,
           spread: 70,
