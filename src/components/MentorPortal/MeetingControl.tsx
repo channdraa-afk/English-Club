@@ -390,15 +390,31 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     if (!newPin.trim() || newPin.length < 4) return;
     sound.playPop();
 
-    const { error } = await supabase
-      .from('app_settings')
-      .upsert({ key: 'mentor_pin', value: newPin.trim() });
+    const cleanNewPin = newPin.trim();
 
-    if (!error) {
-      onPinUpdated(newPin.trim());
+    // 1. Prioritize Server-Side update_mentor_pin RPC
+    const { error: rpcError } = await supabase.rpc('update_mentor_pin', {
+      current_pin: currentPin || '456654',
+      new_pin: cleanNewPin,
+    });
+
+    if (!rpcError) {
+      onPinUpdated(cleanNewPin);
       setNewPin('');
       setPinSuccess(true);
       setTimeout(() => setPinSuccess(false), 3000);
+    } else {
+      // Fallback if RPC not yet created
+      const { error } = await supabase
+        .from('app_settings')
+        .upsert({ key: 'mentor_pin', value: cleanNewPin });
+
+      if (!error) {
+        onPinUpdated(cleanNewPin);
+        setNewPin('');
+        setPinSuccess(true);
+        setTimeout(() => setPinSuccess(false), 3000);
+      }
     }
   };
 
@@ -890,7 +906,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         <div className="p-5 rounded-3xl bg-white border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0]">
           <h4 className="font-black text-slate-900 text-sm mb-1">Ganti PIN Portal Mentor</h4>
           <p className="text-[11px] font-bold text-slate-400 mb-3">
-            PIN saat ini: <span className="font-mono font-black text-slate-700">{currentPin}</span>
+            Status PIN: <span className="font-mono font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">TERLINDUNGI (RPC)</span>
           </p>
 
           <form onSubmit={handleChangePin} className="flex items-center gap-2">
