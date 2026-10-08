@@ -679,6 +679,17 @@
     2. *Anti-Spam Cooldown*: Memasang proteksi jeda pengiriman 60 detik berbasis `localStorage` di `RegistrationModal.tsx` yang secara otomatis memblokir pengiriman ganda dan menampilkan sisa detik hitung mundur.
     3. *Clean Repo*: Menghapus berkas duplikat di `arsip-data/`, memverifikasi build produksi 0 error (`npm run build`).
 
+- [x] Fortress Privacy Hardening (Zero Public Registrations Read, Persistent Super Admin, & Anti-Brute Force Mentor Lockout):
+  - **Problem**:
+    1. Klien anonim/publik di DevTools (F12) dapat melakukan query `supabase.from('registrations').select('*')` di beranda karena RLS `registrations` mengizinkan public read, mengekspos nama lengkap, kelas, dan nomor WhatsApp siswa yang mendaftar.
+    2. Sesi Super Admin berkedaluwarsa terlalu cepat (6 jam) sehingga merepotkan Ketua yang harus berulang kali mengetik password master di perangkat pribadinya.
+    3. Input PIN Mentor (`MentorLogin.tsx`) belum memiliki sistem cooldown/lockout bertingkat saat salah input, membuka celah brute-force tebak angka.
+  - **Solution / State**:
+    1. *Zero Public Registrations Exposure*: Mengunci total RLS `registrations` (`Deny public select registrations`) di database Supabase. Di sisi frontend (`App.tsx`), pemanggilan `registrations` diputus 100% dari alur fetch publik awal dan hanya dimuat secara aman saat hak Super Admin aktif.
+    2. *Atomic Secure RPC Approval*: Persetujuan anggota baru (`RegistrationApprovals.tsx`) kini divalidasi via PostgreSQL RPC `approve_registration_admin` dan `update_registration_status_admin` dengan verifikasi signature session Super Admin.
+    3. *Super Admin Persistent Memory*: Sesi Super Admin kini tersimpan stabil di perangkat Ketua (`localStorage` bertanda tangan token hash) tanpa auto-kick 6 jam yang mengganggu, tetap dapat dikunci seketika lewat tombol `[ 🔒 Kunci Admin ]`.
+    4. *Anti-Brute Force Mentor Lockout*: Menerapkan sistem pertahanan bertingkat pada `MentorLogin.tsx`: 3x salah PIN membekukan input selama 60 detik, dan 5x salah membekukan selama 5 menit dengan timer countdown interaktif.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

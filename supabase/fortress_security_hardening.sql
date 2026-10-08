@@ -269,3 +269,109 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'attendance_id', v_inserted_id);
 END;
 $$;
+
+-- ==============================================================================
+-- 6. PERLINDUNGAN PRIVASI DATA PENDAFTARAN (REGISTRATIONS TABLE RLS)
+-- Anonim/Publik HANYA boleh INSERT. SELECT/UPDATE/DELETE DILARANG KERAS UNTUK PUBLIK!
+-- ==============================================================================
+ALTER TABLE registrations ENABLE ROW LEVEL SECURITY;
+
+-- Cabut seluruh policy lama yang mengizinkan pembacaan publik
+DROP POLICY IF EXISTS "Allow public read registrations" ON registrations;
+DROP POLICY IF EXISTS "Allow public update registrations" ON registrations;
+DROP POLICY IF EXISTS "Allow public delete registrations" ON registrations;
+
+-- Publik hanya boleh INSERT pendaftaran baru (dengan verifikasi kolom terisi)
+DROP POLICY IF EXISTS "Allow public insert registrations" ON registrations;
+CREATE POLICY "Allow public insert registrations" ON registrations 
+    FOR INSERT 
+    WITH CHECK (
+        full_name IS NOT NULL AND length(trim(full_name)) > 0 AND
+        class_name IS NOT NULL AND length(trim(class_name)) > 0 AND
+        whatsapp_number IS NOT NULL AND length(trim(whatsapp_number)) > 0
+    );
+
+-- Kebijakan SELECT khusus: Anonim tidak boleh melihat daftar pendaftar
+CREATE POLICY "Deny public select registrations" ON registrations
+    FOR SELECT
+    USING (false);
+
+-- 7. SECURE RPC: Akses Pendaftaran Khusus Super Admin
+-- Mengambil daftar calon anggota (Hanya bisa diakses jika Super Admin token valid)
+CREATE OR REPLACE FUNCTION get_admin_registrations(token_input TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF NOT validate_superadmin_session(token_input) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Sesi Super Admin tidak valid atau kedaluwarsa.');
+    END IF;
+
+    RETURN jsonb_build_object(
+        'success', true,
+        'registrations', (
+            SELECT coalesce(jsonb_agg(to_jsonb(r)), '[]'::jsonb)
+            FROM (
+                SELECT * FROM registrations ORDER BY created_at DESC
+            ) r
+        )
+    );
+END;
+$$;
+
+-- Menyetujui pendaftaran & memasukkan siswa ke tabel members secara atomik
+CREATE OR REPLACE FUNCTION approve_registration_admin(
+    token_input TEXT,
+    reg_id UUID,
+    final_name TEXT,
+    final_class TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+    v_existing_id UUID;
+BEGIN
+    IF NOT validate_superadmin_session(token_input) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Sesi Super Admin tidak valid.');
+    END IF;
+
+    -- Validasi duplikasi nama di members
+    SELECT id INTO v_existing_id FROM members WHERE lower(trim(name)) = lower(trim(final_name));
+    IF v_existing_id IS NOT NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Siswa dengan nama ini sudah terdaftar di database.');
+    END IF;
+
+    -- Masukkan ke members
+    INSERT INTO members (name, class_name, generation, role, position, status)
+    VALUES (trim(final_name), trim(final_class), 21, 'member', 'Anggota', 'active');
+
+    -- Update status pendaftaran
+    UPDATE registrations SET status = 'approved' WHERE id = reg_id;
+
+    RETURN jsonb_build_object('success', true);
+END;
+$$;
+
+-- Menolak atau memperbarui status pendaftaran
+CREATE OR REPLACE FUNCTION update_registration_status_admin(
+    token_input TEXT,
+    reg_id UUID,
+    new_status TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+    IF NOT validate_superadmin_session(token_input) THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Sesi Super Admin tidak valid.');
+    END IF;
+
+    UPDATE registrations SET status = new_status WHERE id = reg_id;
+    RETURN jsonb_build_object('success', true);
+END;
+$$;
+
