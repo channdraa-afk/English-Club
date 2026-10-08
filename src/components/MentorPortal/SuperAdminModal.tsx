@@ -68,12 +68,6 @@ export const SuperAdminModal: React.FC<SuperAdminModalProps> = ({
       if (!rpcErr && rpcRes && rpcRes.success) {
         isAuthenticated = true;
         sessionToken = rpcRes.session_token || ('ec_sess_' + Date.now());
-      } else {
-        // Fallback jika database belum menjalankan SQL hardening baru:
-        if (cleanPass === 'whoischandra') {
-          isAuthenticated = true;
-          sessionToken = 'ec_fallback_sig_' + Date.now();
-        }
       }
 
       if (isAuthenticated) {
