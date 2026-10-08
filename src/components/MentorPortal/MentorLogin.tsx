@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Lock, ShieldCheck, KeyRound, AlertCircle, ArrowLeft } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
@@ -19,10 +19,29 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
   const [pin, setPin] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [lockoutSeconds, setLockoutSeconds] = useState(0);
+
+  // Check lockout state on mount
+  useEffect(() => {
+    const checkLockout = () => {
+      const until = Number(safeStorage.get('ec_mentor_lockout_until') || 0);
+      const now = Date.now();
+      if (until > now) {
+        setLockoutSeconds(Math.ceil((until - now) / 1000));
+      } else {
+        setLockoutSeconds(0);
+        safeStorage.remove('ec_mentor_lockout_until');
+      }
+    };
+
+    checkLockout();
+    const interval = setInterval(checkLockout, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pin.trim() || isVerifying) return;
+    if (lockoutSeconds > 0 || !pin.trim() || isVerifying) return;
     setError(null);
     setIsVerifying(true);
 
@@ -47,11 +66,28 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
 
       if (isValid) {
         sound.playSuccess();
+        safeStorage.remove('ec_mentor_fail_count');
+        safeStorage.remove('ec_mentor_lockout_until');
         safeStorage.set('ec_mentor_session_v2', 'ec_auth_' + Date.now());
         onLoginSuccess();
       } else {
         sound.playError();
-        setError('PIN Mentor salah! Silakan coba lagi.');
+        const failCount = Number(safeStorage.get('ec_mentor_fail_count') || 0) + 1;
+        safeStorage.set('ec_mentor_fail_count', String(failCount));
+
+        if (failCount >= 5) {
+          const until = Date.now() + 300000; // 5 menit lockout
+          safeStorage.set('ec_mentor_lockout_until', String(until));
+          setLockoutSeconds(300);
+          setError('Terlalu banyak percobaan salah! Akses dibekukan selama 5 menit.');
+        } else if (failCount >= 3) {
+          const until = Date.now() + 60000; // 60 detik lockout
+          safeStorage.set('ec_mentor_lockout_until', String(until));
+          setLockoutSeconds(60);
+          setError('PIN Mentor salah 3 kali! Akses dibekukan selama 60 detik.');
+        } else {
+          setError(`PIN Mentor salah! Sisa kesempatan: ${3 - failCount}x.`);
+        }
         setPin('');
       }
     } catch {
@@ -88,8 +124,9 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
                 maxLength={8}
                 value={pin}
                 onChange={(e) => setPin(e.target.value)}
-                placeholder="••••••"
-                className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-xl font-black tracking-widest text-slate-900 focus:bg-white focus:border-slate-800 focus:outline-none transition-colors"
+                placeholder={lockoutSeconds > 0 ? `Terkunci (${lockoutSeconds}s)` : "••••••"}
+                disabled={lockoutSeconds > 0}
+                className="w-full pl-11 pr-4 py-3 bg-slate-50 border-2 border-slate-200 rounded-2xl text-center text-xl font-black tracking-widest text-slate-900 focus:bg-white focus:border-slate-800 focus:outline-none transition-colors disabled:opacity-50 disabled:bg-slate-100"
                 autoFocus
               />
             </div>
@@ -107,10 +144,10 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
             variant="slate"
             size="lg"
             className="w-full py-3.5 text-base"
-            disabled={pin.length < 4}
+            disabled={pin.length < 4 || lockoutSeconds > 0}
           >
             <Lock className="w-4 h-4" />
-            <span>MASUK DASHBOARD</span>
+            <span>{lockoutSeconds > 0 ? `Tunggu ${lockoutSeconds} Detik...` : "MASUK DASHBOARD"}</span>
           </TactileButton>
 
           <button
