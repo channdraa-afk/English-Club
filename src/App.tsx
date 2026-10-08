@@ -330,14 +330,21 @@ export const App: React.FC = () => {
       if (attErr) throw attErr;
       setAttendances(attendanceData || []);
 
-      // 4. Fetch registrations
-      const { data: regData, error: regErr } = await supabase
-        .from('registrations')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // 4. Fetch registrations (Strictly scoped: Never load candidate data into public browser context)
+      const hasSuperAdminAccess = Boolean(
+        safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY)
+      );
 
-      if (regErr) throw regErr;
-      setRegistrations(regData || []);
+      if (hasSuperAdminAccess) {
+        const { data: regData } = await supabase
+          .from('registrations')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        setRegistrations(regData || []);
+      } else {
+        setRegistrations([]);
+      }
 
       // 5. Fetch app_settings
       const { data: settingsData } = await supabase.from('app_settings').select('*');
@@ -451,10 +458,13 @@ export const App: React.FC = () => {
       safeStorage.set(SUPERADMIN_SESSION_KEY, signature, 'session');
       safeStorage.set(SUPERADMIN_SESSION_KEY, signature);
     }
+    // Instantly load protected registrations now that credentials are valid
+    fetchData(true);
   };
 
   const handleSuperAdminLock = () => {
     setIsSuperAdmin(false);
+    setRegistrations([]);
     safeStorage.remove(SUPERADMIN_SESSION_KEY, 'session');
     safeStorage.remove(SUPERADMIN_SESSION_KEY);
     safeStorage.remove('ec_superadmin_auth');

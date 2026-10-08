@@ -3,6 +3,7 @@ import { UserCheck, Phone, Check, X, RefreshCw, AlertTriangle, ShieldCheck, Edit
 import { Registration, Member } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
+import { safeStorage } from '../../lib/storage';
 import { supabase } from '../../lib/supabase';
 
 interface RegistrationApprovalsProps {
@@ -101,7 +102,29 @@ export const RegistrationApprovals: React.FC<RegistrationApprovalsProps> = ({
 
     setIsSubmittingApproval(true);
     try {
-      // 1. Insert cleanly into members table
+      const savedSig = safeStorage.get('ec_superadmin_sig', 'session') || safeStorage.get('ec_superadmin_sig') || '';
+
+      // 1. Prioritize Atomic Server-Side RPC
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('approve_registration_admin', {
+        token_input: savedSig,
+        reg_id: reviewTarget.id,
+        final_name: finalName,
+        final_class: finalClass,
+      });
+
+      if (!rpcErr && rpcRes && rpcRes.success) {
+        sound.playSuccess();
+        setReviewTarget(null);
+        onRefreshRegistrations();
+        onMemberAdded();
+        return;
+      }
+
+      if (rpcRes && !rpcRes.success && rpcRes.error) {
+        throw new Error(rpcRes.error);
+      }
+
+      // 2. Fallback to direct tables if RPC is not yet applied
       const { error: insertErr } = await supabase.from('members').insert({
         name: finalName,
         class_name: finalClass,
@@ -113,7 +136,6 @@ export const RegistrationApprovals: React.FC<RegistrationApprovalsProps> = ({
 
       if (insertErr) throw insertErr;
 
-      // 2. Update registration status to approved
       const { error: updateErr } = await supabase
         .from('registrations')
         .update({ status: 'approved' })
@@ -141,6 +163,20 @@ export const RegistrationApprovals: React.FC<RegistrationApprovalsProps> = ({
     setLoadingId(reg.id);
 
     try {
+      const savedSig = safeStorage.get('ec_superadmin_sig', 'session') || safeStorage.get('ec_superadmin_sig') || '';
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('update_registration_status_admin', {
+        token_input: savedSig,
+        reg_id: reg.id,
+        new_status: 'approved',
+      });
+
+      if (!rpcErr && rpcRes && rpcRes.success) {
+        sound.playSuccess();
+        onRefreshRegistrations();
+        return;
+      }
+
+      // Fallback
       const { error } = await supabase
         .from('registrations')
         .update({ status: 'approved' })
@@ -165,6 +201,20 @@ export const RegistrationApprovals: React.FC<RegistrationApprovalsProps> = ({
     setLoadingId(reg.id);
 
     try {
+      const savedSig = safeStorage.get('ec_superadmin_sig', 'session') || safeStorage.get('ec_superadmin_sig') || '';
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('update_registration_status_admin', {
+        token_input: savedSig,
+        reg_id: reg.id,
+        new_status: 'rejected',
+      });
+
+      if (!rpcErr && rpcRes && rpcRes.success) {
+        sound.playPop();
+        onRefreshRegistrations();
+        return;
+      }
+
+      // Fallback
       const { error } = await supabase
         .from('registrations')
         .update({ status: 'rejected' })
