@@ -45,7 +45,20 @@ DELETE FROM app_settings WHERE key IN ('mentor_pin', 'mentor_token', 'superadmin
 -- 5. FUNGSI INTERNAL & KRIPTOGRAFIS SESI (SECURITY DEFINER)
 -- ==============================================================================
 
--- Helper: Mengambil session HMAC secret internal
+-- Bersihkan fungsi lama terlebih dahulu jika tipe return berbeda (Mencegah PostgreSQL Error 42P13)
+DROP FUNCTION IF EXISTS verify_mentor_pin(TEXT);
+DROP FUNCTION IF EXISTS verify_superadmin_master(TEXT);
+DROP FUNCTION IF EXISTS validate_superadmin_session(TEXT);
+DROP FUNCTION IF EXISTS validate_mentor_session(TEXT);
+DROP FUNCTION IF EXISTS update_mentor_pin(TEXT, TEXT);
+DROP FUNCTION IF EXISTS verify_mentor_token(TEXT);
+DROP FUNCTION IF EXISTS update_mentor_token(TEXT);
+DROP FUNCTION IF EXISTS is_authenticated_admin();
+DROP FUNCTION IF EXISTS submit_student_attendance(UUID, UUID, TEXT, TEXT, TEXT, TEXT, BOOLEAN);
+DROP FUNCTION IF EXISTS get_admin_registrations(TEXT);
+DROP FUNCTION IF EXISTS approve_registration_admin(TEXT, UUID, TEXT, TEXT);
+DROP FUNCTION IF EXISTS update_registration_status_admin(TEXT, UUID, TEXT);
+DROP FUNCTION IF EXISTS get_session_hmac_secret();
 CREATE OR REPLACE FUNCTION get_session_hmac_secret()
 RETURNS TEXT
 LANGUAGE plpgsql
