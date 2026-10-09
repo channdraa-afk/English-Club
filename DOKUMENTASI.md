@@ -688,12 +688,20 @@
     1. *Zero Public Registrations Exposure*: Mengunci total RLS `registrations` (`Deny public select registrations`) di database Supabase. Di sisi frontend (`App.tsx`), pemanggilan `registrations` diputus 100% dari alur fetch publik awal dan hanya dimuat secara aman saat hak Super Admin aktif.
     2. *Atomic Secure RPC Approval*: Persetujuan anggota baru (`RegistrationApprovals.tsx`) kini divalidasi via PostgreSQL RPC `approve_registration_admin` dan `update_registration_status_admin` dengan verifikasi signature session Super Admin.
     3. *Super Admin Persistent Memory*: Sesi Super Admin kini tersimpan stabil di perangkat Ketua (`localStorage` bertanda tangan token hash) tanpa auto-kick 6 jam yang mengganggu, tetap dapat dikunci seketika lewat tombol `[ 🔒 Kunci Admin ]`.
-    4. *Anti-Brute Force Mentor Lockout*: Menerapkan sistem pertahanan bertingkat pada `MentorLogin.tsx`: 3x salah PIN membekukan input selama 60 detik, dan 5x salah membekukan selama 5 menit dengan timer countdown interaktif.
+- [x] Fortress Security Lockdown V3 (Remediasi Total VULN-001 & VULN-002 dari Pentest Eksternal):
+  - **Problem**:
+    1. *VULN-001 (Client-Side Super Admin & Mentor Bypass, CVSS 9.8)*: Inisialisasi status admin di `App.tsx` hanya memeriksa panjang token di `localStorage` (`savedSig.length >= 20`), sehingga menyuntikkan string sembarang langsung membuka hak Super Admin dan Mentor Portal tanpa verifikasi kriptografis ke server.
+    2. *VULN-002 (RLS Bypass Penuh pada 8 Tabel Supabase, CVSS 9.8)*: Kebijakan RLS lama dari migrasi awal memiliki `USING (true)` dan `WITH CHECK (true)` pada 8 tabel (`members`, `meetings`, `attendances`, `registrations`, `app_settings`, `quizzes`, `quiz_sessions`, `quiz_submissions`), memungkinkan pengguna anonim dengan cURL/Burp Suite untuk melakukan SELECT, INSERT, UPDATE, dan DELETE semaunya (termasuk membocorkan PII nomor WA, kunci jawaban kuis, memanipulasi presensi, dan menghapus seluruh database).
+  - **Solution / State**:
+    1. *Server-Side Cryptographic Session Validation (VULN-001)*: Menghapus pengecekan naif berbasis panjang string di frontend. `App.tsx` menginisialisasi `isSuperAdmin = false` dan memverifikasi token sesi secara asinkron ke PostgreSQL RPC `validate_superadmin_session` dan `validate_mentor_session` berbasis HMAC-SHA256 dengan server-side private secret. Token palsu atau kedaluwarsa langsung di-purge dari storage seketika.
+    2. *Complete RLS Fortress Lockdown (VULN-002)*: Menulis skrip `supabase/complete_rls_fortress_lockdown.sql` yang mencabut seluruh policy `USING (true)` lama dan mengunci 8 tabel. Operasi INSERT/UPDATE/DELETE langsung via REST API diblokir total untuk publik (`WITH CHECK (is_authenticated_admin())`). Presensi siswa wajib lewat RPC `submit_student_attendance` (verifikasi token papan tulis server-side).
+    3. *Dynamic X-Session-Token PostgREST Header*: Klien Supabase (`src/lib/supabase.ts`) kini secara otomatis menyertakan header `x-session-token` pada setiap fetch terotentikasi, memungkinkan fungsi PostgreSQL `is_authenticated_admin()` memvalidasi sesi admin/mentor secara transparan tanpa merusak fungsionalitas portal pengurus.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
 - [x] Menjalankan skrip `supabase/fortress_security_hardening.sql` di SQL Editor Supabase untuk mengaktifkan RPC dan mengunci tabel secrets di cloud.
+- [ ] Menjalankan skrip `supabase/complete_rls_fortress_lockdown.sql` di SQL Editor Supabase untuk mengunci total RLS pada 8 tabel dan mengaktifkan validasi sesi HMAC-SHA256.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
 
