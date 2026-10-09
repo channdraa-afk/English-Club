@@ -100,11 +100,7 @@ export const App: React.FC = () => {
     return 'landing';
   });
   const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
-    const savedSig = safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY);
-    // Signature must be a non-trivial signed token string (min 20 chars), never plain text
-    return Boolean(savedSig && savedSig.length >= 20);
-  });
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
 
   // Modals state
   const [isWordModalOpen, setIsWordModalOpen] = useState(false);
@@ -112,19 +108,69 @@ export const App: React.FC = () => {
   const [successMeeting, setSuccessMeeting] = useState<Meeting | null>(null);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
 
-  // Check saved mentor login & enforce session validity
+  // Check saved logins & cryptographically validate sessions against PostgreSQL RPC
   useEffect(() => {
-    // 1. Kick legacy logins from all devices
+    // 1. Kick legacy plain-text logins from all devices
     if (safeStorage.get('ec_mentor_auth')) {
       safeStorage.remove('ec_mentor_auth');
       setIsMentorLoggedIn(false);
     }
-
-    // 2. Validate current session against active mentor PIN or valid session marker
-    const savedSession = safeStorage.get('ec_mentor_session_v2');
-    if (savedSession) {
-      setIsMentorLoggedIn(true);
+    if (safeStorage.get('ec_superadmin_auth')) {
+      safeStorage.remove('ec_superadmin_auth');
+      setIsSuperAdmin(false);
     }
+
+    const validateActiveSessions = async () => {
+      // 2. Validate Super Admin Token via server-side HMAC
+      const savedSig = safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY);
+      if (savedSig) {
+        try {
+          const { data: isSuperValid, error: superErr } = await supabase.rpc('validate_superadmin_session', {
+            token_input: savedSig,
+          });
+
+          if (!superErr && isSuperValid) {
+            setIsSuperAdmin(true);
+          } else {
+            // Token invalid, forged, or expired: purge immediately
+            safeStorage.remove(SUPERADMIN_SESSION_KEY, 'session');
+            safeStorage.remove(SUPERADMIN_SESSION_KEY);
+            setIsSuperAdmin(false);
+          }
+        } catch {
+          safeStorage.remove(SUPERADMIN_SESSION_KEY, 'session');
+          safeStorage.remove(SUPERADMIN_SESSION_KEY);
+          setIsSuperAdmin(false);
+        }
+      } else {
+        setIsSuperAdmin(false);
+      }
+
+      // 3. Validate Mentor Session Token via server-side HMAC
+      const savedMentor = safeStorage.get('ec_mentor_session_v2');
+      if (savedMentor) {
+        try {
+          const { data: isMentorValid, error: mentorErr } = await supabase.rpc('validate_mentor_session', {
+            token_input: savedMentor,
+          });
+
+          if (!mentorErr && isMentorValid) {
+            setIsMentorLoggedIn(true);
+          } else {
+            // Token invalid, forged, or expired: purge immediately
+            safeStorage.remove('ec_mentor_session_v2');
+            setIsMentorLoggedIn(false);
+          }
+        } catch {
+          safeStorage.remove('ec_mentor_session_v2');
+          setIsMentorLoggedIn(false);
+        }
+      } else {
+        setIsMentorLoggedIn(false);
+      }
+    };
+
+    validateActiveSessions();
   }, [mentorPin]);
 
   // Listen for browser back/forward or hash change (#absen, #mentor, #beranda)

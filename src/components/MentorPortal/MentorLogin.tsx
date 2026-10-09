@@ -54,13 +54,21 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
       });
 
       let isValid = false;
+      let sessionToken = '';
 
-      if (!rpcError && typeof isRpcValid === 'boolean') {
-        isValid = isRpcValid;
+      if (!rpcError && isRpcValid) {
+        if (typeof isRpcValid === 'boolean') {
+          isValid = isRpcValid;
+          sessionToken = 'ec_auth_' + Date.now();
+        } else if (typeof isRpcValid === 'object' && (isRpcValid as any).success) {
+          isValid = true;
+          sessionToken = (isRpcValid as any).session_token || ('ec_auth_' + Date.now());
+        }
       } else {
         // Fallback if RPC migration hasn't been executed yet or currentPin prop is supplied
         if (currentPin && cleanInput === currentPin.trim()) {
           isValid = true;
+          sessionToken = 'ec_auth_' + Date.now();
         }
       }
 
@@ -68,7 +76,7 @@ export const MentorLogin: React.FC<MentorLoginProps> = ({
         sound.playSuccess();
         safeStorage.remove('ec_mentor_fail_count');
         safeStorage.remove('ec_mentor_lockout_until');
-        safeStorage.set('ec_mentor_session_v2', 'ec_auth_' + Date.now());
+        safeStorage.set('ec_mentor_session_v2', sessionToken);
         onLoginSuccess();
       } else {
         sound.playError();
