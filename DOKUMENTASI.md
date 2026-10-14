@@ -696,6 +696,15 @@
     1. *Server-Side Cryptographic Session Validation (VULN-001)*: Menghapus pengecekan naif berbasis panjang string di frontend. `App.tsx` menginisialisasi `isSuperAdmin = false` dan memverifikasi token sesi secara asinkron ke PostgreSQL RPC `validate_superadmin_session` dan `validate_mentor_session` berbasis HMAC-SHA256 dengan server-side private secret. Token palsu atau kedaluwarsa langsung di-purge dari storage seketika.
     2. *Complete RLS Fortress Lockdown (VULN-002)*: Menulis skrip `supabase/complete_rls_fortress_lockdown.sql` yang mencabut seluruh policy `USING (true)` lama dan mengunci 8 tabel. Operasi INSERT/UPDATE/DELETE langsung via REST API diblokir total untuk publik (`WITH CHECK (is_authenticated_admin())`). Presensi siswa wajib lewat RPC `submit_student_attendance` (verifikasi token papan tulis server-side).
     3. *Dynamic X-Session-Token PostgREST Header*: Klien Supabase (`src/lib/supabase.ts`) kini secara otomatis menyertakan header `x-session-token` pada setiap fetch terotentikasi, memungkinkan fungsi PostgreSQL `is_authenticated_admin()` memvalidasi sesi admin/mentor secara transparan tanpa merusak fungsionalitas portal pengurus.
+- [x] Hotfix Token Attendance & Realtime Synchronization:
+  - **Problem**:
+    1. *Crash Database RPC Siswa*: Fungsi `submit_student_attendance` melempar PostgreSQL error 42703 (`column "is_holiday" does not exist`) karena tabel `meetings` belum memiliki kolom tersebut. Akibatnya presensi adik kelas jatuh ke fallback mode yang diblokir oleh RLS benteng baja (hanya Super Admin yang lolos).
+    2. *Token Mentor Tidak Tersinkron*: Pergantian Token Pengurus A20 di `MeetingControl.tsx` hanya menulis ke `app_settings` dan tidak memperbarui hash di `system_secrets`, sehingga kakak kelas hanya bisa absen menggunakan token pertama (`CREW20`).
+    3. *Ketiadaan Realtime Meetings*: Perubahan token dan sesi aktif tidak tersinkronisasi ke browser siswa yang sudah membuka website di HP mereka sebelum sesi dimulai.
+  - **Solution / State**:
+    1. *Skema & RPC Hotfix (`supabase/hotfix_token_attendance.sql`)*: Menambahkan kolom `is_holiday` & `holiday_reason` ke tabel `meetings` serta menyelaraskan query `submit_student_attendance` dengan `COALESCE(is_holiday, false)` agar kebal crash.
+    2. *Sinkronisasi Kriptografis Token Mentor*: `MeetingControl.tsx` kini secara otomatis memanggil RPC `update_mentor_token` untuk memperbarui `system_secrets.mentor_token_hash` seketika saat tombol simpan ditekan.
+    3. *Realtime In-Place Meeting Sync*: Menambahkan listener `realtime_meetings_watcher` di `App.tsx` yang secara otomatis memperbarui state `meetings` dan token aktif di seluruh HP siswa dalam 0ms tanpa perlu reload halaman.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
