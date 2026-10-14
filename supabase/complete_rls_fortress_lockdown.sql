@@ -7,6 +7,10 @@
 -- 1. Pastikan ekstensi pgcrypto aktif
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
+-- 1.1. Pastikan kolom is_holiday dan holiday_reason tersedia di tabel meetings
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS is_holiday BOOLEAN DEFAULT false;
+ALTER TABLE meetings ADD COLUMN IF NOT EXISTS holiday_reason TEXT;
+
 -- 2. Buat tabel internal aman untuk kredensial hash yang terisolasi dari publik
 CREATE TABLE IF NOT EXISTS system_secrets (
     key TEXT PRIMARY KEY,
@@ -364,7 +368,8 @@ DECLARE
     v_existing_id UUID;
     v_inserted_id UUID;
 BEGIN
-    SELECT token, is_active, is_holiday 
+    -- 1. Ambil data sesi pertemuan
+    SELECT token, is_active, COALESCE(is_holiday, false) 
     INTO v_actual_token, v_is_active, v_is_holiday
     FROM meetings
     WHERE id = p_meeting_id;
