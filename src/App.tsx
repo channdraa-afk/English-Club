@@ -296,6 +296,29 @@ export const App: React.FC = () => {
       )
       .subscribe();
 
+    const meetingsChannel = supabase
+      .channel('realtime_meetings_watcher')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'meetings' },
+        (payload: any) => {
+          const row = payload.new;
+          if (row && row.id) {
+            setMeetings((prev) => {
+              const exists = prev.some((m) => m.id === row.id);
+              if (exists) {
+                return prev.map((m) =>
+                  m.id === row.id ? { ...m, ...row } : row.is_active ? { ...m, is_active: false } : m
+                );
+              } else {
+                return [row, ...prev.map((m) => (row.is_active ? { ...m, is_active: false } : m))];
+              }
+            });
+          }
+        }
+      )
+      .subscribe();
+
     const arenaBroadcastChannel = supabase
       .channel('arena_global')
       .on('broadcast', { event: 'quiz_session_state' }, ({ payload }: any) => {
@@ -307,6 +330,7 @@ export const App: React.FC = () => {
       supabase.removeChannel(quizChannel);
       supabase.removeChannel(settingsChannel);
       supabase.removeChannel(arenaBroadcastChannel);
+      supabase.removeChannel(meetingsChannel);
     };
   }, []);
 

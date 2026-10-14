@@ -358,11 +358,18 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
           // Ignored
         }
 
-        // Save mentor token to app_settings
+        // Save mentor token to app_settings & sync cryptographic hash to system_secrets
         const cleanMentorTok = mentorTokenInput.trim().toUpperCase();
         await supabase
           .from('app_settings')
           .upsert({ key: 'mentor_token', value: cleanMentorTok });
+        
+        try {
+          await supabase.rpc('update_mentor_token', { new_token: cleanMentorTok });
+        } catch (rpcErr) {
+          console.warn('Could not sync mentor token to system_secrets RPC:', rpcErr);
+        }
+
         onMentorTokenUpdated(cleanMentorTok);
       }
 
