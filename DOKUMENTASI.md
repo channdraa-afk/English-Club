@@ -134,10 +134,10 @@
   - Otomatis memetakan seluruh hari Rabu dalam sebulan (misal September: 4 slot hari Rabu).
   - Slot tanggal yang belum tiba berstatus `-` dan tidak mengurangi persentase kehadiran rapor siswa (`heldNonHolidayMeetings`).
   - Ekspor cetak PDF dan file CSV langsung berformat matriks 4 pekan resmi berstandar rapor SMK Negeri 1 Purbalingga.
-- [x] Bank 50+ Idiom Kurasi & Generator Word of the Day (`src/data/idioms.ts` & `MeetingControl.tsx`):
-  - 50 idiom populer bertema motivasi, percakapan sehari-hari, dan kesuksesan dengan arti bahasa Indonesia dan contoh kalimat.
+- [x] Bank 100 Idiom Kurasi & Generator Word of the Day (`src/data/idioms.ts` & `MeetingControl.tsx`):
+  - 100 idiom populer berstandar internasional bertema motivasi, percakapan sehari-hari, kerja tim, kesuksesan, dan metode belajar dengan arti bahasa Indonesia kontekstual dan contoh kalimat relevan.
   - Tombol **`[ 🎲 Acak dari Bank Idiom ]`** di form atur sesi pertemuan untuk pemilihan idiom kilat.
-  - Helper `getWeeklyIdiom` untuk auto-rotate mingguan yang konsisten berdasarkan nomor pekan kalender.
+  - Helper `getWeeklyIdiom` untuk auto-rotate mingguan yang konsisten berdasarkan nomor pekan kalender (mencakup 100 pekan tanpa duplikasi).
 - [x] Optimalisasi Responsivitas Navbar Mobile (`Navbar.tsx`):
   - Tombol mode dibuat adaptif: `[ 🛡️ Mentor ]` / `[ 🛡️ Presensi ]` di mobile (menghemat 70px) dan `[ 🛡️ Dashboard Mentor ]` / `[ 🛡️ Ke Presensi ]` di desktop.
   - Logo dan teks judul fleksibel (`text-base sm:text-lg`, `min-w-0`), sehingga di HP tidak akan pernah terpotong saat dalam mode siswa maupun mentor.
@@ -711,7 +711,9 @@
     2. Siswa kelas X KDS (Putri Eka Novianti) tidak sengaja dinonaktifkan (`status: inactive`), sehingga tersembunyi dari roster dan rekap bulanan meskipun riwayat presensi lamanya di Pertemuan 1-3 tetap tersimpan aman.
   - **Solution / State**:
     1. *Reaktivasi X KDS*: Memulihkan status Putri Eka Novianti menjadi `active` di tabel `members`, mengembalikan 3 riwayat kehadiran lamanya secara utuh.
-    2. *Atomic Bulk Attendance*: Menyisipkan 52 data presensi susulan untuk Pertemuan #4 secara massal dengan validasi Super Admin (`x-session-token`), sehingga total kehadiran resmi Pertemuan #4 mencapai 94 siswa dan Putri Eka Novianti memiliki kehadiran penuh 4/4 (100%).
+- [x] Ekspansi Bank 100 Idiom & Kosa Kata Harian (`src/data/idioms.ts`):
+  - **Problem**: Koleksi awal 50 idiom dirasa masih terbatas bagi siswa dan mentor yang gemar mengeksplorasi variasi kata harian atau menekan tombol `[ 🎲 Acak ]`, sehingga kata-kata mulai sering terulang dalam rentang waktu beberapa bulan.
+  - **Solution / State**: Menggandakan koleksi bank idiom secara presisi dari 50 menjadi **100 entri lengkap** (ID 1-100) dengan 5 kategori terdistribusi seimbang (`motivation`, `daily`, `teamwork`, `learning`, `success`). Dilengkapi makna bahasa Indonesia yang kontekstual dan contoh kalimat berbahasa Inggris yang relevan dengan ekosistem siswa SMK / SMEGA English Club, mendukung 100 pekan rotasi tanpa duplikasi dan zero-overhead ke performa web.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
