@@ -705,6 +705,13 @@
     1. *Skema & RPC Hotfix (`supabase/hotfix_token_attendance.sql`)*: Menambahkan kolom `is_holiday` & `holiday_reason` ke tabel `meetings` serta menyelaraskan query `submit_student_attendance` dengan `COALESCE(is_holiday, false)` agar kebal crash.
     2. *Sinkronisasi Kriptografis Token Mentor*: `MeetingControl.tsx` kini secara otomatis memanggil RPC `update_mentor_token` untuk memperbarui `system_secrets.mentor_token_hash` seketika saat tombol simpan ditekan.
     3. *Realtime In-Place Meeting Sync*: Menambahkan listener `realtime_meetings_watcher` di `App.tsx` yang secara otomatis memperbarui state `meetings` dan token aktif di seluruh HP siswa dalam 0ms tanpa perlu reload halaman.
+- [x] Rekonsiliasi Data Presensi Pertemuan #4 & Reaktivasi Anggota X KDS:
+  - **Problem**:
+    1. Sebanyak 52 siswa Angkatan 21 yang hadir di Pertemuan #4 (14 Okt 2026) tidak sempat melakukan submit mandiri akibat kendala token sebelum hotfix diterapkan.
+    2. Siswa kelas X KDS (Putri Eka Novianti) tidak sengaja dinonaktifkan (`status: inactive`), sehingga tersembunyi dari roster dan rekap bulanan meskipun riwayat presensi lamanya di Pertemuan 1-3 tetap tersimpan aman.
+  - **Solution / State**:
+    1. *Reaktivasi X KDS*: Memulihkan status Putri Eka Novianti menjadi `active` di tabel `members`, mengembalikan 3 riwayat kehadiran lamanya secara utuh.
+    2. *Atomic Bulk Attendance*: Menyisipkan 52 data presensi susulan untuk Pertemuan #4 secara massal dengan validasi Super Admin (`x-session-token`), sehingga total kehadiran resmi Pertemuan #4 mencapai 94 siswa dan Putri Eka Novianti memiliki kehadiran penuh 4/4 (100%).
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
