@@ -20,7 +20,7 @@ interface QuizManagerProps {
 export const QuizManager: React.FC<QuizManagerProps> = ({ 
   activeMeetingId, 
   onAwardTalentStar, 
-  totalA21Count = 103,
+  totalA21Count = 101,
   onSessionChanged
 }) => {
   const liveMonitorRef = useRef<HTMLDivElement>(null);
@@ -846,7 +846,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({
                 Peserta Selesai
               </span>
               <span className="text-2xl font-black text-slate-900">
-                {submissions.length} <span className="text-xs text-slate-400 font-bold">/ {totalA21Count || 103} Siswa</span>
+                {submissions.length} <span className="text-xs text-slate-400 font-bold">/ {totalA21Count || 101} Siswa</span>
               </span>
             </div>
             <div className="bg-slate-50 p-4 rounded-2xl border-2 border-slate-200 text-center">

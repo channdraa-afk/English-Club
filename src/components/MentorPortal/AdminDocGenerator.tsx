@@ -197,7 +197,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
       (a) => a.meeting_id === mId && activeA21Members.some((m) => m.id === a.member_id)
     );
 
-    const total = activeA21Members.length || 103;
+    const total = activeA21Members.length || 101;
     const h = a21Attended.length;
     const th = Math.max(0, total - h);
     const pH = ((h / total) * 100).toFixed(1).replace('.', ',');
@@ -427,7 +427,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
       sound.playSuccess();
       setStatusMessage({
         type: 'success',
-        text: `Berhasil mengunduh "${filename}"! Terdapat 103 siswa terisi otomatis sesuai template resmi sekolah.`,
+        text: `Berhasil mengunduh "${filename}"! Terdapat ${activeA21Members.length} siswa terisi otomatis sesuai template resmi sekolah.`,
       });
     } catch (err: any) {
       sound.playError();
@@ -451,7 +451,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
                 Sekretariat & Dokumen Resmi
               </span>
               <span className="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-200 border border-emerald-400/40 text-[11px] font-bold">
-                103 Anggota A21
+                {activeA21Members.length} Anggota A21
               </span>
             </div>
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
@@ -1434,7 +1434,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
                     Pertemuan Minggu ke-1
                   </span>
                   <span className="text-[11px] font-bold text-blue-600">
-                    Total Anggota: {activeA21Members.length || 103}
+                    Total Anggota: {activeA21Members.length || 101}
                   </span>
                 </div>
 
@@ -1505,7 +1505,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
                     Pertemuan Minggu ke-2
                   </span>
                   <span className="text-[11px] font-bold text-indigo-600">
-                    Total Anggota: {activeA21Members.length || 103}
+                    Total Anggota: {activeA21Members.length || 101}
                   </span>
                 </div>
 
@@ -1571,16 +1571,16 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
             </div>
           </div>
 
-          {/* Card 4: Status Presensi 103 Siswa Angkatan 21 */}
+          {/* Card 4: Status Presensi Siswa Angkatan 21 */}
           <div className="bg-white p-5 sm:p-6 rounded-3xl border-2 border-slate-200 shadow-sm space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
               <div>
                 <h3 className="text-base font-black text-slate-800 flex items-center gap-2">
                   <Users className="w-5 h-5 text-emerald-600" />
-                  Format Presensi 103 Siswa Angkatan 21
+                  Format Presensi {activeA21Members.length} Siswa Angkatan 21
                 </h3>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Seluruh 103 siswa aktif otomatis digenerate ke Tabel 3 dengan centang (✓) sesuai format resmi.
+                  Seluruh {activeA21Members.length} siswa aktif otomatis digenerate ke Tabel 3 dengan centang (✓) sesuai format resmi.
                 </p>
               </div>
 
@@ -1618,7 +1618,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
             <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center justify-between">
               <div className="flex items-center gap-2 font-bold">
                 <Check className="w-4 h-4 text-emerald-600" />
-                <span>Terverifikasi: Tepat <strong>{activeA21Members.length || 103} Siswa Angkatan 21</strong> siap diexport.</span>
+                <span>Terverifikasi: Tepat <strong>{activeA21Members.length} Siswa Angkatan 21</strong> siap diexport.</span>
               </div>
               <span className="text-[11px] font-black text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
                 100% Cocok Dokumen Sekolah
@@ -1642,7 +1642,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
           {/* Action Download LB Button */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white p-5 rounded-3xl border-2 border-slate-200 shadow-sm">
             <div className="text-xs text-slate-500 font-bold">
-              Kop formulir FO-002 s/d FO-008, rekapitulasi, dan 103 baris absensi otomatis tuntas sempurna.
+              Kop formulir FO-002 s/d FO-008, rekapitulasi, dan baris absensi otomatis tuntas sempurna.
             </div>
             <TactileButton
               variant="emerald"

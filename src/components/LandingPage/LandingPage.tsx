@@ -128,7 +128,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenMentor,
   onOpenArena,
   hasActiveQuiz = false,
-  membersCount = { a21: 103, a20: 59 },
+  membersCount = { a21: 101, a20: 59 },
   isRegistrationOpen = true,
   isSuperAdmin = false,
   onGoToMentorPortal,
@@ -1029,7 +1029,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <h3 className="text-base font-black text-slate-900">Solid Generation</h3>
               <p className="text-xs font-bold text-slate-600 leading-relaxed">
                 Koneksi hangat antar-angkatan, dari 59 pengurus Angkatan 20 yang membimbing hingga 
-                103 adik-adik Angkatan 21 yang antusias berkarya bersama.
+                {' '}{membersCount.a21} adik-adik Angkatan 21 yang antusias berkarya bersama.
               </p>
             </div>
           </div>
