@@ -709,11 +709,16 @@
   - **Problem**:
     1. Sebanyak 52 siswa Angkatan 21 yang hadir di Pertemuan #4 (14 Okt 2026) tidak sempat melakukan submit mandiri akibat kendala token sebelum hotfix diterapkan.
     2. Siswa kelas X KDS (Putri Eka Novianti) tidak sengaja dinonaktifkan (`status: inactive`), sehingga tersembunyi dari roster dan rekap bulanan meskipun riwayat presensi lamanya di Pertemuan 1-3 tetap tersimpan aman.
-  - **Solution / State**:
-    1. *Reaktivasi X KDS*: Memulihkan status Putri Eka Novianti menjadi `active` di tabel `members`, mengembalikan 3 riwayat kehadiran lamanya secara utuh.
+    2. *Atomic Bulk Attendance*: Menyisipkan 52 data presensi susulan untuk Pertemuan #4 secara massal dengan validasi Super Admin (`x-session-token`), sehingga total kehadiran resmi Pertemuan #4 mencapai 94 siswa dan Putri Eka Novianti memiliki kehadiran penuh 4/4 (100%).
 - [x] Ekspansi Bank 100 Idiom & Kosa Kata Harian (`src/data/idioms.ts`):
   - **Problem**: Koleksi awal 50 idiom dirasa masih terbatas bagi siswa dan mentor yang gemar mengeksplorasi variasi kata harian atau menekan tombol `[ 🎲 Acak ]`, sehingga kata-kata mulai sering terulang dalam rentang waktu beberapa bulan.
   - **Solution / State**: Menggandakan koleksi bank idiom secara presisi dari 50 menjadi **100 entri lengkap** (ID 1-100) dengan 5 kategori terdistribusi seimbang (`motivation`, `daily`, `teamwork`, `learning`, `success`). Dilengkapi makna bahasa Indonesia yang kontekstual dan contoh kalimat berbahasa Inggris yang relevan dengan ekosistem siswa SMK / SMEGA English Club, mendukung 100 pekan rotasi tanpa duplikasi dan zero-overhead ke performa web.
+- [x] Eliminasi Akun Anomali Dummy (TEST & TEST ADMIN) & Normalisasi 101 Anggota A21:
+  - **Problem**: Saat menyalin daftar siswa alpa di Pertemuan #4, muncul dua nama anomali `TEST` dan `TEST ADMIN` (`X TEST`). Akun ini berasal dari pengujian database pada 10 Oktober 2026 yang masih berstatus `active`, sehingga terbaca oleh sistem sebagai siswa alpa dan menggelembungkan total alpa menjadi 42 anak.
+  - **Solution / State**:
+    1. *Database Purge*: Menghapus permanen kedua akun dummy dari tabel `members` Supabase (`926d8f85...` dan `24306a5d...`) tanpa meninggalkan *orphan record*.
+    2. *Roster Normalization*: Roster aktif Angkatan 21 kini resmi dan presisi di angka **101 siswa riil** (dari total 106 pendaftar di mana 5 siswa berstatus `inactive` karena pindah/keluar).
+    3. *Dynamic Counter Alignment*: Seluruh fallback antarmuka (`App.tsx`, `LandingPage.tsx`, `MentorDashboard.tsx`, `AdminDocGenerator.tsx`, `QuizManager.tsx`) telah diselaraskan ke 101 siswa dinamis. Total Alpa Pertemuan #4 otomatis turun menjadi murni **40 siswa riil**.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
