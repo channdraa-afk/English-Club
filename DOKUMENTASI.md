@@ -758,6 +758,18 @@
     2. *Sinkronisasi Ganda Atomik di MeetingControl.tsx*: Pembaruan status libur kini secara serentak mengupdate tabel `meetings` dan `app_settings`, menjaga kedua tabel cloud 100% harmonis.
     3. *Banner Libur Presensi Pengurus*: Menambahkan kartu informasi taktil `🏖️ Pertemuan Pengurus Hari Ini Libur` di `MentorAttendance.tsx` serta indikator libur di panel assist Super Admin, mengunci 59 pengurus agar tidak dihitung alpa di radar kedisiplinan.
 
+- [x] Polish UI Copywriting, Koreksi Typo FAQ, & Standardisasi Bahasa Baku KBBI:
+  - **Problem**:
+    1. *Typo FAQ #1*: Terdapat salah ketik `"Inggriskuku"` di FAQ pendaftaran.
+    2. *Data Basi Galeri Default*: Kartu galeri perdana masih memuat angka lama `"86+ adik kelas A21"`.
+    3. *Ambiguitas Kata Absen*: Pesan error duplikasi presensi siswa menggunakan kata `"tercatat absen"` yang rawan disalahartikan adik kelas sebagai alpa.
+    4. *Ketidakbakuan Kata Praktik*: Istilah `"Pekan Praktek"` dan deskripsi surat peminjaman ruang menggunakan kata non-baku `"Praktek"`.
+  - **Solution / State**:
+    1. Memperbaiki typo FAQ menjadi `"Inggrisku"` dan menyelaraskan teks galeri ke `"99 adik kelas A21"`.
+    2. Memperjelas pesan error siswa menjadi `"Kamu sudah mengisi presensi untuk pertemuan ini! ✨"`.
+    3. Menstandardisasi seluruh istilah non-baku menjadi `"Praktik"` di `AdminDocGenerator.tsx` (surat resmi peminjaman ruangan), `App.tsx`, `ArenaPlayer.tsx`, dan `QuizManager.tsx`.
+    4. Memperhalus label tab `MentorDashboard.tsx` menjadi `"Verifikasi Calon Anggota (ACC)"` dan teks sukses pendaftaran menjadi `"diverifikasi & disetujui"`.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
