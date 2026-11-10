@@ -731,6 +731,16 @@
     3. *UUID Safe Meeting Deactivation*: Mengganti query dengan `.eq('is_active', true)` saat membuat sesi baru dan menormalkan sesi aktif di database sehingga dijamin hanya 1 sesi yang aktif.
     4. *SuperAdmin Persistent Memory*: State `isSuperAdmin` kini diinisialisasi langsung dari `localStorage` tanpa auto-kick, tetap terbuka secara permanen di perangkat Ketua hingga tombol `[ 🔒 Kunci Admin ]` ditekan secara manual.
 
+- [x] Stabilisasi Fitur "Liburkan Sesi", Input Alasan Modal, & Eliminasi Anomali Alpa Sesi Libur:
+  - **Problem**:
+    1. *Silent Success di Tombol Libur*: Pada `MeetingControl.tsx`, fungsi `applyToggleHoliday` menempatkan `setSuccessMsg` di dalam blok `if (holErr)`. Karena kolom `is_holiday` di Supabase sudah ada dan update berhasil, blok tersebut dilewati sehingga toast sukses hijau tidak pernah muncul dan tombol terkesan macet.
+    2. *Ketiadaan Input Alasan Libur*: Modal konfirmasi libur belum memiliki input teks, memaksa alasan default *"Libur Kegiatan / Ujian Sekolah"*.
+    3. *Anomali 42 Siswa Dicap Alpa di Sesi Libur*: Pada tab rekap per-sesi (`ReportRecap.tsx`) dan live monitor (`LiveMonitorA21.tsx`), sistem hanya membaca `!attendanceRecord` tanpa mengecek `is_holiday`. Akibatnya saat sesi libur dibuka, seluruh 42 siswa yang tidak hadir dicap Alpa dan tombol "Salin WA" menyalin teks daftar 42 anak alpa palsu.
+  - **Solution / State**:
+    1. *Feedback Visual & Suara*: Memindahkan `setSuccessMsg` dan `sound.playSuccess()` ke luar blok error, memastikan toast hijau *"Status libur sesi X berhasil disimpan!"* atau *"Sesi X dibuka kembali!"* selalu menyala seketika.
+    2. *Input Alasan Fleksibel di Modal*: Menambahkan input teks interaktif di modal konfirmasi libur agar mentor bebas mengetikkan alasan spesifik (Ujian Sekolah, Libur Nasional, Classmeeting).
+    3. *Eliminasi Total Anomali Alpa*: Jika sesi pertemuan berstatus `is_holiday: true`, tab per-sesi dan monitor langsung mengunci status seluruh siswa menjadi badge `LIBUR` (Alpa = 0, Hadir = 0). Tombol Salin WA otomatis beralih menjadi broadcast pemberitahuan resmi bahwa kegiatan libur tanpa ada catatan alpa. Di tabel matriks bulanan dan ekspor CSV rapor, seluruh siswa tetap tercatat permanen sebagai `"LIBUR"`.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
