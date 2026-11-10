@@ -720,6 +720,17 @@
     2. *Roster Normalization*: Roster aktif Angkatan 21 kini resmi dan presisi di angka **101 siswa riil** (dari total 106 pendaftar di mana 5 siswa berstatus `inactive` karena pindah/keluar).
     3. *Dynamic Counter Alignment*: Seluruh fallback antarmuka (`App.tsx`, `LandingPage.tsx`, `MentorDashboard.tsx`, `AdminDocGenerator.tsx`, `QuizManager.tsx`) telah diselaraskan ke 101 siswa dinamis. Total Alpa Pertemuan #4 otomatis turun menjadi murni **40 siswa riil**.
 
+- [x] Fitur Hapus Sesi Pertemuan, SuperAdmin Persistent Memory, & Hotfix Token Sync:
+  - **Problem**:
+    1. *Ketiadaan Fitur Hapus Sesi*: Di `MeetingControl.tsx` hanya tersedia tombol "Kosongkan Presensi Sesi" yang hanya mereset absensi dan tidak menghapus baris sesi di `meetings`, serta Realtime listener mengabaikan event `DELETE` karena `payload.new` kosong.
+    2. *Bug Deaktivasi Sesi UUID 'new'*: Query deaktivasi `neq('id', 'new')` melempar PostgreSQL error `22P02: invalid input syntax for type uuid`, sehingga sesi lama tidak pernah dinonaktifkan dan menyebabkan multiple active meetings bertabrakan tokennya.
+    3. *Auto-Kick SuperAdmin yang Mengganggu*: Validasi HMAC agresif 12 jam memutus sesi SuperAdmin dan memaksa Ketua login ulang terus-menerus.
+  - **Solution / State**:
+    1. *Fitur Resmi Hapus Sesi*: Menambahkan tombol taktil `[ 🗑️ Hapus Sesi Pertemuan ]` di `MeetingControl.tsx` dengan modal konfirmasi protektif. Menghapus data secara atomik dari `attendances` dan `meetings`, serta otomatis mengalihkan status aktif ke sesi pertemuan berikutnya.
+    2. *Realtime DELETE Sync*: `realtime_meetings_watcher` di `App.tsx` kini secara presisi membaca `payload.old.id` saat event `DELETE`, seketika memfilter keluar sesi yang dihapus dalam 0ms.
+    3. *UUID Safe Meeting Deactivation*: Mengganti query dengan `.eq('is_active', true)` saat membuat sesi baru dan menormalkan sesi aktif di database sehingga dijamin hanya 1 sesi yang aktif.
+    4. *SuperAdmin Persistent Memory*: State `isSuperAdmin` kini diinisialisasi langsung dari `localStorage` tanpa auto-kick, tetap terbuka secara permanen di perangkat Ketua hingga tombol `[ 🔒 Kunci Admin ]` ditekan secara manual.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
