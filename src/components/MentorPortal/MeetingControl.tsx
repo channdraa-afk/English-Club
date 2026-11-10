@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Sparkles, 
   Check, 
@@ -226,6 +226,69 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   const [showClearSessionModal, setShowClearSessionModal] = useState(false);
   const [isClearingSession, setIsClearingSession] = useState(false);
 
+  // Modal & state untuk Hapus Sesi Pertemuan Permanen
+  const [showDeleteMeetingModal, setShowDeleteMeetingModal] = useState(false);
+  const [isDeletingMeeting, setIsDeletingMeeting] = useState(false);
+
+  // Target meeting yang akan dihapus berdasarkan selectedMeetingId
+  const meetingToDelete = useMemo(() => {
+    if (!selectedMeetingId || selectedMeetingId === 'new') return null;
+    return meetings.find((m) => m.id === selectedMeetingId) || null;
+  }, [selectedMeetingId, meetings]);
+
+  const handleDeleteMeeting = async () => {
+    if (!meetingToDelete) return;
+    setIsDeletingMeeting(true);
+    sound.playPop();
+
+    try {
+      // 1. Hapus presensi terkait terlebih dahulu
+      await supabase
+        .from('attendances')
+        .delete()
+        .eq('meeting_id', meetingToDelete.id);
+
+      // 2. Hapus baris pertemuan di tabel meetings
+      const { error: delErr } = await supabase
+        .from('meetings')
+        .delete()
+        .eq('id', meetingToDelete.id);
+
+      if (delErr) throw delErr;
+
+      // 3. Jika sesi yang dihapus adalah sesi aktif, jadikan sesi terbaru lainnya sebagai sesi aktif
+      if (meetingToDelete.is_active) {
+        const remaining = meetings.filter((m) => m.id !== meetingToDelete.id);
+        const nextActive = remaining.find((m) => !m.is_holiday) || remaining[0];
+        if (nextActive) {
+          await supabase
+            .from('meetings')
+            .update({ is_active: true })
+            .eq('id', nextActive.id);
+          setSelectedMeetingId(nextActive.id);
+        } else {
+          setSelectedMeetingId('new');
+        }
+      } else {
+        setSelectedMeetingId(activeMeeting?.id || (meetings.length > 0 ? meetings[0].id : 'new'));
+      }
+
+      sound.playSuccess();
+      setShowDeleteMeetingModal(false);
+      setSuccessMsg(`Sesi "${meetingToDelete.title}" berhasil dihapus permanen dari sistem!`);
+      setTimeout(() => setSuccessMsg(null), 3500);
+      onMeetingUpdated();
+      onAttendanceChanged?.();
+    } catch (err: any) {
+      console.error('Error deleting meeting:', err);
+      sound.playError();
+      setErrorMsg('Gagal menghapus sesi pertemuan: ' + (err?.message || 'Error'));
+      setTimeout(() => setErrorMsg(null), 4000);
+    } finally {
+      setIsDeletingMeeting(false);
+    }
+  };
+
   const handleClearSessionAttendances = async () => {
     if (!activeMeeting) return;
     setIsClearingSession(true);
@@ -265,12 +328,19 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
       // Tentukan apakah sesi ini akan menjadi sesi aktif atau tetap arsip
       const willBeActive = isExisting ? (forceActivate ?? isSelectedActive) : true;
 
-      // Jika sesi ini dijadikan aktif, nonaktifkan sesi aktif lainnya terlebih dahulu
+      // Jika sesi ini dijadikan aktif, nonaktifkan sesi aktif lainnya terlebih dahulu (bebas error UUID 'new')
       if (willBeActive) {
-        await supabase
-          .from('meetings')
-          .update({ is_active: false })
-          .neq('id', isExisting ? selectedMeetingId : 'new');
+        if (isExisting && selectedMeetingId) {
+          await supabase
+            .from('meetings')
+            .update({ is_active: false })
+            .neq('id', selectedMeetingId);
+        } else {
+          await supabase
+            .from('meetings')
+            .update({ is_active: false })
+            .eq('is_active', true);
+        }
       }
 
       const basePayload = {
@@ -315,7 +385,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         if (error) throw error;
       } else {
         // Create brand new meeting: nonaktifkan sesi lama agar hanya 1 sesi yang is_active
-        await supabase.from('meetings').update({ is_active: false }).neq('id', 'new');
+        await supabase.from('meetings').update({ is_active: false }).eq('is_active', true);
 
         let { data: insertedMeeting, error } = await supabase
           .from('meetings')
@@ -870,11 +940,28 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                   sound.playPop();
                   setShowActivateConfirmModal(true);
                 }}
-                disabled={isLoading}
+                disabled={isLoading || isDeletingMeeting}
                 className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl font-black text-xs bg-amber-50 hover:bg-amber-100 text-amber-900 border-2 border-amber-300 shadow-[0_2px_0_0_#f59e0b] active:translate-y-0.5 transition-all cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-amber-600" />
                 <span>⚡ Jadikan Sesi Aktif di Portal Siswa</span>
+              </button>
+            )}
+
+            {/* Tombol Hapus Sesi Pertemuan (Hanya untuk sesi yang sudah ada di database) */}
+            {!isNewSession && meetingToDelete && (
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  setShowDeleteMeetingModal(true);
+                }}
+                disabled={isLoading || isDeletingMeeting}
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-2xl font-black text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 hover:text-rose-900 border-2 border-rose-300 shadow-[0_2px_0_0_#f43f5e] active:translate-y-0.5 transition-all cursor-pointer sm:ml-auto"
+                title="Hapus permanen pertemuan ini beserta presensinya dari database"
+              >
+                <Trash2 className="w-4 h-4 text-rose-600" />
+                <span>Hapus Sesi Pertemuan</span>
               </button>
             )}
           </div>
@@ -1043,6 +1130,67 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                   <>
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>Ya, Kosongkan Sesi Ini</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tactile Delete Meeting Modal */}
+      {showDeleteMeetingModal && meetingToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-3xl border-2 border-slate-300 shadow-2xl max-w-md w-full p-6 text-slate-800 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">⚠️</span>
+                <h3 className="font-black text-slate-900 text-base">
+                  Hapus Sesi Pertemuan?
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowDeleteMeetingModal(false)}
+                className="p-1 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-200 text-xs text-rose-900 space-y-2">
+              <p className="font-bold">
+                Apakah kamu yakin ingin menghapus permanen sesi <span className="font-black">"{meetingToDelete.title}"</span> ({meetingToDelete.meeting_date})?
+              </p>
+              <p className="text-[11px] text-rose-800/80 leading-relaxed">
+                Tindakan ini akan <strong>menghapus baris pertemuan dari database</strong> beserta seluruh riwayat presensi yang terhubung ke sesi ini. Tindakan ini permanen dan tidak dapat dibatalkan.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteMeetingModal(false)}
+                disabled={isDeletingMeeting}
+                className="px-4 py-2 rounded-xl text-xs font-black text-slate-600 hover:bg-slate-100 border border-slate-200 transition-colors cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteMeeting}
+                disabled={isDeletingMeeting}
+                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-black bg-rose-600 hover:bg-rose-700 text-white shadow-[0_3px_0_0_#9f1239] active:translate-y-0.5 transition-all cursor-pointer"
+              >
+                {isDeletingMeeting ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Menghapus dari Database...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Ya, Hapus Sesi Ini</span>
                   </>
                 )}
               </button>

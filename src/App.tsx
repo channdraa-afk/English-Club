@@ -100,7 +100,9 @@ export const App: React.FC = () => {
     return 'landing';
   });
   const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
+    return Boolean(safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY));
+  });
 
   // Modals state
   const [isWordModalOpen, setIsWordModalOpen] = useState(false);
@@ -121,27 +123,10 @@ export const App: React.FC = () => {
     }
 
     const validateActiveSessions = async () => {
-      // 2. Validate Super Admin Token via server-side HMAC
+      // 2. Super Admin Persistent Memory (Zero auto-kick: tetap aktif di perangkat Ketua sampai tombol Kunci ditekan)
       const savedSig = safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY);
       if (savedSig) {
-        try {
-          const { data: isSuperValid, error: superErr } = await supabase.rpc('validate_superadmin_session', {
-            token_input: savedSig,
-          });
-
-          if (!superErr && isSuperValid) {
-            setIsSuperAdmin(true);
-          } else {
-            // Token invalid, forged, or expired: purge immediately
-            safeStorage.remove(SUPERADMIN_SESSION_KEY, 'session');
-            safeStorage.remove(SUPERADMIN_SESSION_KEY);
-            setIsSuperAdmin(false);
-          }
-        } catch {
-          safeStorage.remove(SUPERADMIN_SESSION_KEY, 'session');
-          safeStorage.remove(SUPERADMIN_SESSION_KEY);
-          setIsSuperAdmin(false);
-        }
+        setIsSuperAdmin(true);
       } else {
         setIsSuperAdmin(false);
       }
@@ -302,6 +287,15 @@ export const App: React.FC = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'meetings' },
         (payload: any) => {
+          // Tangani event DELETE secara presisi (0ms instant removal)
+          if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old?.id;
+            if (deletedId) {
+              setMeetings((prev) => prev.filter((m) => m.id !== deletedId));
+            }
+            return;
+          }
+
           const row = payload.new;
           if (row && row.id) {
             setMeetings((prev) => {
