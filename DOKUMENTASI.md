@@ -741,6 +741,14 @@
     2. *Input Alasan Fleksibel di Modal*: Menambahkan input teks interaktif di modal konfirmasi libur agar mentor bebas mengetikkan alasan spesifik (Ujian Sekolah, Libur Nasional, Classmeeting).
     3. *Eliminasi Total Anomali Alpa*: Jika sesi pertemuan berstatus `is_holiday: true`, tab per-sesi dan monitor langsung mengunci status seluruh siswa menjadi badge `LIBUR` (Alpa = 0, Hadir = 0). Tombol Salin WA otomatis beralih menjadi broadcast pemberitahuan resmi bahwa kegiatan libur tanpa ada catatan alpa. Di tabel matriks bulanan dan ekspor CSV rapor, seluruh siswa tetap tercatat permanen sebagai `"LIBUR"`.
 
+- [x] Sinkronisasi Roster A21 (99 Siswa Aktif) & Integrasi Tampilan Sesi Libur di Monitor Adik:
+  - **Problem**:
+    1. *Roster A21 Terpangkas*: Jumlah siswa aktif Angkatan 21 kini resmi berjumlah 99 orang (dari 106 pendaftar, 7 berstatus non-aktif). Sejumlah teks fallback antarmuka masih memuat angka lama 101.
+    2. *Lemparan Sesi Libur di Live Monitor*: Pada `LiveMonitorA21.tsx` dan `MentorAttendance.tsx`, daftar `availableMeetings` memfilter `!m.is_holiday`. Saat Sesi #7 diliburkan, sistem membuang Sesi #7 dan otomatis melompat mundur menampilkan Sesi #6 yang tidak libur, sehingga monitor tampak tidak merespons status libur.
+  - **Solution / State**:
+    1. *Roster Synchronization 99 Siswa*: Memperbarui seluruh fallback counter di `App.tsx`, `LandingPage.tsx`, `AdminDocGenerator.tsx`, `DataVault.tsx`, `MentorDashboard.tsx`, dan `QuizManager.tsx` menjadi 99 siswa aktif riil sesuai status database.
+    2. *Tampilan Utuh Sesi Libur di Monitor Adik*: Menghapus filter pembuang `!m.is_holiday` pada `LiveMonitorA21.tsx` dan `MentorAttendance.tsx`. Sesi libur kini tetap tampil di pill terdepan (`🏖️ [LIBUR] Sesi Aktif`), hero card atas menampilkan banner hangat `🏖️ Pertemuan Diliburkan (99 Siswa Libur • 0 Alpa)`, subtab otomatis menampilkan seluruh siswa dengan badge `🏖️ Libur Resmi`, tombol `+ Hadir` dinonaktifkan, dan tombol WA menyalin pengumuman resmi libur eskul.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
