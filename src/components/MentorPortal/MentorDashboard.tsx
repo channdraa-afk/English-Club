@@ -624,7 +624,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
         <QuizManager
           activeMeetingId={activeMeeting?.id}
           onAwardTalentStar={onAddTalentStar}
-          totalA21Count={members.filter((m) => m.generation === 21 && m.status === 'active').length || 101}
+          totalA21Count={members.filter((m) => m.generation === 21 && m.status === 'active').length || 99}
           onSessionChanged={onQuizSessionChanged}
         />
       )}

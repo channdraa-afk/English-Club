@@ -197,7 +197,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
       (a) => a.meeting_id === mId && activeA21Members.some((m) => m.id === a.member_id)
     );
 
-    const total = activeA21Members.length || 101;
+    const total = activeA21Members.length || 99;
     const h = a21Attended.length;
     const th = Math.max(0, total - h);
     const pH = ((h / total) * 100).toFixed(1).replace('.', ',');
@@ -1434,7 +1434,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
                     Pertemuan Minggu ke-1
                   </span>
                   <span className="text-[11px] font-bold text-blue-600">
-                    Total Anggota: {activeA21Members.length || 101}
+                    Total Anggota: {activeA21Members.length || 99}
                   </span>
                 </div>
 
@@ -1505,7 +1505,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
                     Pertemuan Minggu ke-2
                   </span>
                   <span className="text-[11px] font-bold text-indigo-600">
-                    Total Anggota: {activeA21Members.length || 101}
+                    Total Anggota: {activeA21Members.length || 99}
                   </span>
                 </div>
 

@@ -128,7 +128,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenMentor,
   onOpenArena,
   hasActiveQuiz = false,
-  membersCount = { a21: 101, a20: 59 },
+  membersCount = { a21: 99, a20: 59 },
   isRegistrationOpen = true,
   isSuperAdmin = false,
   onGoToMentorPortal,
