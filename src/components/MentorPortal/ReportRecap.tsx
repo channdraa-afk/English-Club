@@ -98,6 +98,12 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
   // ==========================================
   // SINGLE MEETING RECAP LOGIC
   // ==========================================
+  const currentMeeting = useMemo(() => {
+    return meetings.find((m) => m.id === selectedMeetingId) || null;
+  }, [meetings, selectedMeetingId]);
+
+  const isCurrentMeetingHoliday = Boolean(currentMeeting?.is_holiday);
+
   // Attendances in selected meeting
   const currentMeetingAttendances = useMemo(() => {
     if (!selectedMeetingId) return [];
@@ -114,6 +120,16 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
         return matchesClass && matchesName;
       })
       .map((m) => {
+        if (isCurrentMeetingHoliday) {
+          return {
+            member: m,
+            isPresent: false,
+            isPermit: false,
+            isAbsent: false,
+            isHoliday: true,
+            attendance: undefined,
+          };
+        }
         const attendanceRecord = currentMeetingAttendances.find((a) => a.member_id === m.id);
         const isPermit = Boolean(attendanceRecord && attendanceRecord.critique === 'IZIN_SURAT_FISIK');
         const isPresent = Boolean(attendanceRecord && !isPermit);
@@ -123,24 +139,45 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
           isPresent,
           isPermit,
           isAbsent,
+          isHoliday: false,
           attendance: attendanceRecord,
         };
       })
       .sort((a, b) => a.member.class_name.localeCompare(b.member.class_name) || a.member.name.localeCompare(b.member.name));
-  }, [a21Students, selectedClass, searchName, currentMeetingAttendances]);
+  }, [a21Students, selectedClass, searchName, currentMeetingAttendances, isCurrentMeetingHoliday]);
 
   const singlePresentCount = singleReportRows.filter((r) => r.isPresent).length;
   const singlePermitCount = singleReportRows.filter((r) => r.isPermit).length;
   const singleAbsentCount = singleReportRows.filter((r) => r.isAbsent).length;
   const singleEffectiveCount = singlePresentCount + singlePermitCount;
-  const singlePercentage = singleReportRows.length > 0 
+  const singlePercentage = isCurrentMeetingHoliday
+    ? 100
+    : singleReportRows.length > 0 
     ? Math.round((singleEffectiveCount / singleReportRows.length) * 100) 
     : 0;
 
   // 1-Click Copy Absent List to WhatsApp (Per Sesi Terpilih)
   const handleCopySingleAbsentWA = () => {
     sound.playPop();
-    const currentMeeting = meetings.find((m) => m.id === selectedMeetingId);
+
+    if (isCurrentMeetingHoliday) {
+      sound.playSuccess();
+      const reason = currentMeeting?.holiday_reason || 'Libur Kegiatan / Ujian Sekolah';
+      const meetingTitle = currentMeeting?.title || 'Sesi Pertemuan English Club';
+      const meetingDate = currentMeeting?.meeting_date 
+        ? new Date(currentMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+        : 'Hari Ini';
+
+      const text = `📢 *PEMBERITAHUAN LIBUR — ENGLISH CLUB SMEGA*\n📅 *Sesi:* ${meetingTitle} (${meetingDate})\n🏖️ *Keterangan:* Sesi ini resmi diliburkan (${reason}).\n\n✨ Seluruh adik kelas Angkatan 21 tercatat LIBUR (0 Alpa). Selamat beristirahat! 🙏`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        sound.playSuccess();
+        setCopiedWA(true);
+        setTimeout(() => setCopiedWA(false), 3000);
+      });
+      return;
+    }
+
     const absentRows = singleReportRows.filter((r) => r.isAbsent);
 
     if (absentRows.length === 0) {
@@ -743,31 +780,59 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
             </div>
 
             {/* 1-Click WhatsApp Broadcast Bar for Absent Students in this meeting */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300/80 p-3.5 rounded-2xl shadow-sm">
-              <div className="flex items-center gap-2.5 w-full sm:w-auto">
-                <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm shrink-0">
-                  <MessageSquare className="w-4 h-4" />
+            {isCurrentMeetingHoliday ? (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300/80 p-3.5 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <div className="p-2 rounded-xl bg-amber-600 text-white shadow-sm shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-amber-950">
+                      Informasi Status Pertemuan (Diliburkan)
+                    </h4>
+                    <p className="text-[11px] font-bold text-amber-800">
+                      Sesi ini resmi diliburkan ({currentMeeting?.holiday_reason || 'Libur Kegiatan / Ujian Sekolah'}). Seluruh siswa tercatat LIBUR (0 Alpa).
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-black text-emerald-950">
-                    Kirim Rekap Alpa Sesi Ini ke Grup WhatsApp
-                  </h4>
-                  <p className="text-[11px] font-bold text-emerald-700">
-                    Tercatat <strong>{singleAbsentCount}</strong> adik kelas belum hadir / tanpa keterangan pada sesi ini.
-                  </p>
-                </div>
-              </div>
 
-              <TactileButton
-                variant="emerald"
-                size="sm"
-                onClick={handleCopySingleAbsentWA}
-                className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-1.5 px-3.5"
-              >
-                {copiedWA ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
-              </TactileButton>
-            </div>
+                <TactileButton
+                  variant="amber"
+                  size="sm"
+                  onClick={handleCopySingleAbsentWA}
+                  className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-1.5 px-3.5"
+                >
+                  {copiedWA ? <Check className="w-3.5 h-3.5 text-amber-900" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Info Libur (WA)'}</span>
+                </TactileButton>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300/80 p-3.5 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                  <div className="p-2 rounded-xl bg-emerald-600 text-white shadow-sm shrink-0">
+                    <MessageSquare className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-emerald-950">
+                      Kirim Rekap Alpa Sesi Ini ke Grup WhatsApp
+                    </h4>
+                    <p className="text-[11px] font-bold text-emerald-700">
+                      Tercatat <strong>{singleAbsentCount}</strong> adik kelas belum hadir / tanpa keterangan pada sesi ini.
+                    </p>
+                  </div>
+                </div>
+
+                <TactileButton
+                  variant="emerald"
+                  size="sm"
+                  onClick={handleCopySingleAbsentWA}
+                  className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-1.5 px-3.5"
+                >
+                  {copiedWA ? <Check className="w-3.5 h-3.5 text-amber-300" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
+                </TactileButton>
+              </div>
+            )}
 
             {recapNotice && (
               <div className="p-3.5 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 text-xs font-black text-center shadow-[0_2px_0_0_#34d399] animate-fade-in">
@@ -826,7 +891,12 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                         </span>
                       </td>
                       <td className="py-2.5 px-3 text-center">
-                        {r.isPresent ? (
+                        {r.isHoliday ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 text-[10px] font-black border border-amber-300">
+                            <span>🏖️</span>
+                            Libur
+                          </span>
+                        ) : r.isPresent ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-black border border-emerald-300">
                             <UserCheck className="w-3 h-3" />
                             Hadir
@@ -845,73 +915,77 @@ export const ReportRecap: React.FC<ReportRecapProps> = ({
                       </td>
                       {isSuperAdmin && (
                         <td className="py-2.5 px-3 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            {r.isPresent ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={manualLoadingId === r.member.id}
-                                  onClick={() => handleSetStatus(r.member, 'permit')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                  title="Ubah status ke Izin Surat Fisik"
-                                >
-                                  📄 Jadi Izin
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={manualLoadingId === r.member.id}
-                                  onClick={() => handleSetStatus(r.member, 'absent')}
-                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                  title="Batalkan presensi (jadikan alpa)"
-                                >
-                                  Batal
-                                </button>
-                              </>
-                            ) : r.isPermit ? (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={manualLoadingId === r.member.id}
-                                  onClick={() => handleSetStatus(r.member, 'present')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                  title="Ubah status ke Hadir"
-                                >
-                                  ⚡ Jadi Hadir
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={manualLoadingId === r.member.id}
-                                  onClick={() => handleSetStatus(r.member, 'absent')}
-                                  className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
-                                  title="Batalkan izin (jadikan alpa)"
-                                >
-                                  Batal
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  disabled={manualLoadingId === r.member.id}
-                                  onClick={() => handleSetStatus(r.member, 'present')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
-                                >
-                                  + Hadir
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={manualLoadingId === r.member.id}
-                                  onClick={() => handleSetStatus(r.member, 'permit')}
-                                  className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
-                                >
-                                  📄 Izin (Surat)
-                                </button>
-                              </>
-                            )}
-                            {manualLoadingId === r.member.id && (
-                              <RefreshCw className="w-3 h-3 animate-spin text-slate-400 shrink-0" />
-                            )}
-                          </div>
+                          {r.isHoliday ? (
+                            <span className="text-[11px] font-bold text-slate-400 italic">Sesi Diliburkan</span>
+                          ) : (
+                            <div className="flex items-center justify-center gap-1.5">
+                              {r.isPresent ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={manualLoadingId === r.member.id}
+                                    onClick={() => handleSetStatus(r.member, 'permit')}
+                                    className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                    title="Ubah status ke Izin Surat Fisik"
+                                  >
+                                    📄 Jadi Izin
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={manualLoadingId === r.member.id}
+                                    onClick={() => handleSetStatus(r.member, 'absent')}
+                                    className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                    title="Batalkan presensi (jadikan alpa)"
+                                  >
+                                    Batal
+                                  </button>
+                                </>
+                              ) : r.isPermit ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={manualLoadingId === r.member.id}
+                                    onClick={() => handleSetStatus(r.member, 'present')}
+                                    className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                    title="Ubah status ke Hadir"
+                                  >
+                                    ⚡ Jadi Hadir
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={manualLoadingId === r.member.id}
+                                    onClick={() => handleSetStatus(r.member, 'absent')}
+                                    className="px-2 py-1 rounded-xl text-[11px] font-black bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 transition-all active:translate-y-0.5 cursor-pointer disabled:opacity-60"
+                                    title="Batalkan izin (jadikan alpa)"
+                                  >
+                                    Batal
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={manualLoadingId === r.member.id}
+                                    onClick={() => handleSetStatus(r.member, 'present')}
+                                    className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-800 shadow-[0_2px_0_0_#15803d] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
+                                  >
+                                    + Hadir
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={manualLoadingId === r.member.id}
+                                    onClick={() => handleSetStatus(r.member, 'permit')}
+                                    className="px-2.5 py-1 rounded-xl text-[11px] font-black bg-amber-500 hover:bg-amber-600 text-white border border-amber-700 shadow-[0_2px_0_0_#b45309] active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-60"
+                                  >
+                                    📄 Izin (Surat)
+                                  </button>
+                                </>
+                              )}
+                              {manualLoadingId === r.member.id && (
+                                <RefreshCw className="w-3 h-3 animate-spin text-slate-400 shrink-0" />
+                              )}
+                            </div>
+                          )}
                         </td>
                       )}
                     </tr>

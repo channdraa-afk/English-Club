@@ -224,10 +224,11 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   }, [a21Students, attendedMap]);
 
   const absentStudents = useMemo(() => {
+    if (targetMeeting?.is_holiday) return [];
     return a21Students
       .filter((m) => !attendedMap.has(m.id))
       .sort((a, b) => a.class_name.localeCompare(b.class_name) || a.name.localeCompare(b.name));
-  }, [a21Students, attendedMap]);
+  }, [a21Students, attendedMap, targetMeeting?.is_holiday]);
 
   // Classes list
   const classList = useMemo(() => {
@@ -280,6 +281,25 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   // 1-Click Copy Absent List to WhatsApp
   const handleCopyAbsentWA = () => {
     sound.playPop();
+
+    if (targetMeeting?.is_holiday) {
+      sound.playSuccess();
+      const reason = targetMeeting.holiday_reason || 'Libur Kegiatan / Ujian Sekolah';
+      const meetingTitle = targetMeeting.title || 'Sesi Pertemuan English Club';
+      const meetingDate = targetMeeting.meeting_date 
+        ? new Date(targetMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+        : 'Hari Ini';
+
+      const text = `📢 *PEMBERITAHUAN LIBUR — ENGLISH CLUB SMEGA*\n📅 *Sesi:* ${meetingTitle} (${meetingDate})\n🏖️ *Keterangan:* Sesi ini resmi diliburkan (${reason}).\n\n✨ Seluruh adik kelas Angkatan 21 tercatat LIBUR (0 Alpa). Selamat beristirahat! 🙏`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        sound.playSuccess();
+        setCopiedWA(true);
+        setTimeout(() => setCopiedWA(false), 3000);
+      });
+      return;
+    }
+
     if (absentStudents.length === 0) {
       sound.playSuccess();
       setWaNotice('Alhamdulillah, semua adik kelas pada sesi ini tercatat Hadir atau Izin resmi! 🎉');

@@ -178,39 +178,47 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   const applyToggleHoliday = async (nextState: boolean) => {
     if (!activeMeeting) return;
     sound.playPop();
-    let reason = holidayReason;
-    if (nextState && !reason.trim()) {
+    let reason = holidayReason.trim();
+    if (nextState && !reason) {
       reason = 'Libur Kegiatan / Ujian Sekolah';
       setHolidayReason(reason);
     }
     setIsHoliday(nextState);
     setShowHolidayModal(false);
 
-    const { error: holErr } = await supabase
-      .from('meetings')
-      .update({
-        is_holiday: nextState,
-        holiday_reason: nextState ? reason : null,
-      })
-      .eq('id', activeMeeting.id);
+    try {
+      const { error: holErr } = await supabase
+        .from('meetings')
+        .update({
+          is_holiday: nextState,
+          holiday_reason: nextState ? reason : null,
+        })
+        .eq('id', activeMeeting.id);
 
-    if (holErr) {
-      console.warn('Kolom holiday belum terpasang di database Supabase:', holErr.message);
-      try {
-        await supabase.from('app_settings').upsert({
-          key: 'holiday_config',
-          value: {
-            meeting_date: activeMeeting.meeting_date,
-            is_holiday: nextState,
-            reason: nextState ? reason : null,
-          },
-        });
-      } catch {}
-      setSuccessMsg(nextState ? 'Status libur disimpan!' : 'Pertemuan dibuka kembali!');
+      if (holErr) {
+        console.warn('Kolom holiday belum terpasang di database Supabase:', holErr.message);
+        try {
+          await supabase.from('app_settings').upsert({
+            key: 'holiday_config',
+            value: {
+              meeting_date: activeMeeting.meeting_date,
+              is_holiday: nextState,
+              reason: nextState ? reason : null,
+            },
+          });
+        } catch {}
+      }
+
+      sound.playSuccess();
+      setSuccessMsg(nextState ? `Status libur sesi "${activeMeeting.title}" berhasil disimpan!` : `Sesi "${activeMeeting.title}" dibuka kembali!`);
       setTimeout(() => setSuccessMsg(null), 3500);
+      onMeetingUpdated();
+    } catch (err: any) {
+      console.error('Error toggling holiday:', err);
+      sound.playError();
+      setErrorMsg('Gagal mengubah status libur: ' + (err?.message || 'Error'));
+      setTimeout(() => setErrorMsg(null), 4000);
     }
-
-    onMeetingUpdated();
   };
 
   const handleToggleHoliday = () => {
@@ -1055,6 +1063,19 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
               <p className="text-[11px] text-amber-800/80">
                 Presensi pada sesi tersebut akan ditutup, dan <strong>TIDAK AKAN</strong> dihitung alpa di Rekap Rapor Bulanan adik kelas.
               </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black uppercase tracking-wider text-slate-600">
+                Alasan Libur (Ditampilkan ke Siswa)
+              </label>
+              <input
+                type="text"
+                value={holidayReason}
+                onChange={(e) => setHolidayReason(e.target.value)}
+                placeholder="Misal: Ujian Sekolah, Libur Nasional, Classmeeting..."
+                className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:bg-white focus:border-slate-800 focus:outline-none"
+              />
             </div>
 
             <div className="flex items-center justify-end gap-2.5 pt-2">
