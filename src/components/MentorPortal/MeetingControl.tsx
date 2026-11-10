@@ -195,19 +195,19 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         })
         .eq('id', activeMeeting.id);
 
-      if (holErr) {
-        console.warn('Kolom holiday belum terpasang di database Supabase:', holErr.message);
-        try {
-          await supabase.from('app_settings').upsert({
-            key: 'holiday_config',
-            value: {
-              meeting_date: activeMeeting.meeting_date,
-              is_holiday: nextState,
-              reason: nextState ? reason : null,
-            },
-          });
-        } catch {}
-      }
+      if (holErr) throw holErr;
+
+      // Always sync app_settings to keep both tables in 100% lockstep
+      try {
+        await supabase.from('app_settings').upsert({
+          key: 'holiday_config',
+          value: {
+            meeting_date: activeMeeting.meeting_date,
+            is_holiday: nextState,
+            reason: nextState ? reason : null,
+          },
+        });
+      } catch {}
 
       sound.playSuccess();
       setSuccessMsg(nextState ? `Status libur sesi "${activeMeeting.title}" berhasil disimpan!` : `Sesi "${activeMeeting.title}" dibuka kembali!`);

@@ -222,8 +222,8 @@ export const App: React.FC = () => {
                   m.meeting_date === hConfig.meeting_date
                     ? {
                         ...m,
-                        is_holiday: Boolean(hConfig.is_holiday),
-                        holiday_reason: hConfig.reason || m.holiday_reason,
+                        is_holiday: typeof m.is_holiday === 'boolean' ? m.is_holiday : Boolean(hConfig.is_holiday),
+                        holiday_reason: m.holiday_reason || hConfig.reason,
                       }
                     : m
                 )
@@ -452,10 +452,11 @@ export const App: React.FC = () => {
         });
       }
 
-      // Merge holiday_config into rawMeetings if present
+      // Primary SSOT: meetings table has native is_holiday & holiday_reason columns.
+      // Only merge holiday_config as a legacy fallback if m.is_holiday is strictly undefined.
       if (holidayConfig && holidayConfig.meeting_date) {
         rawMeetings = rawMeetings.map((m) => {
-          if (m.meeting_date === holidayConfig.meeting_date) {
+          if (m.meeting_date === holidayConfig.meeting_date && (m.is_holiday === undefined || m.is_holiday === null)) {
             return {
               ...m,
               is_holiday: Boolean(holidayConfig.is_holiday),

@@ -380,8 +380,26 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
       </div>
 
       {/* Main Attendance Card */}
-      <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-6 space-y-5">
-        {/* Step 1: Member Selector */}
+      {scheduleStatus.isHoliday ? (
+        <div className="bg-white rounded-3xl border-2 border-amber-300 shadow-[0_6px_0_0_#fcd34d] p-8 text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-100 text-amber-600 border-2 border-amber-300 flex items-center justify-center text-3xl">
+            🏖️
+          </div>
+          <div>
+            <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-black uppercase tracking-wider mb-2">
+              Pertemuan Pengurus Hari Ini Libur
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+              {activeMeeting?.holiday_reason || 'Kegiatan English Club Ditiadakan'}
+            </h2>
+            <p className="text-xs sm:text-sm font-bold text-slate-500 mt-2 max-w-md mx-auto leading-relaxed">
+              Presensi dan evaluasi ditiadakan untuk seluruh 59 pengurus Angkatan 20 (0 Alpa). Selamat beristirahat dan sampai jumpa di hari Rabu minggu depan! ✨
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-3xl border-2 border-slate-200 shadow-[0_6px_0_0_#e2e8f0] p-6 space-y-5">
+          {/* Step 1: Member Selector */}
         <div>
           <label className="block text-xs font-black text-slate-700 uppercase tracking-wider mb-2">
             1. Cari & Pilih Namamu (Pengurus A20)
@@ -630,10 +648,20 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
           </form>
         )}
       </div>
+      )}
 
       {/* Super Admin Quick-Assist Panel for Angkatan 20 */}
       {isSuperAdmin && selectedAssistMeeting && (
         <div className="bg-white rounded-3xl border-2 border-indigo-300 shadow-[0_6px_0_0_#a5b4fc] p-5 space-y-4">
+          {selectedAssistMeeting.is_holiday && (
+            <div className="p-3.5 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-950 text-xs font-bold flex items-center gap-2">
+              <span className="text-base">🏖️</span>
+              <span>
+                <strong>Sesi {selectedAssistMeeting.title} Resmi Diliburkan ({selectedAssistMeeting.holiday_reason || 'PJJ / Libur Sekolah'}).</strong> Seluruh pengurus tidak dihitung alpa di radar kedisiplinan.
+              </span>
+            </div>
+          )}
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
             <div className="flex items-center gap-2.5">
               <span className="p-2 rounded-2xl bg-indigo-100 text-indigo-700 border border-indigo-300 shrink-0">
