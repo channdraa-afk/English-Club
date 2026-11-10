@@ -226,7 +226,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
     // --- 🌐 UMUM (SISTEM & PUSAT) ---
     { id: 'session', label: 'Kontrol Sesi & Token', icon: Sliders, category: 'general', superOnly: true },
     { id: 'roster_manager', label: 'Kelola Master Siswa', icon: UserCog, category: 'general', superOnly: true },
-    { id: 'approvals', label: 'ACC Anggota Baru', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
+    { id: 'approvals', label: 'Verifikasi Calon Anggota (ACC)', icon: UserPlus, badge: pendingRegsCount, category: 'general', superOnly: true },
     { id: 'data_vault', label: 'Brankas Reset & Backup', icon: Database, category: 'general', superOnly: true },
 
     // --- 🎒 OPERASIONAL A21 (ADIK KELAS) ---

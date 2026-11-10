@@ -704,7 +704,7 @@ export const ArenaPlayer: React.FC<ArenaPlayerProps> = ({ members, onBackToHome 
             EC Arena — Kuis Live
           </h2>
           <p className="text-xs font-bold text-slate-500">
-            English Club SMKN 1 Purbalingga (Pekan Praktek)
+            English Club SMKN 1 Purbalingga (Pekan Praktik)
           </p>
         </div>
 

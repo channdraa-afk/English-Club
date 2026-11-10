@@ -739,7 +739,7 @@ export const App: React.FC = () => {
                             Kuis Live Sedang Dibuka!
                           </span>
                           <h4 className="text-sm font-black tracking-tight leading-tight">
-                            EC Arena — Pekan Praktek
+                            EC Arena — Pekan Praktik
                           </h4>
                           <p className="text-xs font-medium text-blue-100">
                             Cek kode token yang ditulis mentor di papan tulis kelasmu

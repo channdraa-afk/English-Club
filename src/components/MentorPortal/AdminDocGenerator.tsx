@@ -123,7 +123,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
 
   const [ruangList, setRuangList] = useState<RuangItem[]>([
     { id: '1', nama: 'Ruang 4', waktu: '15:30 - 17:00', keterangan: 'Pertemuan rutin & Ice Breaking' },
-    { id: '2', nama: 'Ruang Kuliner', waktu: '15:30 - 17:00', keterangan: 'Praktek speaking kelompok' },
+    { id: '2', nama: 'Ruang Kuliner', waktu: '15:30 - 17:00', keterangan: 'Praktik speaking kelompok' },
     { id: '3', nama: 'Ruang 5', waktu: '15:30 - 17:00', keterangan: 'Games & Quiz Arena' },
     { id: '4', nama: 'Aula Baru Jendral Sudirman', waktu: '15:30 - 17:00', keterangan: 'Pleno bersama' }
   ]);
@@ -165,7 +165,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
       hariTanggal: 'Rabu, 19 Agustus 2026',
       pemateri: "English Club A'20",
       uraian: 'Agenda rutin speaking practice and vocabulary building',
-      keterangan: 'Praktek kelompok di 3 ruangan.'
+      keterangan: 'Praktik kelompok di 3 ruangan.'
     }
   ]);
 
@@ -1289,7 +1289,7 @@ export const AdminDocGenerator: React.FC<AdminDocGeneratorProps> = ({
                       hariTanggal: 'Rabu, ...',
                       pemateri: "English Club A'20",
                       uraian: 'Agenda rutin speaking practice',
-                      keterangan: 'Praktek dialog kelompok',
+                      keterangan: 'Praktik dialog kelompok',
                     },
                   ]);
                 }}

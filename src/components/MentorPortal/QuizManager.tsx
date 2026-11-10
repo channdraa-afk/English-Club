@@ -981,7 +981,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({
           <div>
             <h4 className="text-base font-black text-slate-900">Paket Kuis Tersedia</h4>
             <p className="text-xs font-bold text-slate-500">
-              Pilih paket kuis untuk dimainkan pada Pekan Praktek
+              Pilih paket kuis untuk dimainkan pada Pekan Praktik
             </p>
           </div>
           <TactileButton variant="brand" size="sm" onClick={handleNewQuiz}>
@@ -1213,7 +1213,7 @@ export const QuizManager: React.FC<QuizManagerProps> = ({
               </div>
               <h3 className="text-xl font-black text-slate-900">Podium Juara EC Arena</h3>
               <p className="text-xs font-bold text-amber-700">
-                Pemenang Kuis Bahasa Inggris Pekan Praktek
+                Pemenang Kuis Bahasa Inggris Pekan Praktik
               </p>
             </div>
 

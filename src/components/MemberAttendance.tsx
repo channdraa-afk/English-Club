@@ -172,7 +172,7 @@ export const MemberAttendance: React.FC<MemberAttendanceProps> = ({
       if (insertError) {
         if (insertError.code === '23505') {
           // Unique violation
-          setErrorMessage('Kamu sudah tercatat absen untuk pertemuan ini!');
+          setErrorMessage('Kamu sudah mengisi presensi untuk pertemuan ini! ✨');
           sound.playError();
           setIsLoading(false);
           return;

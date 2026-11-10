@@ -72,7 +72,7 @@ export const DEFAULT_GALLERY_ITEMS: GalleryItem[] = [
   {
     id: 'gal-1',
     title: 'First Gathering 2026',
-    subtitle: 'Pertemuan perdana perkenalan dan fun icebreaker bersama 86+ adik kelas A21.',
+    subtitle: 'Pertemuan perdana perkenalan dan fun icebreaker bersama 99 adik kelas A21.',
     imageUrl: '/logo.png',
     postUrl: 'https://www.instagram.com/englishclubsvhs1pbg/',
     accentColor: 'blue',
@@ -415,7 +415,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const FAQ_ITEMS = [
     {
-      q: 'Kak, kalau bahasa Inggriskuku masih belepotan / pemula banget boleh ikut?',
+      q: 'Kak, kalau bahasa Inggrisku masih belepotan / pemula banget boleh ikut?',
       a: 'Boleh banget dan sangat dipersilakan! Di English Club SMEGA tidak ada yang bakal menghakimi atau menertawakan kesalahan grammar. Prinsip utama kami: keberanian bicara adalah langkah pertama menuju kefasihan. Kakak-kakak mentor Angkatan 20 akan membimbingmu dengan santai dan ramah!',
     },
     {
@@ -1557,7 +1557,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div className="space-y-1">
                   <h3 className="text-lg font-black text-slate-900">Pendaftaran Berhasil Terkirim! 🎉</h3>
                   <p className="text-xs font-bold text-slate-500 max-w-sm mx-auto leading-relaxed">
-                    Terima kasih sudah mendaftar! Data kamu sudah masuk ke sistem dan akan segera di-ACC oleh Kak Chandra & Pengurus EC SMEGA.
+                    Terima kasih sudah mendaftar! Data kamu sudah masuk ke sistem dan akan segera diverifikasi &amp; disetujui oleh Kak Chandra &amp; Pengurus EC SMEGA.
                   </p>
                 </div>
                 <button
