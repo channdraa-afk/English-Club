@@ -749,6 +749,15 @@
     1. *Roster Synchronization 99 Siswa*: Memperbarui seluruh fallback counter di `App.tsx`, `LandingPage.tsx`, `AdminDocGenerator.tsx`, `DataVault.tsx`, `MentorDashboard.tsx`, dan `QuizManager.tsx` menjadi 99 siswa aktif riil sesuai status database.
     2. *Tampilan Utuh Sesi Libur di Monitor Adik*: Menghapus filter pembuang `!m.is_holiday` pada `LiveMonitorA21.tsx` dan `MentorAttendance.tsx`. Sesi libur kini tetap tampil di pill terdepan (`🏖️ [LIBUR] Sesi Aktif`), hero card atas menampilkan banner hangat `🏖️ Pertemuan Diliburkan (99 Siswa Libur • 0 Alpa)`, subtab otomatis menampilkan seluruh siswa dengan badge `🏖️ Libur Resmi`, tombol `+ Hadir` dinonaktifkan, dan tombol WA menyalin pengumuman resmi libur eskul.
 
+- [x] Eliminasi Kudeta Penimpaan Status Libur di App.tsx & Proteksi Presensi Pengurus A20:
+  - **Problem**:
+    1. *Kudeta Data app_settings*: Saat sesi diliburkan, tombol sempat berwarna kuning di `MeetingControl.tsx`, tetapi saat pengguna berpindah tab, `fetchData()` di `App.tsx` membaca baris usang `holiday_config` di `app_settings` (`is_holiday: false`) dan menimpa paksa data `meetings` yang sudah benar menjadi `false` kembali (merah lagi).
+    2. *Ketiadaan Banner Libur di Presensi A20*: Kartu Presensi Pengurus (`MentorAttendance.tsx`) tetap menampilkan formulir presensi dan input token saat eskul libur, alih-alih menampilkan banner libur resmi seperti di portal adik kelas.
+  - **Solution / State**:
+    1. *meetings Mutlak SSOT di App.tsx*: Mengunci nilai `m.is_holiday` dari tabel `meetings` sebagai kebenaran mutlak; `App.tsx` kini dilarang menimpa nilai tersebut dengan `holiday_config` lama.
+    2. *Sinkronisasi Ganda Atomik di MeetingControl.tsx*: Pembaruan status libur kini secara serentak mengupdate tabel `meetings` dan `app_settings`, menjaga kedua tabel cloud 100% harmonis.
+    3. *Banner Libur Presensi Pengurus*: Menambahkan kartu informasi taktil `🏖️ Pertemuan Pengurus Hari Ini Libur` di `MentorAttendance.tsx` serta indikator libur di panel assist Super Admin, mengunci 59 pengurus agar tidak dihitung alpa di radar kedisiplinan.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
