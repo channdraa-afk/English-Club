@@ -81,12 +81,10 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
     return members.filter((m) => m.generation === 20 && m.status === 'active');
   }, [members]);
 
-  // All valid non-holiday meetings for Super Admin Assist selector
+  // All meetings for Super Admin Assist selector
   const availableAssistMeetings = useMemo(() => {
-    const list = meetings.filter((m) => !m.is_holiday);
-    if (list.length === 0 && activeMeeting) return [activeMeeting];
-    return [...list].sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
-  }, [meetings, activeMeeting]);
+    return [...meetings].sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
+  }, [meetings]);
 
   const selectedAssistMeeting = useMemo(() => {
     if (assistMeetingId) {

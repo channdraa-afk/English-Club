@@ -43,12 +43,10 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   const [waNotice, setWaNotice] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  // Available meetings sorted descending by date
+  // Available meetings sorted descending by date (including holiday meetings so mentors can monitor holiday status)
   const availableMeetings = useMemo(() => {
-    const list = meetings.filter((m) => !m.is_holiday);
-    if (list.length === 0 && activeMeeting) return [activeMeeting];
-    return [...list].sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
-  }, [meetings, activeMeeting]);
+    return [...meetings].sort((a, b) => b.meeting_date.localeCompare(a.meeting_date));
+  }, [meetings]);
 
   const [selectedMeetingId, setSelectedMeetingId] = useState<string>(() => {
     return activeMeeting?.id || (availableMeetings.length > 0 ? availableMeetings[0].id : '');
@@ -263,7 +261,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
 
   // Filtered lists for view
   const displayList = useMemo(() => {
-    let source = absentStudents;
+    let source = targetMeeting?.is_holiday ? a21Students : absentStudents;
     if (activeSubTab === 'present') source = presentStudents;
     else if (activeSubTab === 'permit') source = permitStudents;
     else if (activeSubTab === 'all') source = a21Students;
@@ -276,7 +274,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
         m.class_name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchClass && matchSearch;
     });
-  }, [activeSubTab, presentStudents, permitStudents, absentStudents, a21Students, selectedClass, searchQuery]);
+  }, [activeSubTab, presentStudents, permitStudents, absentStudents, a21Students, selectedClass, searchQuery, targetMeeting?.is_holiday]);
 
   // 1-Click Copy Absent List to WhatsApp
   const handleCopyAbsentWA = () => {
@@ -333,54 +331,109 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
   return (
     <div className="space-y-6">
       {/* Hero Live Counter Card with Session Selector */}
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-700 to-slate-900 text-white border-2 border-blue-900 shadow-[0_6px_0_0_#1e3a8a] space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {targetMeeting?.is_holiday ? (
+        <div className="p-6 rounded-3xl bg-gradient-to-br from-amber-600 via-rose-700 to-slate-900 text-white border-2 border-amber-500 shadow-[0_6px_0_0_#9a3412] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-200 bg-amber-950/80 px-2.5 py-0.5 rounded-md border border-amber-400/50">
+                  🏖️ Status Pertemuan: Libur Resmi
+                </span>
+                <span className="text-[10px] font-black text-rose-200 bg-rose-950/80 px-2 py-0.5 rounded-md border border-rose-400/50">
+                  Alasan: {targetMeeting.holiday_reason || 'PJJ / Libur Sekolah'}
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                Pertemuan Diliburkan ({targetMeeting.title})
+              </h2>
+
+              <div className="pt-0.5 flex items-center gap-2">
+                <span className="text-xs font-extrabold text-amber-100">
+                  📅 Tanggal Sesi: <strong className="text-amber-300">{targetMeeting.meeting_date ? new Date(targetMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '-'}</strong>
+                </span>
+              </div>
+              <p className="text-xs font-bold text-amber-200/90 pt-1">
+                Pintu presensi adik kelas ditutup. Seluruh {totalStudents} siswa otomatis berstatus <strong>LIBUR (0 Alpa)</strong> dan tidak mengurangi persentase rapor.
+              </p>
+            </div>
+
+            {/* Big Circular/Number Stats */}
+            <div className="bg-slate-900/80 border-2 border-amber-400/50 rounded-3xl p-4 text-center min-w-[170px]">
+              <div className="text-3xl sm:text-4xl font-black text-amber-300">
+                {totalStudents} <span className="text-sm font-bold text-amber-100">/ {totalStudents}</span>
+              </div>
+              <p className="text-xs font-black text-amber-200 mt-0.5">
+                🏖️ Tercatat Libur Resmi
+              </p>
+            </div>
+          </div>
+
+          {/* Dynamic Progress Bar for Holiday */}
           <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-200 bg-blue-900/60 px-2.5 py-0.5 rounded-md border border-blue-500/40">
-                Cockpit Terpadu A21
-              </span>
-              <span className="text-[10px] font-black text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/40">
-                Pantau &amp; Bantu Absen / Izin
-              </span>
+            <div className="w-full h-4 bg-slate-900/80 rounded-full overflow-hidden border border-amber-400/50 p-0.5">
+              <div
+                className="h-full bg-gradient-to-r from-amber-400 to-orange-400 rounded-full transition-all duration-500 shadow-sm"
+                style={{ width: '100%' }}
+              />
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
-              Presensi Angkatan 21 (Adik Kelas)
-            </h2>
-
-            <div className="pt-0.5 flex items-center gap-2">
-              <span className="text-xs font-extrabold text-blue-200">
-                📅 Sesi Dipantau: <strong className="text-amber-300">{targetMeeting?.title}</strong> ({targetMeeting?.meeting_date ? new Date(targetMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'})
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold text-amber-100">
+              <span>🏖️ Status: Seluruh Siswa Libur</span>
+              <span>🟢 Hadir: 0</span>
+              <span>🟡 Izin: 0</span>
+              <span>🔴 Alpa: 0 Siswa</span>
             </div>
-          </div>
-
-          {/* Big Circular/Number Stats */}
-          <div className="bg-blue-950/60 border-2 border-blue-400/40 rounded-3xl p-4 text-center min-w-[170px]">
-            <div className="text-3xl sm:text-4xl font-black text-amber-300">
-              {effectiveCount} <span className="text-sm font-bold text-blue-100">/ {totalStudents}</span>
-            </div>
-            <p className="text-xs font-black text-blue-200 mt-0.5">
-              {overallPercent}% Kehadiran Efektif
-            </p>
           </div>
         </div>
+      ) : (
+        <div className="p-6 rounded-3xl bg-gradient-to-br from-blue-600 via-indigo-700 to-slate-900 text-white border-2 border-blue-900 shadow-[0_6px_0_0_#1e3a8a] space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-200 bg-blue-900/60 px-2.5 py-0.5 rounded-md border border-blue-500/40">
+                  Cockpit Terpadu A21
+                </span>
+                <span className="text-[10px] font-black text-amber-300 bg-amber-950/60 px-2 py-0.5 rounded-md border border-amber-500/40">
+                  Pantau &amp; Bantu Absen / Izin
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                Presensi Angkatan 21 (Adik Kelas)
+              </h2>
 
-        {/* Dynamic Progress Bar */}
-        <div className="space-y-1.5">
-          <div className="w-full h-4 bg-blue-950/70 rounded-full overflow-hidden border border-blue-500/50 p-0.5">
-            <div
-              className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500 shadow-sm"
-              style={{ width: `${overallPercent}%` }}
-            />
+              <div className="pt-0.5 flex items-center gap-2">
+                <span className="text-xs font-extrabold text-blue-200">
+                  📅 Sesi Dipantau: <strong className="text-amber-300">{targetMeeting?.title}</strong> ({targetMeeting?.meeting_date ? new Date(targetMeeting.meeting_date).toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short' }) : '-'})
+                </span>
+              </div>
+            </div>
+
+            {/* Big Circular/Number Stats */}
+            <div className="bg-blue-950/60 border-2 border-blue-400/40 rounded-3xl p-4 text-center min-w-[170px]">
+              <div className="text-3xl sm:text-4xl font-black text-amber-300">
+                {effectiveCount} <span className="text-sm font-bold text-blue-100">/ {totalStudents}</span>
+              </div>
+              <p className="text-xs font-black text-blue-200 mt-0.5">
+                {overallPercent}% Kehadiran Efektif
+              </p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold text-blue-100">
-            <span>🟢 Hadir: {presentCount}</span>
-            <span>🟡 Izin (Surat): {permitCount}</span>
-            <span>🔴 Belum Hadir: {absentCount}</span>
+
+          {/* Dynamic Progress Bar */}
+          <div className="space-y-1.5">
+            <div className="w-full h-4 bg-blue-950/70 rounded-full overflow-hidden border border-blue-500/50 p-0.5">
+              <div
+                className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 rounded-full transition-all duration-500 shadow-sm"
+                style={{ width: `${overallPercent}%` }}
+              />
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] font-extrabold text-blue-100">
+              <span>🟢 Hadir: {presentCount}</span>
+              <span>🟡 Izin (Surat): {permitCount}</span>
+              <span>🔴 Belum Hadir: {absentCount}</span>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 📅 BILAH KONTROL SESI TAKTIL (1-TAP SESI AKTIF VS SESI KEMARIN) */}
       <div className="bg-white p-4 sm:p-5 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">
@@ -428,12 +481,17 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
               }}
               className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 min-h-[44px] ${
                 targetMeeting?.id === primaryMeeting.id
-                  ? 'bg-emerald-600 text-white shadow-[0_3px_0_0_#047857]'
+                  ? primaryMeeting.is_holiday
+                    ? 'bg-amber-600 text-white shadow-[0_3px_0_0_#b45309]'
+                    : 'bg-emerald-600 text-white shadow-[0_3px_0_0_#047857]'
+                  : primaryMeeting.is_holiday
+                  ? 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-2 border-amber-300 shadow-[0_2px_0_0_#fde68a]'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-2 border-emerald-200 shadow-[0_2px_0_0_#a7f3d0]'
               }`}
             >
               <span>
-                {primaryMeeting.is_active ? '🟢 Sesi Aktif' : '📁 Sesi Terbaru'} (
+                {primaryMeeting.is_holiday ? '🏖️ [LIBUR] ' : primaryMeeting.is_active ? '🟢 ' : '📁 '}
+                {primaryMeeting.is_active ? 'Sesi Aktif' : 'Sesi Terbaru'} (
                 {new Date(primaryMeeting.meeting_date).toLocaleDateString('id-ID', {
                   day: 'numeric',
                   month: 'short',
@@ -452,12 +510,17 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
               }}
               className={`px-4 py-2.5 rounded-2xl text-xs font-black transition-all cursor-pointer flex items-center gap-1.5 active:translate-y-0.5 min-h-[44px] ${
                 targetMeeting?.id === previousMeeting.id
-                  ? 'bg-amber-500 text-white shadow-[0_3px_0_0_#b45309]'
+                  ? previousMeeting.is_holiday
+                    ? 'bg-amber-600 text-white shadow-[0_3px_0_0_#b45309]'
+                    : 'bg-amber-500 text-white shadow-[0_3px_0_0_#b45309]'
+                  : previousMeeting.is_holiday
+                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-2 border-amber-300 shadow-[0_2px_0_0_#fde68a]'
                   : 'bg-amber-50/70 hover:bg-amber-100 text-amber-900 border-2 border-amber-200 shadow-[0_2px_0_0_#fde68a]'
               }`}
             >
               <span>
-                📄 Pekan Lalu (
+                {previousMeeting.is_holiday ? '🏖️ [LIBUR] ' : '📄 '}
+                Pekan Lalu (
                 {new Date(previousMeeting.meeting_date).toLocaleDateString('id-ID', {
                   day: 'numeric',
                   month: 'short',
@@ -494,7 +557,7 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
                 </option>
                 {olderMeetings.map((m) => (
                   <option key={m.id} value={m.id} className="text-slate-900 bg-white">
-                    {m.title} ({new Date(m.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})
+                    {m.is_holiday ? '🏖️ [LIBUR] ' : ''}{m.title} ({new Date(m.meeting_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })})
                   </option>
                 ))}
               </select>
@@ -515,31 +578,59 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
       </div>
 
       {/* 1-Click WhatsApp Broadcast Bar for Absent Students */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300/80 p-4 rounded-3xl shadow-[0_3px_0_0_#a7f3d0]">
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <div className="p-2.5 rounded-2xl bg-emerald-600 text-white shadow-sm shrink-0">
-            <MessageSquare className="w-5 h-5" />
+      {targetMeeting?.is_holiday ? (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300/80 p-4 rounded-3xl shadow-[0_3px_0_0_#fde68a]">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="p-2.5 rounded-2xl bg-amber-600 text-white shadow-sm shrink-0">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-amber-950">
+                Kirim Pengumuman Libur Eskul ke WhatsApp
+              </h4>
+              <p className="text-[11px] font-bold text-amber-800 mt-0.5">
+                Sesi ini resmi diliburkan ({targetMeeting.holiday_reason || 'PJJ / Libur Sekolah'}). Seluruh adik kelas berstatus Libur (0 Alpa).
+              </p>
+            </div>
           </div>
-          <div>
-            <h4 className="text-xs font-black text-emerald-950">
-              Salin Daftar Alpa / Bolos ke Grup WhatsApp
-            </h4>
-            <p className="text-[11px] font-bold text-emerald-700 mt-0.5">
-              Tercatat <strong>{absentCount}</strong> adik kelas belum hadir tanpa keterangan pada sesi ini.
-            </p>
-          </div>
-        </div>
 
-        <TactileButton
-          variant="emerald"
-          size="sm"
-          onClick={handleCopyAbsentWA}
-          className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-2 px-4"
-        >
-          {copiedWA ? <Check className="w-4 h-4 text-amber-300" /> : <Copy className="w-4 h-4" />}
-          <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
-        </TactileButton>
-      </div>
+          <TactileButton
+            variant="amber"
+            size="sm"
+            onClick={handleCopyAbsentWA}
+            className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-2 px-4"
+          >
+            {copiedWA ? <Check className="w-4 h-4 text-amber-900" /> : <Copy className="w-4 h-4" />}
+            <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Info Libur (WA)'}</span>
+          </TactileButton>
+        </div>
+      ) : (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-gradient-to-r from-emerald-50 to-teal-50 border-2 border-emerald-300/80 p-4 rounded-3xl shadow-[0_3px_0_0_#a7f3d0]">
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="p-2.5 rounded-2xl bg-emerald-600 text-white shadow-sm shrink-0">
+              <MessageSquare className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-black text-emerald-950">
+                Salin Daftar Alpa / Bolos ke Grup WhatsApp
+              </h4>
+              <p className="text-[11px] font-bold text-emerald-700 mt-0.5">
+                Tercatat <strong>{absentCount}</strong> adik kelas belum hadir tanpa keterangan pada sesi ini.
+              </p>
+            </div>
+          </div>
+
+          <TactileButton
+            variant="emerald"
+            size="sm"
+            onClick={handleCopyAbsentWA}
+            className="w-full sm:w-auto shrink-0 flex items-center justify-center gap-2 py-2 px-4"
+          >
+            {copiedWA ? <Check className="w-4 h-4 text-amber-300" /> : <Copy className="w-4 h-4" />}
+            <span>{copiedWA ? '✓ Berhasil Disalin!' : '📋 Salin Daftar Alpa (WA)'}</span>
+          </TactileButton>
+        </div>
+      )}
 
       {waNotice && (
         <div className="p-3.5 rounded-2xl bg-emerald-100 border-2 border-emerald-400 text-emerald-950 text-xs font-black text-center shadow-[0_2px_0_0_#34d399] animate-fade-in">
@@ -589,67 +680,82 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
 
       {/* Filter & Subtabs Bar */}
       <div className="bg-white p-4 rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] space-y-3">
-        {/* Subtabs Selector (4 Subtabs) */}
+        {/* Subtabs Selector */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <button
-            onClick={() => {
-              sound.playPop();
-              setActiveSubTab('absent');
-            }}
-            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
-              activeSubTab === 'absent'
-                ? 'bg-rose-500 text-white border-rose-700 shadow-[0_3px_0_0_#b91c1c]'
-                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <UserX className="w-4 h-4" />
-            <span>Belum ({absentCount})</span>
-          </button>
+          {targetMeeting?.is_holiday ? (
+            <button
+              onClick={() => {
+                sound.playPop();
+                setActiveSubTab('all');
+              }}
+              className="col-span-2 sm:col-span-4 py-2.5 px-4 rounded-2xl font-black text-xs bg-amber-500 text-white border-2 border-amber-600 shadow-[0_3px_0_0_#b45309] flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <span>🏖️</span>
+              <span>Seluruh Siswa Berstatus Libur ({totalStudents} Siswa)</span>
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => {
+                  sound.playPop();
+                  setActiveSubTab('absent');
+                }}
+                className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeSubTab === 'absent'
+                    ? 'bg-rose-500 text-white border-rose-700 shadow-[0_3px_0_0_#b91c1c]'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <UserX className="w-4 h-4" />
+                <span>Belum ({absentCount})</span>
+              </button>
 
-          <button
-            onClick={() => {
-              sound.playPop();
-              setActiveSubTab('present');
-            }}
-            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
-              activeSubTab === 'present'
-                ? 'bg-emerald-600 text-white border-emerald-800 shadow-[0_3px_0_0_#15803d]'
-                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <UserCheck className="w-4 h-4" />
-            <span>Hadir ({presentCount})</span>
-          </button>
+              <button
+                onClick={() => {
+                  sound.playPop();
+                  setActiveSubTab('present');
+                }}
+                className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeSubTab === 'present'
+                    ? 'bg-emerald-600 text-white border-emerald-800 shadow-[0_3px_0_0_#15803d]'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <UserCheck className="w-4 h-4" />
+                <span>Hadir ({presentCount})</span>
+              </button>
 
-          <button
-            onClick={() => {
-              sound.playPop();
-              setActiveSubTab('permit');
-            }}
-            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
-              activeSubTab === 'permit'
-                ? 'bg-amber-500 text-white border-amber-700 shadow-[0_3px_0_0_#b45309]'
-                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <FileText className="w-4 h-4" />
-            <span>Izin ({permitCount})</span>
-          </button>
+              <button
+                onClick={() => {
+                  sound.playPop();
+                  setActiveSubTab('permit');
+                }}
+                className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeSubTab === 'permit'
+                    ? 'bg-amber-500 text-white border-amber-700 shadow-[0_3px_0_0_#b45309]'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <FileText className="w-4 h-4" />
+                <span>Izin ({permitCount})</span>
+              </button>
 
-          <button
-            onClick={() => {
-              sound.playPop();
-              setActiveSubTab('all');
-            }}
-            className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 ${
-              activeSubTab === 'all'
-                ? 'bg-blue-600 text-white border-blue-800 shadow-[0_3px_0_0_#1d4ed8]'
-                : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            <span>Semua ({totalStudents})</span>
-          </button>
+              <button
+                onClick={() => {
+                  sound.playPop();
+                  setActiveSubTab('all');
+                }}
+                className={`py-2 px-3 rounded-2xl font-black text-xs border-2 transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  activeSubTab === 'all'
+                    ? 'bg-blue-600 text-white border-blue-800 shadow-[0_3px_0_0_#1d4ed8]'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Semua ({totalStudents})</span>
+              </button>
+            </>
+          )}
         </div>
 
         {/* Search & Class Filter */}
@@ -755,7 +861,12 @@ export const LiveMonitorA21: React.FC<LiveMonitorA21Props> = ({
 
                 {/* Status & Quick 1-Click Action Buttons */}
                 <div className="shrink-0 flex items-center gap-1.5 self-end sm:self-center">
-                  {isPresent ? (
+                  {targetMeeting?.is_holiday ? (
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-amber-100 text-amber-900 border border-amber-300 text-xs font-black shadow-sm">
+                      <span>🏖️</span>
+                      <span>Libur Resmi</span>
+                    </span>
+                  ) : isPresent ? (
                     <>
                       <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-100 text-emerald-800 border border-emerald-300 text-xs font-black">
                         <UserCheck className="w-3.5 h-3.5" />
