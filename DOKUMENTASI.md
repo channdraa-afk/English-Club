@@ -780,11 +780,19 @@
     2. *Pencegahan Clobber Input*: Membatasi `useEffect` agar tidak menimpa input saat pengguna sedang berada di mode buat sesi baru (`selectedMeetingId === 'new'`).
     3. *Bank Acak Token Pengurus*: Mengacak otomatis token pengurus saat membuat sesi baru dari bank kata dinamis. Server RPC `update_mentor_token` langsung disinkronkan ke hash rahasia di `system_secrets`.
 
+- [x] Sesi Super Admin Abadi (Zero Auto-Kick & Immortal Session Policy):
+  - **Problem**: Sesi Super Admin di server database PostgreSQL sebelumnya disetel dengan batas waktu 12 jam. Akibatnya saat sesi melebihi 12 jam, operasi bantuan presensi 1-klik di `MentorAttendance.tsx` gagal (error RLS 42501) dan meminta login ulang, bertentangan dengan kebijakan bahwa Super Admin Ketua tidak boleh di-logout otomatis.
+  - **Solution / State**:
+    1. *Immortal Super Admin Hotfix (`supabase/immortal_superadmin_hotfix.sql`)*: Menghapus pengecekan masa aktif (`v_expiry`) khusus untuk role `superadmin` pada fungsi `validate_superadmin_session` dan `validate_mentor_session`. Server kini murni memvalidasi tanda tangan kriptografi HMAC, sehingga sesi berlaku permanen tanpa kedaluwarsa.
+    2. *RPC Baru `admin_toggle_attendance`*: Menyediakan fungsi stored procedure `SECURITY DEFINER` untuk menghapus dan menyisipkan presensi secara atomik dan kebal pemblokiran RLS.
+    3. *Pembersihan UX Frontend*: Menghilangkan pop-up paksa login ulang di `MentorAttendance.tsx` dan mengintegrasikan panggilan RPC baru dengan graceful fallback.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
 - [x] Menjalankan skrip `supabase/fortress_security_hardening.sql` di SQL Editor Supabase untuk mengaktifkan RPC dan mengunci tabel secrets di cloud.
 - [x] Menjalankan skrip `supabase/complete_rls_fortress_lockdown.sql` di SQL Editor Supabase untuk mengunci total RLS pada 8 tabel dan mengaktifkan validasi sesi HMAC-SHA256.
+- [ ] Menjalankan skrip `supabase/immortal_superadmin_hotfix.sql` di SQL Editor Supabase untuk mengaktifkan validasi sesi abadi Super Admin.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
 
