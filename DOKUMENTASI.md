@@ -659,7 +659,7 @@
 
 - [x] Fortress Security Hardening V2 (Zero-Knowledge Client & Server-Side RPC Migration):
   - **Problem**: 
-    1. Teman Chandra melakukan uji penetrasi via DevTools (F12) dan menemukan kebocoran kredensial di Network Tab: PIN Mentor (`456654`) dan Token Pengurus (`CREW20`) bocor dalam query `SELECT * FROM app_settings`, serta Token Papan Tulis bocor dalam `SELECT * FROM meetings`.
+    1. Teman Chandra melakukan uji penetrasi via DevTools (F12) dan menemukan kebocoran kredensial di Network Tab: PIN Mentor dan Token Pengurus bocor dalam query `SELECT * FROM app_settings`, serta Token Papan Tulis bocor dalam `SELECT * FROM meetings`.
     2. Salt dan hash Super Admin (`SUPERADMIN_HASH` & `SUPERADMIN_SALT`) terekspos di bundle JavaScript frontend dan commit Git lama, memungkinkan reverse-engineering kata sandi lama (`helloworldimchandra`) via offline dictionary brute-force.
     3. Verifikasi Super Admin hanya mengandalkan perbandingan nilai statis di `localStorage`, rentan terhadap pengambilalihan hak akses (`privilege escalation`) hanya dengan menyuntikkan hash via console browser.
   - **Solution / State**:
@@ -699,7 +699,7 @@
 - [x] Hotfix Token Attendance & Realtime Synchronization:
   - **Problem**:
     1. *Crash Database RPC Siswa*: Fungsi `submit_student_attendance` melempar PostgreSQL error 42703 (`column "is_holiday" does not exist`) karena tabel `meetings` belum memiliki kolom tersebut. Akibatnya presensi adik kelas jatuh ke fallback mode yang diblokir oleh RLS benteng baja (hanya Super Admin yang lolos).
-    2. *Token Mentor Tidak Tersinkron*: Pergantian Token Pengurus A20 di `MeetingControl.tsx` hanya menulis ke `app_settings` dan tidak memperbarui hash di `system_secrets`, sehingga kakak kelas hanya bisa absen menggunakan token pertama (`CREW20`).
+    2. *Token Mentor Tidak Tersinkron*: Pergantian Token Pengurus A20 di `MeetingControl.tsx` hanya menulis ke `app_settings` dan tidak memperbarui hash di `system_secrets`, sehingga kakak kelas hanya bisa absen menggunakan token awal sebelum pembaruan.
     3. *Ketiadaan Realtime Meetings*: Perubahan token dan sesi aktif tidak tersinkronisasi ke browser siswa yang sudah membuka website di HP mereka sebelum sesi dimulai.
   - **Solution / State**:
     1. *Skema & RPC Hotfix (`supabase/hotfix_token_attendance.sql`)*: Menambahkan kolom `is_holiday` & `holiday_reason` ke tabel `meetings` serta menyelaraskan query `submit_student_attendance` dengan `COALESCE(is_holiday, false)` agar kebal crash.
@@ -770,15 +770,15 @@
     3. Menstandardisasi seluruh istilah non-baku menjadi `"Praktik"` di `AdminDocGenerator.tsx` (surat resmi peminjaman ruangan), `App.tsx`, `ArenaPlayer.tsx`, dan `QuizManager.tsx`.
     4. Memperhalus label tab `MentorDashboard.tsx` menjadi `"Verifikasi Calon Anggota (ACC)"` dan teks sukses pendaftaran menjadi `"diverifikasi & disetujui"`.
 
-- [x] Persistensi Token Pengurus A20 & Pencegahan Reset Otomatis ke CREW20:
+- [x] Persistensi Token Pengurus A20 & Pencegahan Reset Otomatis ke Default:
   - **Problem**:
-    1. *Blokade RLS app_settings*: Query `select('*')` dari `app_settings` diblokir oleh blacklist RLS PostgreSQL (`key NOT IN ('mentor_token', ...)`), sehingga `App.tsx` selalu gagal mengambil token pengurus dan mundur ke default kodenya `useState('CREW20')`.
+    1. *Blokade RLS app_settings*: Query `select('*')` dari `app_settings` diblokir oleh blacklist RLS PostgreSQL (`key NOT IN ('mentor_token', ...)`), sehingga `App.tsx` selalu gagal mengambil token pengurus dan mundur ke default state kodenya.
     2. *Penimpaan Form di MeetingControl*: `useEffect` di `MeetingControl.tsx` secara agresif menyinkronkan input form ke `mentorToken` dari `App.tsx`, menimpa token baru yang diketik pengguna saat membuat sesi baru.
     3. *Ketiadaan Otomasi Acak*: Tombol "Buat Sesi Baru" hanya mengacak token adik kelas, sedangkan token pengurus dibiarkan pasif.
   - **Solution / State**:
     1. *Dual Persistence ke Local & Cloud*: `App.tsx` dan `MeetingControl.tsx` kini mengunci token aktif ke `safeStorage` (`ec_active_mentor_token`) serta menyimpan ke `active_mentor_token` di cloud yang kebal dari filter blacklist RLS lama.
     2. *Pencegahan Clobber Input*: Membatasi `useEffect` agar tidak menimpa input saat pengguna sedang berada di mode buat sesi baru (`selectedMeetingId === 'new'`).
-    3. *Bank Acak Token Pengurus*: Memperluas bank token pengurus (`LEAD20`, `MENTOR20`, `COMMAND20`, `SMEGA20`, `SOLID20`, `IMPACT20`, `LEGACY20`, `SPIRIT20`, `PRIDE20`, `CHAMP20`) dan mengacaknya otomatis saat membuat sesi baru. Server RPC `update_mentor_token` langsung disinkronkan ke token aktif `LEAD20`.
+    3. *Bank Acak Token Pengurus*: Mengacak otomatis token pengurus saat membuat sesi baru dari bank kata dinamis. Server RPC `update_mentor_token` langsung disinkronkan ke hash rahasia di `system_secrets`.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
