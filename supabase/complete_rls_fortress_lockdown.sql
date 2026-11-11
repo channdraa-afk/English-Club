@@ -114,10 +114,9 @@ BEGIN
     END IF;
 
     v_role := data_parts[1];
-    v_expiry := data_parts[2]::BIGINT;
 
-    -- Validasi role & masa aktif
-    IF v_role <> 'superadmin' OR EXTRACT(EPOCH FROM NOW())::BIGINT > v_expiry THEN
+    -- Validasi role & signature (Super Admin abadi tanpa expiry)
+    IF v_role <> 'superadmin' THEN
         RETURN FALSE;
     END IF;
 
@@ -165,10 +164,16 @@ BEGIN
     END IF;
 
     v_role := data_parts[1];
-    v_expiry := data_parts[2]::BIGINT;
 
-    -- Mentor session valid jika role adalah 'mentor' atau 'superadmin'
-    IF v_role NOT IN ('mentor', 'superadmin') OR EXTRACT(EPOCH FROM NOW())::BIGINT > v_expiry THEN
+    -- Super Admin abadi tanpa expiry; Mentor reguler dicek masa aktifnya
+    IF v_role = 'superadmin' THEN
+        NULL;
+    ELSIF v_role = 'mentor' THEN
+        v_expiry := data_parts[2]::BIGINT;
+        IF EXTRACT(EPOCH FROM NOW())::BIGINT > v_expiry THEN
+            RETURN FALSE;
+        END IF;
+    ELSE
         RETURN FALSE;
     END IF;
 
@@ -206,8 +211,8 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Kata sandi tidak valid');
     END IF;
 
-    -- Generate Kriptografis HMAC-SHA256 Token (Berlaku 12 Jam)
-    v_expiry := (EXTRACT(EPOCH FROM (NOW() + INTERVAL '12 hours')))::BIGINT;
+    -- Generate Kriptografis HMAC-SHA256 Token (Berlaku Abadi / 100 Tahun)
+    v_expiry := (EXTRACT(EPOCH FROM (NOW() + INTERVAL '100 years')))::BIGINT;
     v_data := 'superadmin:' || v_expiry::TEXT || ':' || gen_random_uuid()::TEXT;
     v_secret := get_session_hmac_secret();
     v_sig := encode(hmac(v_data, v_secret, 'sha256'), 'hex');
@@ -216,7 +221,7 @@ BEGIN
     RETURN jsonb_build_object(
         'success', true,
         'session_token', v_token,
-        'expires_at', (NOW() + INTERVAL '12 hours')
+        'expires_at', (NOW() + INTERVAL '100 years')
     );
 END;
 $$;
