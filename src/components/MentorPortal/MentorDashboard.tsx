@@ -36,9 +36,12 @@ import { SuperAdminModal } from './SuperAdminModal';
 import { DataVault } from './DataVault';
 import { MemberRosterManager } from './MemberRosterManager';
 import { QuizManager } from './QuizManager';
-import { AdminDocGenerator } from './AdminDocGenerator';
 import { sound } from '../../lib/audio';
 import { safeStorage } from '../../lib/storage';
+
+const AdminDocGenerator = React.lazy(() =>
+  import('./AdminDocGenerator').then((m) => ({ default: m.AdminDocGenerator }))
+);
 
 export type TabId = 
   | 'session'
@@ -738,11 +741,20 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
       {/* Generator Administrasi & Dokumen Resmi (.docx) */}
       {activeTab === 'admin_docs' && (
-        <AdminDocGenerator
-          members={members}
-          meetings={officialMeetings}
-          attendances={attendances}
-        />
+        <React.Suspense
+          fallback={
+            <div className="flex flex-col items-center justify-center p-12 bg-white rounded-3xl border-2 border-slate-200 shadow-tactile text-slate-500 font-bold space-y-3">
+              <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-sm">Memuat modul generator dokumen...</p>
+            </div>
+          }
+        >
+          <AdminDocGenerator
+            members={members}
+            meetings={officialMeetings}
+            attendances={attendances}
+          />
+        </React.Suspense>
       )}
 
       {/* Super Admin Secret Modal */}
