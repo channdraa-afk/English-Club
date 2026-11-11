@@ -770,6 +770,16 @@
     3. Menstandardisasi seluruh istilah non-baku menjadi `"Praktik"` di `AdminDocGenerator.tsx` (surat resmi peminjaman ruangan), `App.tsx`, `ArenaPlayer.tsx`, dan `QuizManager.tsx`.
     4. Memperhalus label tab `MentorDashboard.tsx` menjadi `"Verifikasi Calon Anggota (ACC)"` dan teks sukses pendaftaran menjadi `"diverifikasi & disetujui"`.
 
+- [x] Persistensi Token Pengurus A20 & Pencegahan Reset Otomatis ke CREW20:
+  - **Problem**:
+    1. *Blokade RLS app_settings*: Query `select('*')` dari `app_settings` diblokir oleh blacklist RLS PostgreSQL (`key NOT IN ('mentor_token', ...)`), sehingga `App.tsx` selalu gagal mengambil token pengurus dan mundur ke default kodenya `useState('CREW20')`.
+    2. *Penimpaan Form di MeetingControl*: `useEffect` di `MeetingControl.tsx` secara agresif menyinkronkan input form ke `mentorToken` dari `App.tsx`, menimpa token baru yang diketik pengguna saat membuat sesi baru.
+    3. *Ketiadaan Otomasi Acak*: Tombol "Buat Sesi Baru" hanya mengacak token adik kelas, sedangkan token pengurus dibiarkan pasif.
+  - **Solution / State**:
+    1. *Dual Persistence ke Local & Cloud*: `App.tsx` dan `MeetingControl.tsx` kini mengunci token aktif ke `safeStorage` (`ec_active_mentor_token`) serta menyimpan ke `active_mentor_token` di cloud yang kebal dari filter blacklist RLS lama.
+    2. *Pencegahan Clobber Input*: Membatasi `useEffect` agar tidak menimpa input saat pengguna sedang berada di mode buat sesi baru (`selectedMeetingId === 'new'`).
+    3. *Bank Acak Token Pengurus*: Memperluas bank token pengurus (`LEAD20`, `MENTOR20`, `COMMAND20`, `SMEGA20`, `SOLID20`, `IMPACT20`, `LEGACY20`, `SPIRIT20`, `PRIDE20`, `CHAMP20`) dan mengacaknya otomatis saat membuat sesi baru. Server RPC `update_mentor_token` langsung disinkronkan ke token aktif `LEAD20`.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
