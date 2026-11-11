@@ -664,6 +664,7 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           isManualBypass={isManualBypass}
           isSuperAdmin={isSuperAdmin}
           onAttendanceChanged={onAttendanceChanged}
+          onRequestSuperAdmin={() => setIsSuperModalOpen(true)}
         />
       )}
 
