@@ -787,12 +787,20 @@
     2. *RPC Baru `admin_toggle_attendance`*: Menyediakan fungsi stored procedure `SECURITY DEFINER` untuk menghapus dan menyisipkan presensi secara atomik dan kebal pemblokiran RLS.
     3. *Pembersihan UX Frontend*: Menghilangkan pop-up paksa login ulang di `MentorAttendance.tsx` dan mengintegrasikan panggilan RPC baru dengan graceful fallback.
 
+- [x] Fortress V3 Database Purge & Linter Hardening:
+  - **Problem**: Audit mendalam database via Supabase MCP menemukan kebocoran hak eksekusi publik pada `get_session_hmac_secret`, policy zombie permisif pada tabel `members`, 14 fungsi RPC tanpa deklarasi `search_path`, 2 relasi kuis tanpa covering index, dan baris sampah di `app_settings`.
+  - **Solution / State**:
+    1. *Revoke Kunci HMAC*: Mencabut hak eksekusi publik dari `get_session_hmac_secret()` sehingga anon tidak bisa membaca rahasia server via REST RPC.
+    2. *Neutralize Zombie Policy*: Menetralkan policy lama pada tabel `members` (`USING (false) WITH CHECK (false)`) sehingga proteksi RLS tertutup rapat.
+    3. *Linter Hardening & Indexes*: Menetapkan `search_path = public` pada seluruh 14 fungsi Stored Procedures dan menambahkan covering index pada `quiz_sessions` dan `quiz_submissions`. Skrip dirangkum di `supabase/fortress_v3_database_purge.sql`.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
 - [x] Menjalankan skrip `supabase/fortress_security_hardening.sql` di SQL Editor Supabase untuk mengaktifkan RPC dan mengunci tabel secrets di cloud.
 - [x] Menjalankan skrip `supabase/complete_rls_fortress_lockdown.sql` di SQL Editor Supabase untuk mengunci total RLS pada 8 tabel dan mengaktifkan validasi sesi HMAC-SHA256.
-- [ ] Menjalankan skrip `supabase/immortal_superadmin_hotfix.sql` di SQL Editor Supabase untuk mengaktifkan validasi sesi abadi Super Admin.
+- [x] Menjalankan skrip `supabase/immortal_superadmin_hotfix.sql` di SQL Editor Supabase untuk mengaktifkan validasi sesi abadi Super Admin.
+- [x] Audit komprehensif Supabase & eksekusi Fortress V3 Database Purge via Supabase MCP.
 - [ ] Evaluasi kehadiran bulanan pengurus A20 bersama Sie Kedisiplinan via tab Radar Kedisiplinan.
 - [ ] Monitoring radar bibit lomba A21 menjelang pendaftaran kompetisi bahasa Inggris tingkat kabupaten/provinsi.
 
