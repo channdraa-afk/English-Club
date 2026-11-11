@@ -213,18 +213,6 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
       if (holErr) throw holErr;
 
-      // Always sync app_settings to keep both tables in 100% lockstep
-      try {
-        await supabase.from('app_settings').upsert({
-          key: 'holiday_config',
-          value: {
-            meeting_date: activeMeeting.meeting_date,
-            is_holiday: nextState,
-            reason: nextState ? reason : null,
-          },
-        });
-      } catch {}
-
       sound.playSuccess();
       setSuccessMsg(nextState ? `Status libur sesi "${activeMeeting.title}" berhasil disimpan!` : `Sesi "${activeMeeting.title}" dibuka kembali!`);
       setTimeout(() => setSuccessMsg(null), 3500);
@@ -437,21 +425,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         }
       }
 
-      // Sync holiday configuration & mentor token (hanya jika sesi ini aktif)
+      // Sync mentor token (hanya jika sesi ini aktif)
       if (willBeActive) {
-        try {
-          await supabase.from('app_settings').upsert({
-            key: 'holiday_config',
-            value: {
-              meeting_date: basePayload.meeting_date,
-              is_holiday: isHoliday,
-              reason: isHoliday ? holidayReason.trim() : null,
-            },
-          });
-        } catch {
-          // Ignored
-        }
-
         // Save mentor token to app_settings & sync cryptographic hash to system_secrets
         const cleanMentorTok = mentorTokenInput.trim().toUpperCase();
         try {
