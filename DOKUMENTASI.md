@@ -792,7 +792,15 @@
   - **Solution / State**:
     1. *Revoke Kunci HMAC*: Mencabut hak eksekusi publik dari `get_session_hmac_secret()` sehingga anon tidak bisa membaca rahasia server via REST RPC.
     2. *Neutralize Zombie Policy*: Menetralkan policy lama pada tabel `members` (`USING (false) WITH CHECK (false)`) sehingga proteksi RLS tertutup rapat.
-    3. *Linter Hardening & Indexes*: Menetapkan `search_path = public` pada seluruh 14 fungsi Stored Procedures dan menambahkan covering index pada `quiz_sessions` dan `quiz_submissions`. Skrip dirangkum di `supabase/fortress_v3_database_purge.sql`.
+    3. *Linter Hardening & Indexes*: Menetapkan `search_path = public, extensions` pada seluruh 14 fungsi Stored Procedures dan menambahkan covering index pada `quiz_sessions` dan `quiz_submissions`. Skrip dirangkum di `supabase/fortress_v3_database_purge.sql`.
+
+- [x] Rampingkan Frontend & Code-Splitting AdminDocGenerator:
+  - **Problem**:
+    1. *Dual-Write Redundant*: `MeetingControl.tsx` melakukan dual-write ke `app_settings` (`holiday_config`) saat update status libur pertemuan, padahal tabel `meetings` sudah menjadi sumber kebenaran tunggal (SSOT).
+    2. *Bloated Chunk*: `MentorDashboard.tsx` berukuran 633 kB karena memuat library generator dokumen `.docx` (`PizZip` dan `Docxtemplater`) secara statis di initial bundle.
+  - **Solution / State**:
+    1. *Eliminasi Dual-Write*: Menghapus upsert `holiday_config` di `MeetingControl.tsx`, menghemat round-trip jaringan saat membuka/menutup sesi pertemuan.
+    2. *Lazy-Loaded Chunk*: Memisahkan `AdminDocGenerator` menggunakan `React.lazy()` dan `<Suspense>`. Ukuran chunk `MentorDashboard` terpangkas lebih dari 50% (dari 633 kB menjadi 307 kB), menghilangkan peringatan Vite build secara tuntas.
 
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
