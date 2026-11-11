@@ -16,6 +16,7 @@ import { Meeting } from '../../types/database';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { supabase } from '../../lib/supabase';
+import { safeStorage } from '../../lib/storage';
 import { getScheduleStatus, getTargetWednesdayDate } from '../../lib/schedule';
 import { getRandomIdiom } from '../../data/idioms';
 
@@ -95,13 +96,26 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   const isArchiveSession = !isNewSession && !isSelectedActive;
 
   const sampleStudentTokens = ['EAGLE21', 'SPEAK21', 'SMART21', 'VOCA21', 'BRAVO21', 'SUPER21'];
-  const sampleMentorTokens = ['LEAD20', 'CREW20', 'MENTOR20', 'COMMAND20', 'SMEGA20'];
+  const sampleMentorTokens = [
+    'LEAD20',
+    'MENTOR20',
+    'COMMAND20',
+    'SMEGA20',
+    'SOLID20',
+    'IMPACT20',
+    'LEGACY20',
+    'SPIRIT20',
+    'PRIDE20',
+    'CHAMP20',
+  ];
 
   const scheduleStatus = getScheduleStatus(activeMeeting, isManualBypass);
 
   useEffect(() => {
-    setMentorTokenInput(mentorToken);
-  }, [mentorToken]);
+    if (mentorToken && selectedMeetingId !== 'new') {
+      setMentorTokenInput(mentorToken);
+    }
+  }, [mentorToken, selectedMeetingId]);
 
   useEffect(() => {
     if (activeMeeting?.id && selectedMeetingId === 'new' && meetings.length === 0) {
@@ -147,6 +161,8 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     setTitle(`Weekly English Gathering #${meetings.length + 1}`);
     const randToken = sampleStudentTokens[Math.floor(Math.random() * sampleStudentTokens.length)];
     setToken(randToken);
+    const randMentorTok = sampleMentorTokens[Math.floor(Math.random() * sampleMentorTokens.length)];
+    setMentorTokenInput(randMentorTok);
     const randIdiom = getRandomIdiom();
     setWord(randIdiom.word);
     setMeaning(randIdiom.meaning);
@@ -438,10 +454,17 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
 
         // Save mentor token to app_settings & sync cryptographic hash to system_secrets
         const cleanMentorTok = mentorTokenInput.trim().toUpperCase();
-        await supabase
-          .from('app_settings')
-          .upsert({ key: 'mentor_token', value: cleanMentorTok });
+        try {
+          await supabase.from('app_settings').upsert([
+            { key: 'active_mentor_token', value: cleanMentorTok },
+            { key: 'mentor_token', value: cleanMentorTok },
+          ]);
+        } catch (setErr) {
+          console.warn('Could not update app_settings for mentor token:', setErr);
+        }
         
+        safeStorage.set('ec_active_mentor_token', cleanMentorTok);
+
         try {
           await supabase.rpc('update_mentor_token', { new_token: cleanMentorTok });
         } catch (rpcErr) {

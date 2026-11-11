@@ -268,7 +268,8 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
         isTokenValid = isRpcValid;
       } else {
         // Fallback jika database belum update RPC
-        const cleanExpected = mentorToken.trim().toUpperCase();
+        const cachedMentorTok = safeStorage.get('ec_active_mentor_token');
+        const cleanExpected = (cachedMentorTok || mentorToken).trim().toUpperCase();
         isTokenValid = cleanInput === cleanExpected || cleanInput === 'CREW20' || cleanInput === 'LEAD20';
       }
 

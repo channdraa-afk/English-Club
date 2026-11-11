@@ -53,7 +53,9 @@ export const App: React.FC = () => {
   const [galleryItems, setGalleryItems] = useState<GalleryItem[]>([]);
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
   const [mentorPin, setMentorPin] = useState('');
-  const [mentorToken, setMentorToken] = useState('CREW20');
+  const [mentorToken, setMentorToken] = useState<string>(() => {
+    return safeStorage.get('ec_active_mentor_token') || 'LEAD20';
+  });
   const [activeQuizSession, setActiveQuizSession] = useState<QuizSession | null>(null);
   const [sandboxState, setSandboxState] = useState<SandboxState | null>(null);
 
@@ -212,8 +214,12 @@ export const App: React.FC = () => {
             setIsRegistrationOpen(Boolean(row.value));
           } else if (row.key === 'mentor_pin') {
             setMentorPin(typeof row.value === 'string' ? row.value : String(row.value));
-          } else if (row.key === 'mentor_token') {
-            setMentorToken(typeof row.value === 'string' ? row.value : String(row.value));
+          } else if (row.key === 'active_mentor_token' || row.key === 'mentor_token') {
+            const val = typeof row.value === 'string' ? row.value : String(row.value);
+            if (val) {
+              setMentorToken(val);
+              safeStorage.set('ec_active_mentor_token', val);
+            }
           } else if (row.key === 'holiday_config') {
             const hConfig = row.value as any;
             if (hConfig && hConfig.meeting_date) {
@@ -418,8 +424,12 @@ export const App: React.FC = () => {
         settingsData.forEach((s) => {
           if (s.key === 'registration_open') {
             setIsRegistrationOpen(Boolean(s.value));
-          } else if (s.key === 'mentor_token') {
-            setMentorToken(typeof s.value === 'string' ? s.value : String(s.value));
+          } else if (s.key === 'active_mentor_token' || s.key === 'mentor_token') {
+            const val = typeof s.value === 'string' ? s.value : String(s.value);
+            if (val) {
+              setMentorToken(val);
+              safeStorage.set('ec_active_mentor_token', val);
+            }
           } else if (s.key === 'holiday_config') {
             holidayConfig = s.value;
           } else if (s.key === 'manual_bypass') {
@@ -544,7 +554,15 @@ export const App: React.FC = () => {
 
   const handleMentorTokenUpdated = async (tok: string) => {
     setMentorToken(tok);
-    await supabase.from('app_settings').upsert({ key: 'mentor_token', value: tok });
+    safeStorage.set('ec_active_mentor_token', tok);
+    try {
+      await supabase.from('app_settings').upsert([
+        { key: 'active_mentor_token', value: tok },
+        { key: 'mentor_token', value: tok },
+      ]);
+    } catch {
+      // Ignored
+    }
   };
 
   const handleToggleManualBypass = async (state: boolean) => {
