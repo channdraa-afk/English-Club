@@ -54,7 +54,7 @@ export const App: React.FC = () => {
   const [isRegistrationOpen, setIsRegistrationOpen] = useState(true);
   const [mentorPin, setMentorPin] = useState('');
   const [mentorToken, setMentorToken] = useState<string>(() => {
-    return safeStorage.get('ec_active_mentor_token') || 'LEAD20';
+    return safeStorage.get('ec_active_mentor_token') || '';
   });
   const [activeQuizSession, setActiveQuizSession] = useState<QuizSession | null>(null);
   const [sandboxState, setSandboxState] = useState<SandboxState | null>(null);

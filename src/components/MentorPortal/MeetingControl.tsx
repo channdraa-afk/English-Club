@@ -75,7 +75,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
   const [meetingDate, setMeetingDate] = useState(activeMeeting?.meeting_date || targetWed.dateStr);
   const [title, setTitle] = useState(activeMeeting?.title || 'Weekly English Gathering');
   const [token, setToken] = useState(activeMeeting?.token || 'EAGLE21');
-  const [mentorTokenInput, setMentorTokenInput] = useState(mentorToken || 'CREW20');
+  const [mentorTokenInput, setMentorTokenInput] = useState(mentorToken || '');
   const [word, setWord] = useState(activeMeeting?.word_of_the_day || 'Piece of cake (Sangat mudah)');
   const [meaning, setMeaning] = useState(activeMeeting?.word_meaning || 'Idiom yang digunakan saat sesuatu terasa sangat mudah diselesaikan.');
   const [isHoliday, setIsHoliday] = useState(Boolean(activeMeeting?.is_holiday));
@@ -874,7 +874,7 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
                 type="text"
                 value={mentorTokenInput}
                 onChange={(e) => setMentorTokenInput(e.target.value.toUpperCase())}
-                placeholder="LEAD20"
+                placeholder="TOKEN BARU"
                 className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-xl text-base font-black tracking-wider text-amber-900 uppercase focus:bg-white focus:border-slate-800 focus:outline-none"
               />
             </div>
