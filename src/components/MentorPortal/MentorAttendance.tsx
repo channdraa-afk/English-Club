@@ -47,7 +47,6 @@ interface MentorAttendanceProps {
   isManualBypass?: boolean;
   isSuperAdmin?: boolean;
   onAttendanceChanged: () => void;
-  onRequestSuperAdmin?: () => void;
 }
 
 export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
@@ -59,7 +58,6 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   isManualBypass = false,
   isSuperAdmin = false,
   onAttendanceChanged,
-  onRequestSuperAdmin,
 }) => {
   const [showEasterEggModal, setShowEasterEggModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -169,24 +167,34 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
     setTimeout(() => setAssistToast(null), 3500);
 
     try {
-      const { error: delErr } = await supabase
-        .from('attendances')
-        .delete()
-        .eq('meeting_id', targetMeeting.id)
-        .eq('member_id', mentor.id);
+      // 1. Coba lewat RPC admin_toggle_attendance (Atomic & Security Definer)
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('admin_toggle_attendance', {
+        p_meeting_id: targetMeeting.id,
+        p_member_id: mentor.id,
+        p_state: nextState,
+      });
 
-      if (delErr) throw delErr;
+      if (rpcErr || (rpcRes && !rpcRes.success)) {
+        // Fallback jika database belum update RPC: eksekusi direct table
+        const { error: delErr } = await supabase
+          .from('attendances')
+          .delete()
+          .eq('meeting_id', targetMeeting.id)
+          .eq('member_id', mentor.id);
 
-      if (nextState) {
-        const { error: insErr } = await supabase.from('attendances').insert({
-          meeting_id: targetMeeting.id,
-          member_id: mentor.id,
-          feedback_rating: 'super_fun',
-          critique: null,
-          next_agenda_suggestion: null,
-          is_anonymous: false,
-        });
-        if (insErr) throw insErr;
+        if (delErr) throw delErr;
+
+        if (nextState) {
+          const { error: insErr } = await supabase.from('attendances').insert({
+            meeting_id: targetMeeting.id,
+            member_id: mentor.id,
+            feedback_rating: 'super_fun',
+            critique: null,
+            next_agenda_suggestion: null,
+            is_anonymous: false,
+          });
+          if (insErr) throw insErr;
+        }
       }
 
       onAttendanceChanged();
@@ -194,15 +202,7 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
       console.error('Error in Super Admin A20 assist:', err);
       sound.playError();
       setOptimisticAssistMap((prev) => ({ ...prev, [key]: currentlyAttended }));
-      const isAuthErr = err?.code === '42501' || String(err?.message || '').toLowerCase().includes('violates row-level');
-      if (isAuthErr) {
-        setAssistToast('⚠️ Sesi Super Admin kedaluwarsa. Silakan masukkan kata sandi ketua kembali untuk menyegarkan sesi!');
-        if (onRequestSuperAdmin) {
-          setTimeout(() => onRequestSuperAdmin(), 800);
-        }
-      } else {
-        setAssistToast(`⚠️ Gagal menyimpan: ${err.message || 'Database error'}`);
-      }
+      setAssistToast(`⚠️ Gagal menyimpan: ${err.message || 'Database error'}`);
     }
   };
 
