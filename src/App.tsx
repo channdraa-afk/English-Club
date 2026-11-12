@@ -389,12 +389,14 @@ export const App: React.FC = () => {
         safeStorage.get('ec_mentor_session_v2')
       );
 
-      const { data: meetingData, error: meetingErr } = hasStaffAccess
-        ? await supabase.from('meetings').select('*').order('meeting_date', { ascending: false })
-        : await supabase
-            .from('meetings')
-            .select('id, title, meeting_date, word_of_the_day, word_meaning, is_active, is_holiday, holiday_reason, created_at')
-            .order('meeting_date', { ascending: false });
+      const { data: meetingData, error: meetingErr } = await supabase
+        .from('meetings')
+        .select(
+          (hasStaffAccess
+            ? '*'
+            : 'id, title, meeting_date, word_of_the_day, word_meaning, is_active, is_holiday, holiday_reason, created_at') as '*'
+        )
+        .order('meeting_date', { ascending: false });
 
       if (meetingErr) throw meetingErr;
       let rawMeetings = (meetingData as Meeting[]) || [];
