@@ -54,7 +54,6 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
   activeMeeting,
   meetings = [],
   attendances,
-  mentorToken = '',
   isManualBypass = false,
   isSuperAdmin = false,
   onAttendanceChanged,
@@ -275,75 +274,45 @@ export const MentorAttendance: React.FC<MentorAttendanceProps> = ({
       return;
     }
 
-    // Easter Egg: Mencegah & menyentil mentor yang presensi sebelum 16:10 WIB
+    // Easter Egg: Mencegah & menyentil mentor yang presensi sebelum 16:10 WIB (0ms UI check)
     if (!isSuperAdmin && isBefore1610WIB()) {
       sound.playError();
       setShowEasterEggModal(true);
       return;
     }
 
-    // Only enforce token check if NOT Super Admin (or if Super Admin typed something wrong)
-    if (!isSuperAdmin) {
-      const cleanInput = tokenInput.trim().toUpperCase();
-
-      // Check if mentor accidentally typed student token
-      if (activeMeeting.token && cleanInput === activeMeeting.token.trim().toUpperCase()) {
-        sound.playError();
-        setErrorMessage('Ini token adik kelas! Masukkan Token Khusus Pengurus A20 yaa.');
-        return;
-      }
-
-      // 1. Verifikasi Server-Side via RPC
-      const { data: isRpcValid, error: rpcErr } = await supabase.rpc('verify_mentor_token', {
-        token_input: cleanInput,
-      });
-
-      let isTokenValid = false;
-
-      if (!rpcErr && typeof isRpcValid === 'boolean') {
-        isTokenValid = isRpcValid;
-      } else {
-        // Fallback jika database belum update RPC
-        const cachedMentorTok = safeStorage.get('ec_active_mentor_token');
-        const cleanExpected = (cachedMentorTok || mentorToken || '').trim().toUpperCase();
-        isTokenValid = Boolean(cleanExpected && cleanInput === cleanExpected);
-      }
-
-      if (!isTokenValid) {
-        sound.playError();
-        setErrorMessage('Token Khusus Pengurus salah! Tanyakan token ini ke Ketua / BPH.');
-        return;
-      }
+    const cleanInput = tokenInput.trim().toUpperCase();
+    if (!isSuperAdmin && activeMeeting.token && cleanInput === activeMeeting.token.trim().toUpperCase()) {
+      sound.playError();
+      setErrorMessage('Ini token adik kelas! Masukkan Token Khusus Pengurus A20 yaa.');
+      return;
     }
 
     setIsLoading(true);
 
     try {
-      // Check duplicate
-      const { data: existing } = await supabase
-        .from('attendances')
-        .select('id')
-        .eq('meeting_id', activeMeeting.id)
-        .eq('member_id', selectedMentor.id)
-        .maybeSingle();
-
-      if (existing) {
-        sound.playError();
-        setErrorMessage('Kamu sudah tercatat hadir di pertemuan ini!');
-        return;
-      }
-
-      // Record attendance + curhat
-      const { error } = await supabase.from('attendances').insert({
-        meeting_id: activeMeeting.id,
-        member_id: selectedMentor.id,
-        feedback_rating: mood,
-        critique: issues.trim() || null,
-        next_agenda_suggestion: suggestions.trim() || null,
-        is_anonymous: isAnonymous,
+      // Atomic Server-Side RPC: Validasi Jam Server (>=16:10 WIB), Token Pengurus, Duplikasi & Simpan
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('submit_mentor_attendance', {
+        p_meeting_id: activeMeeting.id,
+        p_member_id: selectedMentor.id,
+        p_token_input: cleanInput,
+        p_feedback_rating: mood,
+        p_critique: issues.trim() || null,
+        p_next_agenda: suggestions.trim() || null,
+        p_is_anonymous: isAnonymous,
       });
 
-      if (error) throw error;
+      if (rpcErr) throw rpcErr;
+
+      if (rpcRes && !rpcRes.success) {
+        sound.playError();
+        if (rpcRes.code === 'BEFORE_1610') {
+          setShowEasterEggModal(true);
+        } else {
+          setErrorMessage(rpcRes.message || 'Gagal mencatat presensi.');
+        }
+        return;
+      }
 
       sound.playSuccess();
       setSuccessRecorded(true);
