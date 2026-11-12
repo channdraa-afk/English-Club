@@ -382,14 +382,22 @@ export const App: React.FC = () => {
       if (memberErr) throw memberErr;
       setMembers(memberData || []);
 
-      // 2. Fetch meetings
-      const { data: meetingData, error: meetingErr } = await supabase
-        .from('meetings')
-        .select('*')
-        .order('meeting_date', { ascending: false });
+      // 2. Fetch meetings (Never expose whiteboard token to non-staff Network tab)
+      const hasStaffAccess = Boolean(
+        safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') ||
+        safeStorage.get(SUPERADMIN_SESSION_KEY) ||
+        safeStorage.get('ec_mentor_session_v2')
+      );
+
+      const { data: meetingData, error: meetingErr } = hasStaffAccess
+        ? await supabase.from('meetings').select('*').order('meeting_date', { ascending: false })
+        : await supabase
+            .from('meetings')
+            .select('id, title, meeting_date, word_of_the_day, word_meaning, is_active, is_holiday, holiday_reason, created_at')
+            .order('meeting_date', { ascending: false });
 
       if (meetingErr) throw meetingErr;
-      let rawMeetings = meetingData || [];
+      let rawMeetings = (meetingData as Meeting[]) || [];
 
       // 3. Fetch attendances
       const { data: attendanceData, error: attErr } = await supabase
