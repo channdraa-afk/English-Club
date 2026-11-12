@@ -663,7 +663,6 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           activeMeeting={activeMeeting}
           meetings={officialMeetings}
           attendances={attendances}
-          mentorToken={mentorToken}
           isManualBypass={isManualBypass}
           isSuperAdmin={isSuperAdmin}
           onAttendanceChanged={onAttendanceChanged}

@@ -43,7 +43,6 @@ interface MentorAttendanceProps {
   activeMeeting: Meeting | null;
   meetings?: Meeting[];
   attendances: Attendance[];
-  mentorToken?: string;
   isManualBypass?: boolean;
   isSuperAdmin?: boolean;
   onAttendanceChanged: () => void;
