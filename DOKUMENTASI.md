@@ -802,6 +802,16 @@
     1. *Eliminasi Dual-Write*: Menghapus upsert `holiday_config` di `MeetingControl.tsx`, menghemat round-trip jaringan saat membuka/menutup sesi pertemuan.
     2. *Lazy-Loaded Chunk*: Memisahkan `AdminDocGenerator` menggunakan `React.lazy()` dan `<Suspense>`. Ukuran chunk `MentorDashboard` terpangkas lebih dari 50% (dari 633 kB menjadi 307 kB), menghilangkan peringatan Vite build secara tuntas.
 
+- [x] Fortress V4: RBAC Separation, Server-Side Time Gate & Network Token Masking:
+  - **Problem**:
+    1. *Client Time Bypass*: Validasi jam `>= 16:10 WIB` di `MentorAttendance.tsx` baru berjalan di jam perangkat user.
+    2. *RBAC Over-Privilege*: `is_authenticated_admin()` di PostgreSQL menyamakan hak akses mentor biasa dengan Super Admin untuk tabel sensitif (`members`, `meetings`, `registrations`).
+    3. *Network Tab Exposure*: `App.tsx` melakukan `SELECT * FROM meetings` untuk pengunjung publik sehingga kolom `token` papan tulis ikut terbaca di Network Tab.
+  - **Solution / State**:
+    1. *RPC `submit_mentor_attendance` (`supabase/fortress_v4_rbac_and_server_time.sql`)*: Memvalidasi jam server PostgreSQL (`NOW() AT TIME ZONE 'Asia/Jakarta' >= 16:10`), token pengurus, dan duplikasi dalam 1 transaksi atomik.
+    2. *Strict RBAC (`is_superadmin()`)*: Mengunci policy `INSERT/UPDATE/DELETE` pada `members`, `meetings`, dan `registrations` khusus untuk token `superadmin`.
+    3. *Column Masking*: `App.tsx` kini hanya mengambil kolom aman `meetings` tanpa kolom `token` bagi pengguna non-staff.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
