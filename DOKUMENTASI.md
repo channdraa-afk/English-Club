@@ -812,6 +812,13 @@
     2. *Strict RBAC (`is_superadmin()`)*: Mengunci policy `INSERT/UPDATE/DELETE` pada `members`, `meetings`, dan `registrations` khusus untuk token `superadmin`.
     3. *Column Masking*: `App.tsx` kini hanya mengambil kolom aman `meetings` tanpa kolom `token` bagi pengguna non-staff.
 
+- [x] Dispensasi Kuota Shift Sesi Libur di Radar Kedisiplinan A20:
+  - **Problem**: Saat sesi ekskul diliburkan sekolah (misal: 4 Nov 2026 - PJJ), pengurus kehilangan jatah giliran shift presensi. Karena target kuota bulanan minimal 2x, 29 pengurus yang hadir 1x di sesi aktif lainnya otomatis tersangkut di status "Kurang 1 Sesi (1x)" meskipun bukan karena kelalaian mereka.
+  - **Solution / State**:
+    1. *Virtual Shift Credit*: Sesi `is_holiday: true` otomatis memberikan +1 kredit dispensasi libur ("Dispen Libur") tanpa mengotori tabel `attendances` dengan rekaman dummy.
+    2. *Anti-Curang*: Pengurus dengan 0 kehadiran fisik tetap tercatat "Kurang 1 Sesi" (wajib hadir fisik di sesi aktif). Pengurus dengan 1 kehadiran fisik + 1 libur otomatis mencapai kuota 2/2 dengan status "Aman / Disiplin".
+    3. *Transparansi Visual*: Menampilkan kembali pill sesi libur (`🏖️ Tgl 04 (Libur: PJJ) [Dispen]`), rincian kuota transparan (`2 / 2 Sesi (1 Hadir + 1 Dispen Libur)`), serta rincian pada cetak PDF dan ekspor CSV Kedis. Sesi adik kelas (A21) tetap murni tercatat "LIBUR" di rapor tanpa penalti.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

@@ -129,15 +129,21 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
     return Array.from(set).sort().reverse();
   }, [meetings, currentMonthStr]);
 
-  // Meetings in the selected month (excluding official holidays)
+  // Meetings in the selected month
   const monthMeetings = useMemo(() => {
     return meetings
       .filter((m) => m.meeting_date && m.meeting_date.startsWith(selectedMonth))
       .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
   }, [meetings, selectedMonth]);
 
+  // Active non-holiday meetings in selected month
   const effectiveMeetings = useMemo(() => {
     return monthMeetings.filter((m) => !m.is_holiday);
+  }, [monthMeetings]);
+
+  // Official holiday meetings in selected month (eligible for shift quota dispensation)
+  const holidayMeetings = useMemo(() => {
+    return monthMeetings.filter((m) => m.is_holiday);
   }, [monthMeetings]);
 
   // All non-holiday meetings across the entire semester / year
@@ -157,13 +163,17 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
   }, []);
 
   // 1. Compute evaluation per mentor for MONTHLY mode
+  // Holiday sessions grant automatic +1 shift quota credit ("Dispen Libur") so mentors aren't penalized for school holidays
   const monthlyEvaluations = useMemo(() => {
+    const holidayCount = holidayMeetings.length;
+
     return a20Mentors.map((mentor) => {
       const attendedMeetings = effectiveMeetings.filter((meeting) =>
         isMentorPresentInMeeting(meeting.id, mentor.id)
       );
 
-      const count = attendedMeetings.length;
+      const physicalCount = attendedMeetings.length;
+      const count = physicalCount + holidayCount;
 
       let status: 'critical' | 'warning' | 'safe' = 'safe';
       let statusLabel = 'Aman / Disiplin';
@@ -174,29 +184,37 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
         statusLabel = 'Kritis (0x Hadir)';
       } else if (count === 1) {
         status = 'warning';
-        statusLabel = 'Kurang 1 Sesi (1x)';
+        statusLabel = holidayCount > 0
+          ? `Kurang 1 Sesi (${physicalCount} Hadir + ${holidayCount} Libur)`
+          : 'Kurang 1 Sesi (1x)';
       } else if (count === 2) {
         status = 'safe';
-        statusLabel = 'Disiplin Sesuai Shift (2x)';
+        statusLabel = holidayCount > 0
+          ? `Disiplin (${physicalCount} Hadir + ${holidayCount} Libur)`
+          : 'Disiplin Sesuai Shift (2x)';
       } else {
         status = 'safe';
         isOverachiever = true;
-        statusLabel = `Super Dedikasi (${count}x Hadir)`;
+        statusLabel = holidayCount > 0
+          ? `Super Dedikasi (${physicalCount} Hadir + ${holidayCount} Libur)`
+          : `Super Dedikasi (${count}x Hadir)`;
       }
 
       return {
         mentor,
         attendedMeetings,
+        physicalCount,
+        holidayCount,
         count,
         target: 2,
-        totalMeetings: effectiveMeetings.length,
+        totalMeetings: monthMeetings.length,
         status,
         statusLabel,
         isOverachiever,
-        percent: effectiveMeetings.length > 0 ? Math.round((count / effectiveMeetings.length) * 100) : 100,
+        percent: monthMeetings.length > 0 ? Math.min(100, Math.round((count / Math.max(2, monthMeetings.length)) * 100)) : 100,
       };
     });
-  }, [a20Mentors, effectiveMeetings, isMentorPresentInMeeting]);
+  }, [a20Mentors, effectiveMeetings, holidayMeetings, monthMeetings.length, isMentorPresentInMeeting]);
 
   // 2. Compute evaluation per mentor for CUMULATIVE / TAHUNAN mode
   const cumulativeEvaluations = useMemo(() => {
@@ -234,6 +252,8 @@ export const MentorDisciplineRadar: React.FC<MentorDisciplineRadarProps> = ({
       return {
         mentor,
         attendedMeetings,
+        physicalCount: count,
+        holidayCount: 0,
         count,
         target: targetMeetings,
         totalMeetings,
@@ -425,12 +445,13 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
 
     const rows = filteredList.map((item, idx) => {
       const datesStr = item.attendedMeetings.map((m) => m.meeting_date).join(' | ');
+      const holidayNote = holidayMeetings.length > 0 ? ` (+${holidayMeetings.length} Dispen Libur)` : '';
       return [
         idx + 1,
         `"${item.mentor.name.replace(/"/g, '""')}"`,
         `"${item.mentor.class_name}"`,
         `"${item.mentor.position.replace(/"/g, '""')}"`,
-        item.count,
+        `"${item.count} Sesi${holidayNote}"`,
         '2 Pertemuan',
         `"${item.statusLabel}"`,
         `"${datesStr || 'Belum Ada'}"`,
@@ -670,10 +691,10 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
                 : `Total Pertemuan Terlaksana Semester Ini: ${allHeldMeetings.length} Sesi`}
             </span>
           </span>
-          {radarMode === 'monthly' && monthMeetings.some((m) => m.is_holiday) && (
-            <span className="flex items-center gap-1 bg-rose-900/60 text-rose-200 px-2.5 py-1 rounded-xl border border-rose-700/50">
-              <AlertTriangle className="w-3.5 h-3.5 text-rose-400" />
-              <span>Libur: {monthMeetings.filter((m) => m.is_holiday).length} Pertemuan</span>
+          {radarMode === 'monthly' && holidayMeetings.length > 0 && (
+            <span className="flex items-center gap-1 bg-amber-500/20 text-amber-200 px-2.5 py-1 rounded-xl border border-amber-400/40" title="Sesi libur sekolah otomatis dihitung sebagai dispensasi kuota shift agar pengurus tidak dirugikan">
+              <span className="text-xs">🏖️</span>
+              <span>{holidayMeetings.length} Sesi Libur (Dispen Kuota Shift)</span>
             </span>
           )}
         </div>
@@ -1123,10 +1144,23 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
                       <span className="text-[10px] font-bold text-slate-400">
                         {isSuperAdmin ? 'Klik Tanggal (Bantu Absen):' : 'Kehadiran:'}
                       </span>
-                      {effectiveMeetings.length === 0 ? (
+                      {monthMeetings.length === 0 ? (
                         <span className="text-[10px] text-slate-400 italic">Belum ada sesi di bulan ini</span>
                       ) : (
-                        effectiveMeetings.map((m) => {
+                        monthMeetings.map((m) => {
+                          if (m.is_holiday) {
+                            return (
+                              <span
+                                key={m.id}
+                                title={`Sesi Libur Resmi: ${m.title} (${m.meeting_date})${m.holiday_reason ? ` — ${m.holiday_reason}` : ''} • Otomatis dispensasi kuota shift`}
+                                className="px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 bg-amber-100/90 text-amber-950 border border-amber-300 shadow-[0_1px_0_0_#fde68a]"
+                              >
+                                🏖️ Tgl {m.meeting_date.slice(8)} (Libur{m.holiday_reason ? `: ${m.holiday_reason}` : ''})
+                                <span className="text-[9px] px-1 py-0.2 rounded bg-amber-200 text-amber-900 font-extrabold">Dispen</span>
+                              </span>
+                            );
+                          }
+
                           const hasAttended = attendedMeetings.some((am) => am.id === m.id);
                           if (isSuperAdmin) {
                             return (
@@ -1178,17 +1212,24 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
 
                 {/* Status Badge & Attendance Count */}
                 <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-500">Total:</span>
-                    <span className={`text-base font-black px-2 py-0.5 rounded-xl border ${
-                      count >= target 
-                        ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
-                        : count > 0
-                        ? 'bg-yellow-50 text-yellow-900 border-yellow-300'
-                        : 'bg-rose-50 text-rose-900 border-rose-300'
-                    }`}>
-                      {count} / {target} Sesi
-                    </span>
+                  <div className="flex flex-col sm:items-end gap-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-500">Total:</span>
+                      <span className={`text-base font-black px-2 py-0.5 rounded-xl border ${
+                        count >= target 
+                          ? 'bg-emerald-50 text-emerald-900 border-emerald-300'
+                          : count > 0
+                          ? 'bg-yellow-50 text-yellow-900 border-yellow-300'
+                          : 'bg-rose-50 text-rose-900 border-rose-300'
+                      }`}>
+                        {count} / {target} Sesi
+                      </span>
+                    </div>
+                    {radarMode === 'monthly' && holidayMeetings.length > 0 && (
+                      <span className="text-[10px] font-black text-amber-700">
+                        {item.physicalCount} Hadir + {holidayMeetings.length} Dispen Libur
+                      </span>
+                    )}
                   </div>
 
                   <span className={`text-[11px] font-black px-2.5 py-1 rounded-xl border flex items-center gap-1 ${
@@ -1279,6 +1320,11 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
                       ) : (
                         item.attendedMeetings.map((m) => m.meeting_date.slice(8)).join(', ')
                       )}
+                      {holidayMeetings.length > 0 && (
+                        <span className="text-amber-700 font-bold ml-1">
+                          (+{holidayMeetings.map((m) => `${m.meeting_date.slice(8)}L`).join(', ')})
+                        </span>
+                      )}
                     </td>
                     <td className="border border-slate-300 py-1.5 px-2 text-center font-mono font-black text-slate-900">
                       {item.count} Sesi
@@ -1355,7 +1401,7 @@ Bagi rekan-rekan pengurus di atas yang kemarin berhalangan hadir atau memiliki k
         <div className="mt-4 pt-3 border-t border-slate-300 flex items-center justify-between text-[10px] font-bold text-slate-500">
           <div>
             {radarMode === 'monthly'
-              ? 'Ketentuan Shift: Setiap pengurus wajib hadir minimal 2 kali pertemuan aktif per bulan. Sesi libur resmi tidak dihitung.'
+              ? 'Ketentuan Shift: Setiap pengurus wajib hadir minimal 2 kali pertemuan per bulan aktif. Sesi libur resmi sekolah (L) otomatis diberikan dispensasi kuota shift agar hak pengurus tetap terlindungi.'
               : 'Ketentuan Akumulasi: Pengurus wajib memenuhi target kehadiran minimal 50% dari total sesi semester/tahunan yang terlaksana.'}
           </div>
           <div>Total Data: {filteredList.length} Pengurus Angkatan 20</div>
