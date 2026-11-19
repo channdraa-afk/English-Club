@@ -49,7 +49,7 @@ export const StructureView: React.FC<StructureViewProps> = ({
   }, [members]);
 
   const getDisplayPosition = (m: Member) => {
-    if (m.name.toLowerCase().includes('hanan aditya')) return 'Chief of Speaking & Lead Bug Hunter';
+    if (m.name.toLowerCase().includes('hanan aditya')) return 'Ketua Divisi Speaking';
     if (m.name.toLowerCase().includes('amirah nur fairuza')) return 'Ketua Divisi Writing';
     return m.position;
   };
@@ -204,7 +204,7 @@ export const StructureView: React.FC<StructureViewProps> = ({
                         isKetua
                           ? 'bg-amber-50 border-amber-400 shadow-[0_4px_0_0_#f59e0b] cursor-pointer hover:bg-amber-100/70 select-none active:translate-y-0.5'
                           : isHanan
-                          ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-400 shadow-[0_3px_0_0_#6366f1] cursor-pointer hover:from-indigo-100 hover:to-purple-100 select-none active:translate-y-0.5'
+                          ? 'bg-slate-50 border-slate-200 cursor-pointer select-none active:translate-y-0.5'
                           : m.position === 'Wakil Ketua'
                           ? 'bg-emerald-50/70 border-emerald-300 shadow-[0_3px_0_0_#10b981]'
                           : isKoor
@@ -216,8 +216,6 @@ export const StructureView: React.FC<StructureViewProps> = ({
                           ? isSuperAdmin
                             ? '👑 Super Admin Aktif'
                             : 'Tap 3x untuk Akses Rahasia Ketua'
-                          : isHanan
-                          ? '🐞 Tap 3x untuk Akses Bug Hunter & Chief Speaker'
                           : undefined
                       }
                     >
@@ -238,12 +236,6 @@ export const StructureView: React.FC<StructureViewProps> = ({
                               </span>
                             )}
                           </div>
-                        )}
-                        {isHanan && (
-                          <span className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors flex items-center gap-1 text-[10px] font-black" title="Lead Bug Hunter & Chief Speaker">
-                            <span>🐞</span>
-                            <span className="hidden sm:inline">Bug Hunter</span>
-                          </span>
                         )}
                         {isKoor && (
                           <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-black border border-blue-300">

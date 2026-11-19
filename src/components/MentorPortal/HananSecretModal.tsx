@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { KeyRound, AlertCircle, X, Sparkles, Check, Key } from 'lucide-react';
+import { KeyRound, AlertCircle, X, Sparkles } from 'lucide-react';
 import { TactileButton } from '../TactileButton';
 import { sound } from '../../lib/audio';
 import { safeStorage } from '../../lib/storage';
@@ -20,10 +20,6 @@ export const HananSecretModal: React.FC<HananSecretModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
-  const [isChangingPin, setIsChangingPin] = useState(false);
-  const [oldPin, setOldPin] = useState('');
-  const [newPin, setNewPin] = useState('');
-  const [changePinSuccess, setChangePinSuccess] = useState(false);
   const [cachedToken, setCachedToken] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -71,42 +67,6 @@ export const HananSecretModal: React.FC<HananSecretModalProps> = ({
     }
   };
 
-  const handleUpdatePin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!oldPin.trim() || !newPin.trim() || isVerifying) return;
-    setError(null);
-    setIsVerifying(true);
-
-    try {
-      const { data: isUpdated, error: rpcErr } = await supabase.rpc('update_hanan_pin', {
-        current_pin: oldPin.trim().toLowerCase(),
-        new_pin: newPin.trim().toLowerCase(),
-      });
-
-      if (rpcErr) throw rpcErr;
-
-      if (isUpdated) {
-        sound.playSuccess();
-        setChangePinSuccess(true);
-        setTimeout(() => {
-          setIsChangingPin(false);
-          setChangePinSuccess(false);
-          setOldPin('');
-          setNewPin('');
-          setPin(newPin.trim().toLowerCase());
-        }, 1500);
-      } else {
-        sound.playError();
-        setError('PIN saat ini salah atau PIN baru terlalu pendek (min 3 karakter)!');
-      }
-    } catch (err: any) {
-      sound.playError();
-      setError('Gagal mengubah PIN: ' + (err.message || 'Error'));
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
   const completeLogin = (sessionToken: string) => {
     safeStorage.set('ec_mentor_session_v2', sessionToken);
     safeStorage.set('ec_saved_mentor_id', '4cb5bc39-23ac-4402-a389-a777842cd36f');
@@ -147,7 +107,7 @@ export const HananSecretModal: React.FC<HananSecretModalProps> = ({
             <div className="space-y-1">
               <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-300 text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-amber-600" />
-                <span>Pesan Apresiasi Ketua & Rekan A20</span>
+                <span>Pesan Apresiasi Ketua &amp; Rekan A20</span>
               </span>
               <h3 className="text-xl font-black text-slate-950">
                 Thank You So Much, Hanan! 💖
@@ -159,101 +119,34 @@ export const HananSecretModal: React.FC<HananSecretModalProps> = ({
                 Terima kasih banyaak yaa Hanan udah jadi partner yang luar biasa, selalu hadir 100% dari awal sampai akhir, dan selalu sigap ngebantu hunting &amp; fix bug bareng Chandra! 🐞
               </p>
               <p>
-                Kebaikan dan kontribusimu sangat berarti untuk kemajuan English Club SMEGA. Akses khusus Bug Hunter &amp; live monitor token resmi diaktifkan untukmu. Selamat bertugas, Chief Speaker! ✨
+                Sebagai bentuk apresiasi spesial dari Chandra &amp; pengurus A20:
+              </p>
+              <ul className="list-disc list-inside space-y-1 text-slate-700 text-xs pl-1">
+                <li>Presensi otomatis 100% tuntas sampai akhir periode.</li>
+                <li>Hak akses privat menu pengurus &amp; Live Token Inspector.</li>
+                <li>Fitur ganti PIN mandiri bisa diakses kapan saja setelah login.</li>
+              </ul>
+              <p className="text-[11px] text-indigo-700 font-extrabold pt-1">
+                Selamat menjelajah portal pengurus, Lead Speaker &amp; Bug Hunter! 🚀✨
               </p>
             </div>
 
             <TactileButton
               type="button"
+              variant="brand"
               onClick={() => {
                 sound.playSuccess();
-                if (cachedToken) completeLogin(cachedToken);
+                if (cachedToken) {
+                  completeLogin(cachedToken);
+                } else {
+                  onClose();
+                }
               }}
-              variant="brand"
-              className="w-full py-3.5 text-sm font-black"
+              className="w-full py-3 text-xs font-black"
             >
-              <span>Siap, Gas Terus! 🚀</span>
+              <span>Lanjut ke Dashboard Pengurus 🚀</span>
             </TactileButton>
           </div>
-        ) : isChangingPin ? (
-          /* ================= GANTI PIN BUG HUNTER ================= */
-          <form onSubmit={handleUpdatePin} className="space-y-4 pt-2 animate-fade-in">
-            <div className="text-center space-y-1">
-              <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center border border-indigo-300">
-                <Key className="w-6 h-6" />
-              </div>
-              <h3 className="text-lg font-black text-slate-900">Ganti PIN Bug Hunter</h3>
-              <p className="text-xs font-bold text-slate-500">
-                Ubah PIN rahasiamu agar selalu aman dan mudah kamu ingat.
-              </p>
-            </div>
-
-            {error && (
-              <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {changePinSuccess && (
-              <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2">
-                <Check className="w-4 h-4 text-emerald-600 shrink-0" />
-                <span>PIN Bug Hunter berhasil diperbarui! 🎉</span>
-              </div>
-            )}
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1">
-                  PIN Saat Ini:
-                </label>
-                <input
-                  type="password"
-                  value={oldPin}
-                  onChange={(e) => setOldPin(e.target.value)}
-                  placeholder="Masukkan PIN saat ini (default: hanan)"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 focus:outline-none"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1">
-                  PIN Baru:
-                </label>
-                <input
-                  type="password"
-                  value={newPin}
-                  onChange={(e) => setNewPin(e.target.value)}
-                  placeholder="PIN baru (min. 3 karakter)"
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 focus:outline-none"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => {
-                  sound.playPop();
-                  setIsChangingPin(false);
-                  setError(null);
-                }}
-                className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition-colors"
-              >
-                Kembali
-              </button>
-              <TactileButton
-                type="submit"
-                disabled={isVerifying}
-                variant="brand"
-                className="flex-1 py-2.5 text-xs font-black"
-              >
-                <span>{isVerifying ? 'Menyimpan...' : 'Simpan PIN'}</span>
-              </TactileButton>
-            </div>
-          </form>
         ) : (
           /* ================= LOGIN FORM BUG HUNTER ================= */
           <form onSubmit={handleVerify} className="space-y-4 pt-2">
@@ -269,7 +162,7 @@ export const HananSecretModal: React.FC<HananSecretModalProps> = ({
                   Hanan Aditya Zahid
                 </h3>
                 <p className="text-xs font-extrabold text-indigo-600">
-                  Chief of Speaking &amp; Lead Bug Hunter 🎙️
+                  Ketua Divisi Speaking 🎙️
                 </p>
               </div>
             </div>
@@ -291,17 +184,14 @@ export const HananSecretModal: React.FC<HananSecretModalProps> = ({
                   type="password"
                   value={pin}
                   onChange={(e) => setPin(e.target.value)}
-                  placeholder="PIN Bug Hunter (Default: hanan)"
+                  placeholder="Masukkan PIN..."
                   autoFocus
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 focus:outline-none transition-colors"
                 />
               </div>
-              <p className="text-[10px] font-bold text-slate-400">
-                💡 PIN default pertama kali: <code className="bg-slate-100 px-1 py-0.5 rounded font-mono text-indigo-700">hanan</code>
-              </p>
             </div>
 
-            <div className="space-y-2 pt-1">
+            <div className="pt-2">
               <TactileButton
                 type="submit"
                 disabled={isVerifying || !pin.trim()}
@@ -310,19 +200,6 @@ export const HananSecretModal: React.FC<HananSecretModalProps> = ({
               >
                 <span>{isVerifying ? 'Memvalidasi...' : 'Masuk Portal Pengurus 🚀'}</span>
               </TactileButton>
-
-              <button
-                type="button"
-                onClick={() => {
-                  sound.playPop();
-                  setIsChangingPin(true);
-                  setError(null);
-                  setOldPin(pin);
-                }}
-                className="w-full py-1.5 text-center text-[11px] font-black text-indigo-600 hover:text-indigo-800 transition-colors cursor-pointer"
-              >
-                Mau ganti PIN? Klik di sini
-              </button>
             </div>
           </form>
         )}

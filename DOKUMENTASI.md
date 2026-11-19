@@ -830,6 +830,16 @@
     3. *Secret 3-Tap Login & Token Inspector Hanan*: Menambahkan sensor tap 3x pada kartu Hanan di `StructureView.tsx`, modal autentikasi `HananSecretModal` dengan PIN default dan kemampuan ganti PIN via RPC `auth_hanan_pin` / `update_hanan_pin`, dialog apresiasi pertama kali, serta widget live token inspector read-only di dashboard.
     4. *Presensi 100% Core Four*: Menginjeksi presensi penuh 8 sesi aktif untuk Chandra, Anggi, Robi, dan Hanan (100% Hadir — ⭐ Super Dedikasi).
 
+- [x] Stealth Mode Kartu Struktur Hanan, Eliminasi PIN Leak, & Relokasi Ganti PIN Pasca-Login:
+  - **Problem**:
+    1. *Kartu Terlalu Mencolok*: Kartu Hanan di `StructureView.tsx` memiliki gradien warna ungu, badge `🐞 Bug Hunter`, dan posisi panjang dengan simbol `&` yang memicu badge `🌟 Double Job` yang tidak diinginkan.
+    2. *PIN Default Terbocorkan*: Modal pra-login `HananSecretModal.tsx` menampilkan hint dan placeholder yang membocorkan PIN awal `hanan`.
+    3. *Fitur Ganti PIN Prematur*: Tombol ganti PIN berada di modal pra-login sebelum pengguna terautentikasi.
+  - **Solution / State**:
+    1. *Stealth Card Overhaul*: Revert posisi Hanan di database Supabase ke `Ketua Divisi Speaking`, hilangkan badge `Bug Hunter` dan `Double Job`, serta seragamkan kartu menggunakan styling natural (`bg-slate-50 border-slate-200`) sembari mempertahankan sensor 3-tap rahasia.
+    2. *Sanitasi Modal Pra-Login*: Menghapus seluruh placeholder/teks bantuan yang membocorkan PIN awal; placeholder dinetralkan menjadi `Masukkan PIN...`.
+    3. *Session-Bound PIN Management*: Memindahkan modal dan alur perubahan PIN ke dalam `MentorDashboard.tsx` di panel *Live Token Inspector*, sehingga hanya dapat diakses setelah Hanan berhasil login dengan sesi aktif.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

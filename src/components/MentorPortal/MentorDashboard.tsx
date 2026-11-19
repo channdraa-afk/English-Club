@@ -20,7 +20,11 @@ import {
   Database,
   UserCog,
   Gamepad2,
-  FileText
+  FileText,
+  KeyRound,
+  Check,
+  AlertCircle,
+  X
 } from 'lucide-react';
 import { Member, Meeting, Attendance, Registration, TalentStar } from '../../types/database';
 import { MeetingControl } from './MeetingControl';
@@ -38,6 +42,8 @@ import { MemberRosterManager } from './MemberRosterManager';
 import { QuizManager } from './QuizManager';
 import { sound } from '../../lib/audio';
 import { safeStorage } from '../../lib/storage';
+import { supabase } from '../../lib/supabase';
+import { TactileButton } from '../TactileButton';
 
 const AdminDocGenerator = React.lazy(() =>
   import('./AdminDocGenerator').then((m) => ({ default: m.AdminDocGenerator }))
@@ -184,6 +190,49 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
       safeStorage.get('ec_saved_mentor_id') === '4cb5bc39-23ac-4402-a389-a777842cd36f'
     );
   }, []);
+
+  // Hanan Bug Hunter Change PIN State (Session-bound post-login)
+  const [isHananChangePinOpen, setIsHananChangePinOpen] = useState(false);
+  const [hananOldPin, setHananOldPin] = useState('');
+  const [hananNewPin, setHananNewPin] = useState('');
+  const [hananPinError, setHananPinError] = useState<string | null>(null);
+  const [hananPinSuccess, setHananPinSuccess] = useState(false);
+  const [isUpdatingHananPin, setIsUpdatingHananPin] = useState(false);
+
+  const handleUpdateHananPin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hananOldPin.trim() || !hananNewPin.trim() || isUpdatingHananPin) return;
+    setHananPinError(null);
+    setIsUpdatingHananPin(true);
+
+    try {
+      const { data: isUpdated, error: rpcErr } = await supabase.rpc('update_hanan_pin', {
+        current_pin: hananOldPin.trim().toLowerCase(),
+        new_pin: hananNewPin.trim().toLowerCase(),
+      });
+
+      if (rpcErr) throw rpcErr;
+
+      if (isUpdated) {
+        sound.playSuccess();
+        setHananPinSuccess(true);
+        setTimeout(() => {
+          setIsHananChangePinOpen(false);
+          setHananPinSuccess(false);
+          setHananOldPin('');
+          setHananNewPin('');
+        }, 1500);
+      } else {
+        sound.playError();
+        setHananPinError('PIN saat ini salah atau PIN baru terlalu pendek (min. 3 karakter)!');
+      }
+    } catch (err: any) {
+      sound.playError();
+      setHananPinError('Gagal mengubah PIN: ' + (err.message || 'Error'));
+    } finally {
+      setIsUpdatingHananPin(false);
+    }
+  };
 
   const handleSecretHeaderTap = () => {
     if (isSuperAdmin) return;
@@ -394,14 +443,29 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
                   </span>
                 </h3>
                 <p className="text-[10px] text-indigo-200/80 font-bold">
-                  Hak istimewa inspeksi token untuk Hanan Aditya Zahid (Chief of Speaking &amp; Lead Bug Hunter)
+                  Hak istimewa inspeksi token untuk Hanan Aditya Zahid (Ketua Divisi Speaking &amp; Lead Bug Hunter)
                 </p>
               </div>
             </div>
 
-            <span className="text-[10px] font-black text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2.5 py-1 rounded-xl w-fit">
-              🔒 Read-Only (Non-Editable)
-            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playPop();
+                  setIsHananChangePinOpen(true);
+                  setHananPinError(null);
+                  setHananPinSuccess(false);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black border border-indigo-400 active:translate-y-0.5 transition-all cursor-pointer shadow-sm"
+              >
+                <KeyRound className="w-3.5 h-3.5 text-indigo-200" />
+                <span>Ganti PIN Bug Hunter</span>
+              </button>
+              <span className="text-[10px] font-black text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2.5 py-1 rounded-xl w-fit">
+                🔒 Read-Only (Non-Editable)
+              </span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -855,6 +919,110 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
             attendances={attendances}
           />
         </React.Suspense>
+      )}
+
+      {/* Hanan Bug Hunter Change PIN Modal (Session-bound) */}
+      {isHananChangePinOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-fade-in">
+          <div className="relative w-full max-w-md bg-white rounded-3xl border-2 border-indigo-500 shadow-[0_10px_0_0_#3730a3] p-6 space-y-4">
+            <button
+              type="button"
+              onClick={() => {
+                sound.playPop();
+                setIsHananChangePinOpen(false);
+                setHananPinError(null);
+              }}
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-700 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <form onSubmit={handleUpdateHananPin} className="space-y-4 pt-2">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 mx-auto rounded-3xl bg-indigo-100 text-indigo-700 border-2 border-indigo-300 flex items-center justify-center shadow-md">
+                  <KeyRound className="w-7 h-7 text-indigo-600" />
+                </div>
+                <div>
+                  <span className="px-2.5 py-0.5 rounded-md bg-indigo-100 text-indigo-800 text-[10px] font-black uppercase tracking-wider">
+                    Pengaturan Keamanan • Bug Hunter
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 mt-1">
+                    Ganti PIN Bug Hunter
+                  </h3>
+                  <p className="text-xs font-extrabold text-indigo-600">
+                    Hanan Aditya Zahid (Ketua Divisi Speaking)
+                  </p>
+                </div>
+              </div>
+
+              {hananPinError && (
+                <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-800 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{hananPinError}</span>
+                </div>
+              )}
+
+              {hananPinSuccess && (
+                <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fade-in">
+                  <Check className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>PIN Bug Hunter berhasil diperbarui! 🎉</span>
+                </div>
+              )}
+
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1">
+                    PIN Saat Ini:
+                  </label>
+                  <input
+                    type="password"
+                    value={hananOldPin}
+                    onChange={(e) => setHananOldPin(e.target.value)}
+                    placeholder="Masukkan PIN saat ini..."
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 focus:outline-none"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-black uppercase tracking-wider text-slate-600 mb-1">
+                    PIN Baru:
+                  </label>
+                  <input
+                    type="password"
+                    value={hananNewPin}
+                    onChange={(e) => setHananNewPin(e.target.value)}
+                    placeholder="PIN baru (min. 3 karakter)"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border-2 border-slate-200 rounded-2xl text-xs font-bold text-slate-900 focus:bg-white focus:border-indigo-600 focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    sound.playPop();
+                    setIsHananChangePinOpen(false);
+                    setHananPinError(null);
+                  }}
+                  className="flex-1 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-black transition-colors"
+                >
+                  Batal
+                </button>
+                <TactileButton
+                  type="submit"
+                  disabled={isUpdatingHananPin || !hananOldPin.trim() || !hananNewPin.trim()}
+                  variant="brand"
+                  className="flex-1 py-2.5 text-xs font-black"
+                >
+                  <span>{isUpdatingHananPin ? 'Menyimpan...' : 'Simpan PIN'}</span>
+                </TactileButton>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Super Admin Secret Modal */}
