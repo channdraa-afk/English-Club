@@ -14,6 +14,7 @@ export interface Meeting {
   meeting_date: string;
   title: string;
   token: string;
+  mentor_token?: string;
   is_active: boolean;
   is_holiday?: boolean;
   holiday_reason?: string;

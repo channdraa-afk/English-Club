@@ -819,6 +819,17 @@
     2. *Anti-Curang*: Pengurus dengan 0 kehadiran fisik tetap tercatat "Kurang 1 Sesi" (wajib hadir fisik di sesi aktif). Pengurus dengan 1 kehadiran fisik + 1 libur otomatis mencapai kuota 2/2 dengan status "Aman / Disiplin".
     3. *Transparansi Visual*: Menampilkan kembali pill sesi libur (`🏖️ Tgl 04 (Libur: PJJ) [Dispen]`), rincian kuota transparan (`2 / 2 Sesi (1 Hadir + 1 Dispen Libur)`), serta rincian pada cetak PDF dan ekspor CSV Kedis. Sesi adik kelas (A21) tetap murni tercatat "LIBUR" di rapor tanpa penalti.
 
+- [x] Eliminasi Bug Token Lama (SSOT meetings.mentor_token), Anti-Mental Super Admin, & Secret Login Hanan:
+  - **Problem**:
+    1. *Token Lama Gentayangan*: Mengubah token mentor di form kontrol sesi kadang memuntahkan kembali teks lama dari cache browser karena token mentor sebelumnya tidak memiliki kolom fisik di tabel `meetings`.
+    2. *Sering Mental dari Menu Mentor*: `App.tsx` mengecek `isMentorLoggedIn` tanpa mewarisi status Super Admin, dan inisialisasi awal bernilai `false`, menyebabkan sesi mentor ter-kick saat F5 atau jeda jaringan.
+    3. *Kebutuhan Akses Khusus Hanan*: Hanan (selalu aktif fix bug & hadir) membutuhkan pintu masuk personal lewat Struktur Organisasi dan hak melihat token harian secara read-only.
+  - **Solution / State**:
+    1. *Database Column `meetings.mentor_token`*: Menambahkan kolom resmi `mentor_token TEXT` pada tabel `meetings` sebagai SSOT, membersihkan dependensi fallback cache browser, dan menyinkronkan token secara live ke seluruh klien.
+    2. *Super Admin Session Immunity*: Mengubah gerbang render `App.tsx` menjadi `(isMentorLoggedIn || isSuperAdmin)`, menginisialisasi state sesi secara sinkron dari penyimpanan lokal, dan menghilangkan auto-purge prematur saat offline sesaat.
+    3. *Secret 3-Tap Login & Token Inspector Hanan*: Menambahkan sensor tap 3x pada kartu Hanan di `StructureView.tsx`, modal autentikasi `HananSecretModal` dengan PIN default dan kemampuan ganti PIN via RPC `auth_hanan_pin` / `update_hanan_pin`, dialog apresiasi pertama kali, serta widget live token inspector read-only di dashboard.
+    4. *Presensi 100% Core Four*: Menginjeksi presensi penuh 8 sesi aktif untuk Chandra, Anggi, Robi, dan Hanan (100% Hadir — ⭐ Super Dedikasi).
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.

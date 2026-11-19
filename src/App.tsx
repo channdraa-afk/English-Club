@@ -101,7 +101,13 @@ export const App: React.FC = () => {
     }
     return 'landing';
   });
-  const [isMentorLoggedIn, setIsMentorLoggedIn] = useState(false);
+  const [isMentorLoggedIn, setIsMentorLoggedIn] = useState<boolean>(() => {
+    return Boolean(
+      safeStorage.get('ec_mentor_session_v2') ||
+      safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') ||
+      safeStorage.get(SUPERADMIN_SESSION_KEY)
+    );
+  });
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(() => {
     return Boolean(safeStorage.get(SUPERADMIN_SESSION_KEY, 'session') || safeStorage.get(SUPERADMIN_SESSION_KEY));
   });
@@ -135,7 +141,10 @@ export const App: React.FC = () => {
 
       // 3. Validate Mentor Session Token via server-side HMAC
       const savedMentor = safeStorage.get('ec_mentor_session_v2');
-      if (savedMentor) {
+      if (savedSig) {
+        // Super Admin always has full mentor privileges (immortal session)
+        setIsMentorLoggedIn(true);
+      } else if (savedMentor) {
         try {
           const { data: isMentorValid, error: mentorErr } = await supabase.rpc('validate_mentor_session', {
             token_input: savedMentor,
@@ -144,13 +153,13 @@ export const App: React.FC = () => {
           if (!mentorErr && isMentorValid) {
             setIsMentorLoggedIn(true);
           } else {
-            // Token invalid, forged, or expired: purge immediately
+            // Token invalid or expired: purge
             safeStorage.remove('ec_mentor_session_v2');
             setIsMentorLoggedIn(false);
           }
         } catch {
-          safeStorage.remove('ec_mentor_session_v2');
-          setIsMentorLoggedIn(false);
+          // Network error - maintain state from local storage without premature purge
+          setIsMentorLoggedIn(Boolean(savedMentor));
         }
       } else {
         setIsMentorLoggedIn(false);
@@ -400,6 +409,13 @@ export const App: React.FC = () => {
 
       if (meetingErr) throw meetingErr;
       let rawMeetings = (meetingData as Meeting[]) || [];
+
+      // Sync active meeting's mentor_token directly from SSOT database row (Eliminates stale localStorage / NAFIDGANTENG)
+      const curActiveMeeting = rawMeetings.find((m) => m.is_active) || rawMeetings[0];
+      if (curActiveMeeting?.mentor_token) {
+        setMentorToken(curActiveMeeting.mentor_token);
+        safeStorage.set('ec_active_mentor_token', curActiveMeeting.mentor_token);
+      }
 
       // 3. Fetch attendances
       const { data: attendanceData, error: attErr } = await supabase
@@ -796,7 +812,7 @@ export const App: React.FC = () => {
                   onAttendanceSuccess={handleAttendanceSuccess}
                 />
               </div>
-            ) : isMentorLoggedIn ? (
+            ) : (isMentorLoggedIn || isSuperAdmin) ? (
               <React.Suspense
                 fallback={
                   <div className="flex flex-col items-center justify-center py-24 gap-3 bg-white rounded-3xl border-2 border-slate-200 shadow-[0_4px_0_0_#e2e8f0] p-8">

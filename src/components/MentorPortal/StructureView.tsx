@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Crown, Star, Award, Shield } from 'lucide-react';
 import { Member } from '../../types/database';
 import { sound } from '../../lib/audio';
+import { HananSecretModal } from './HananSecretModal';
 
 interface StructureViewProps {
   members: Member[];
@@ -15,6 +16,8 @@ export const StructureView: React.FC<StructureViewProps> = ({
   onRequestSuperAdmin,
 }) => {
   const [ketuaTapCount, setKetuaTapCount] = useState(0);
+  const [hananTapCount, setHananTapCount] = useState(0);
+  const [isHananModalOpen, setIsHananModalOpen] = useState(false);
 
   const handleKetuaTap = () => {
     if (isSuperAdmin) return;
@@ -29,12 +32,24 @@ export const StructureView: React.FC<StructureViewProps> = ({
     }
   };
 
+  const handleHananTap = () => {
+    sound.playPop();
+    const next = hananTapCount + 1;
+    if (next >= 3) {
+      setHananTapCount(0);
+      setIsHananModalOpen(true);
+    } else {
+      setHananTapCount(next);
+      setTimeout(() => setHananTapCount(0), 2500);
+    }
+  };
+
   const a20Mentors = useMemo(() => {
     return members.filter((m) => m.generation === 20 && m.status === 'active');
   }, [members]);
 
   const getDisplayPosition = (m: Member) => {
-    if (m.name.toLowerCase().includes('hanan aditya')) return 'Ketua Divisi Speaking';
+    if (m.name.toLowerCase().includes('hanan aditya')) return 'Chief of Speaking & Lead Bug Hunter';
     if (m.name.toLowerCase().includes('amirah nur fairuza')) return 'Ketua Divisi Writing';
     return m.position;
   };
@@ -176,6 +191,7 @@ export const StructureView: React.FC<StructureViewProps> = ({
               >
                 {list.map((m) => {
                   const isKetua = m.position === 'Ketua';
+                  const isHanan = m.name.toLowerCase().includes('hanan aditya');
                   const isKoor = m.position.includes('Koordinator');
                   const isDouble = m.position.includes('&');
                   const displayPos = getDisplayPosition(m);
@@ -183,10 +199,12 @@ export const StructureView: React.FC<StructureViewProps> = ({
                   return (
                     <div
                       key={m.id}
-                      onClick={isKetua ? handleKetuaTap : undefined}
+                      onClick={isKetua ? handleKetuaTap : isHanan ? handleHananTap : undefined}
                       className={`p-3.5 rounded-2xl border transition-all ${
                         isKetua
                           ? 'bg-amber-50 border-amber-400 shadow-[0_4px_0_0_#f59e0b] cursor-pointer hover:bg-amber-100/70 select-none active:translate-y-0.5'
+                          : isHanan
+                          ? 'bg-gradient-to-r from-indigo-50 to-purple-50 border-indigo-400 shadow-[0_3px_0_0_#6366f1] cursor-pointer hover:from-indigo-100 hover:to-purple-100 select-none active:translate-y-0.5'
                           : m.position === 'Wakil Ketua'
                           ? 'bg-emerald-50/70 border-emerald-300 shadow-[0_3px_0_0_#10b981]'
                           : isKoor
@@ -198,6 +216,8 @@ export const StructureView: React.FC<StructureViewProps> = ({
                           ? isSuperAdmin
                             ? '👑 Super Admin Aktif'
                             : 'Tap 3x untuk Akses Rahasia Ketua'
+                          : isHanan
+                          ? '🐞 Tap 3x untuk Akses Bug Hunter & Chief Speaker'
                           : undefined
                       }
                     >
@@ -218,6 +238,12 @@ export const StructureView: React.FC<StructureViewProps> = ({
                               </span>
                             )}
                           </div>
+                        )}
+                        {isHanan && (
+                          <span className="p-1.5 rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200 transition-colors flex items-center gap-1 text-[10px] font-black" title="Lead Bug Hunter & Chief Speaker">
+                            <span>🐞</span>
+                            <span className="hidden sm:inline">Bug Hunter</span>
+                          </span>
                         )}
                         {isKoor && (
                           <span className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-black border border-blue-300">
@@ -249,6 +275,12 @@ export const StructureView: React.FC<StructureViewProps> = ({
           );
         })}
       </div>
+
+      {/* Secret Bug Hunter Modal for Hanan */}
+      <HananSecretModal
+        isOpen={isHananModalOpen}
+        onClose={() => setIsHananModalOpen(false)}
+      />
     </div>
   );
 };

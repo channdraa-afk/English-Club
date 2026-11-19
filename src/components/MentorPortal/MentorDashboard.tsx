@@ -176,6 +176,14 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
 
   const [isSuperModalOpen, setIsSuperModalOpen] = useState(false);
   const [headerTapCount, setHeaderTapCount] = useState(0);
+  const [copiedTokenNotice, setCopiedTokenNotice] = useState<string | null>(null);
+
+  const isHananBugHunter = useMemo(() => {
+    return (
+      safeStorage.get('ec_is_bughunter') === 'true' ||
+      safeStorage.get('ec_saved_mentor_id') === '4cb5bc39-23ac-4402-a389-a777842cd36f'
+    );
+  }, []);
 
   const handleSecretHeaderTap = () => {
     if (isSuperAdmin) return;
@@ -326,9 +334,19 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
                   <span>Chandra</span>
                 </span>
               )}
+              {isHananBugHunter && !isSuperAdmin && (
+                <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-lg bg-indigo-100 text-indigo-900 border border-indigo-300 text-[10px] font-black shrink-0">
+                  <span>🐞</span>
+                  <span>Hanan • Bug Hunter</span>
+                </span>
+              )}
             </div>
             <p className="text-[10px] sm:text-[11px] font-bold text-slate-400 truncate">
-              {isSuperAdmin ? 'Kendali Penuh Seluruh Angkatan & Sistem' : 'Menu Khusus Angkatan 20 (Presensi & Struktur)'}
+              {isSuperAdmin
+                ? 'Kendali Penuh Seluruh Angkatan & Sistem'
+                : isHananBugHunter
+                ? 'Hak Istimewa Chief of Speaking & Lead Bug Hunter'
+                : 'Menu Khusus Angkatan 20 (Presensi & Struktur)'}
             </p>
           </div>
         </div>
@@ -361,6 +379,89 @@ export const MentorDashboard: React.FC<MentorDashboardProps> = ({
           </button>
         </div>
       </div>
+
+      {/* 🐞 LIVE TOKEN INSPECTOR KHUSUS HANAN (READ-ONLY) */}
+      {isHananBugHunter && (
+        <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-indigo-950 via-slate-900 to-indigo-900 text-white border-2 border-indigo-500 shadow-[0_6px_0_0_#3730a3] space-y-3 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-700/50 pb-2.5">
+            <div className="flex items-center gap-2">
+              <span className="text-xl">🐞</span>
+              <div>
+                <h3 className="text-xs sm:text-sm font-black tracking-tight flex items-center gap-1.5">
+                  <span>Token Hari Ini (Bug Hunter Read-Only Inspector)</span>
+                  <span className="text-[10px] px-2 py-0.2 rounded bg-indigo-500/40 border border-indigo-400/50 text-indigo-200">
+                    Live SSOT
+                  </span>
+                </h3>
+                <p className="text-[10px] text-indigo-200/80 font-bold">
+                  Hak istimewa inspeksi token untuk Hanan Aditya Zahid (Chief of Speaking &amp; Lead Bug Hunter)
+                </p>
+              </div>
+            </div>
+
+            <span className="text-[10px] font-black text-amber-300 bg-amber-950/60 border border-amber-500/40 px-2.5 py-1 rounded-xl w-fit">
+              🔒 Read-Only (Non-Editable)
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {/* Token Adik Kelas */}
+            <div className="p-3.5 rounded-2xl bg-indigo-950/80 border border-indigo-700/60 flex items-center justify-between gap-2">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-300 block">
+                  1. Token Adik Kelas (A21)
+                </span>
+                <span className="text-xl sm:text-2xl font-black font-mono tracking-wider text-white">
+                  {activeMeeting?.token || 'BELUM DIATUR'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playSuccess();
+                  navigator.clipboard.writeText(activeMeeting?.token || '');
+                  setCopiedTokenNotice('Token Adik Kelas berhasil disalin!');
+                  setTimeout(() => setCopiedTokenNotice(null), 2500);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-black border border-indigo-400 active:translate-y-0.5 transition-all cursor-pointer shrink-0"
+              >
+                Salin 📋
+              </button>
+            </div>
+
+            {/* Token Pengurus A20 */}
+            <div className="p-3.5 rounded-2xl bg-indigo-950/80 border border-indigo-700/60 flex items-center justify-between gap-2">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-300 block">
+                  2. Token Pengurus (A20)
+                </span>
+                <span className="text-xl sm:text-2xl font-black font-mono tracking-wider text-amber-300">
+                  {activeMeeting?.mentor_token || mentorToken || 'BELUM DIATUR'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  sound.playSuccess();
+                  const tok = activeMeeting?.mentor_token || mentorToken || '';
+                  navigator.clipboard.writeText(tok);
+                  setCopiedTokenNotice('Token Pengurus A20 berhasil disalin!');
+                  setTimeout(() => setCopiedTokenNotice(null), 2500);
+                }}
+                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-[11px] font-black border border-amber-600 active:translate-y-0.5 transition-all cursor-pointer shrink-0"
+              >
+                Salin 📋
+              </button>
+            </div>
+          </div>
+
+          {copiedTokenNotice && (
+            <p className="text-[11px] font-black text-emerald-300 text-center animate-fade-in">
+              ✓ {copiedTokenNotice}
+            </p>
+          )}
+        </div>
+      )}
 
       {/* 🚀 QUICK-ACTION HUB (3 AKSES UTAMA PENGURUS) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

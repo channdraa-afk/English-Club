@@ -135,6 +135,9 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
     setMeetingDate(target.meeting_date || targetWed.dateStr);
     setTitle(target.title || 'Weekly English Gathering');
     setToken(target.token || 'EAGLE21');
+    if (target.mentor_token) {
+      setMentorTokenInput(target.mentor_token);
+    }
     setWord(target.word_of_the_day || 'Piece of cake (Sangat mudah)');
     setMeaning(target.word_meaning || '');
     setIsHoliday(Boolean(target.is_holiday));
@@ -355,10 +358,13 @@ export const MeetingControl: React.FC<MeetingControlProps> = ({
         }
       }
 
+      const cleanMentorTok = mentorTokenInput.trim().toUpperCase();
+
       const basePayload = {
         meeting_date: meetingDate || targetWed.dateStr,
         title: title.trim(),
         token: token.trim().toUpperCase(),
+        mentor_token: cleanMentorTok,
         word_of_the_day: word.trim(),
         word_meaning: meaning.trim(),
         is_active: willBeActive,
