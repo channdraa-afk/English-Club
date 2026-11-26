@@ -31,6 +31,7 @@ dist-ssr
 
 # Arsip data & dokumen mentah (private)
 arsip-data/
+laporan/
 *.docx
 !public/templates/*.docx
 members_parsed.json

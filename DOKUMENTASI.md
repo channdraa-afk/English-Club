@@ -840,6 +840,16 @@
     2. *Sanitasi Modal Pra-Login*: Menghapus seluruh placeholder/teks bantuan yang membocorkan PIN awal; placeholder dinetralkan menjadi `Masukkan PIN...`.
     3. *Session-Bound PIN Management*: Memindahkan modal dan alur perubahan PIN ke dalam `MentorDashboard.tsx` di panel *Live Token Inspector*, sehingga hanya dapat diakses setelah Hanan berhasil login dengan sesi aktif.
 
+- [x] Sentralisasi Direktori Laporan Kedinasan & Generator Berkas Word A20 & A21:
+  - **Problem**: Berkas laporan administrasi sebelumnya tersebar di folder arsip mentah tanpa pengelompokan tematik, serta belum tersedianya berkas Word (.docx) resmi yang memuat rekapitulasi kehadiran adik kelas Angkatan 21 dan pengurus Angkatan 20 untuk pelaporan pembina/sekolah.
+  - **Solution / State**:
+    1. *Struktur Direktori Sentral*: Membuat folder induk `laporan/` dengan 3 subfolder tematik: `laporan-kehadiran/`, `laporan-keanggotaan/`, dan `laporan-struktur-organisasi/`.
+    2. *Penyalinan & Penataan Arsip*: Memindahkan laporan anggota dan struktur organisasi ke subfoldernya masing-masing.
+    3. *Generator Laporan Word Ganda (.docx)*: Men-generate 2 berkas Word formal berstandar kedinasan lengkap dengan kop surat resmi, garis ganda, rekapitulasi per pertemuan & per kelas, rincian individu, dan lembar pengesahan 4 pihak:
+       - `laporan-kehadiran/Laporan_Kehadiran_Angkatan_21_Semester_Gasal_2026.docx` (106 siswa A21)
+       - `laporan-kehadiran/Laporan_Kehadiran_Angkatan_20_Semester_Gasal_2026.docx` (59 pengurus A20)
+    4. *Zero Leak Git Protection*: Memperbarui `.gitignore` agar folder `laporan/` dan berkas `*.docx` berstatus private lokal.
+
 ### 3.2. Roadmap Selanjutnya
 - [x] Peluncuran perdana sistem presensi pada hari Rabu eskul (15:40 - 17:30 WIB).
 - [x] Pelaksanaan kuis live interaktif EC Arena bersama adik-adik kelas A21 di ruang kelas.
